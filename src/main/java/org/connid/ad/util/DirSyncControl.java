@@ -22,9 +22,9 @@
  */
 package org.connid.ad.util;
 
-import com.sun.jndi.ldap.BasicControl;
 import com.sun.jndi.ldap.BerEncoder;
 import java.io.IOException;
+import javax.naming.ldap.BasicControl;
 
 public class DirSyncControl extends BasicControl {
 
@@ -73,7 +73,7 @@ public class DirSyncControl extends BasicControl {
     private byte[] setEncodedValue(int maxAttrCount, byte[] cookie)
             throws IOException {
 
-        BerEncoder ber = new BerEncoder(64);
+        final BerEncoder ber = new BerEncoder(64);
         ber.beginSeq(48); // (Ber.ASN_SEQUENCE | Ber.ASN_CONSTRUCTOR);
         ber.encodeInt(flags);
         ber.encodeInt(maxAttrCount);
