@@ -1,6 +1,24 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ *
+ * Copyright 2011 Tirasa. All rights reserved.
+ *
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific
+ * language governing permissions and limitations under the License.
+ *
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
  */
 package org.connid.ad;
 
@@ -25,10 +43,6 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.ldap.search.SearchResultsHandler;
 import org.identityconnectors.ldap.search.VlvIndexSearchStrategy;
 
-/**
- *
- * @author fabio
- */
 public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
 
     private static final Log LOG =
@@ -135,7 +149,7 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
                     ctx.search(baseDN, query, searchControls);
             try {
                 // hasMore call for referral resolution ... it fails with AD
-//                while (results.hasMore()) {
+                // while (results.hasMore()) {
                 while (results.hasMoreElements()) {
                     SearchResult result = results.next();
 
