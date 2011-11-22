@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -121,7 +122,8 @@ public class ADSyncStrategy {
     private ConnectorObject createConnectorObject(
             final String baseDN,
             final Attributes profile,
-            final ObjectClass oclass) throws NamingException {
+            final ObjectClass oclass)
+            throws NamingException {
 
         final LdapEntry entry = LdapEntry.create(baseDN, profile);
 
@@ -265,9 +267,9 @@ public class ADSyncStrategy {
         final String filter =
                 DirSyncUtils.createLdapFilter(conn.getConfiguration());
 
-//        if (LOG.isOk()) {
-        LOG.ok("Search filter: " + filter);
-//        }
+        if (LOG.isOk()) {
+            LOG.ok("Search filter: " + filter);
+        }
         // -----------------------------------
 
         // -----------------------------------
@@ -341,7 +343,8 @@ public class ADSyncStrategy {
             final SearchResult sr,
             final String baseContext,
             final SyncResultsHandler handler,
-            final Set<String> handled) throws NamingException {
+            final Set<String> handled)
+            throws NamingException {
 
         if (ctx == null || sr == null) {
             throw new ConnectorException("Invalid context or search result.");
@@ -349,14 +352,14 @@ public class ADSyncStrategy {
 
         ctx.setRequestControls(new Control[]{new DeletedControl()});
 
+        // Just used to retrieve object classes and to pass to getSyncDelta
+        Attributes profile = sr.getAttributes();
+
         if (LOG.isOk()) {
-            LOG.ok("Object profile: {0}", sr.getAttributes());
+            LOG.ok("Object profile: {0}", profile);
         }
 
         final Set<String> classes = CollectionUtil.newCaseInsensitiveSet();
-
-        // Just used to retrieve object classes and to pass to getSyncDelta
-        Attributes profile = sr.getAttributes();
 
         String guid = DirSyncUtils.getGuidAsString(
                 (byte[]) profile.get("objectGUID").get());
@@ -366,13 +369,31 @@ public class ADSyncStrategy {
             return;
         }
 
-        // We need for this beacause DirSync return an uncomplete profile in
+        boolean isDeleted = false;
+
+        try {
+
+            javax.naming.directory.Attribute attributeIsDeleted =
+                    profile.get("isDeleted");
+
+            isDeleted =
+                    attributeIsDeleted != null
+                    && attributeIsDeleted.get() != null
+                    && Boolean.parseBoolean(
+                    attributeIsDeleted.get().toString());
+
+        } catch (NoSuchElementException e) {
+            if (LOG.isOk()) {
+                LOG.ok("Cannot find the isDeleted element for user.");
+            }
+        } catch (Throwable t) {
+            LOG.error(t, "Error retrieving isDeleted attribute");
+        }
+
+        // We need for this beacause DirSync return an uncomplete profile
         // in case of entries updated or deleted.
         // We don't need to search for complete profile for new created users.
-        if (profile.get("objectClass") == null
-                || (profile.get("isDeleted") != null && "true".equalsIgnoreCase(
-                profile.get("isDeleted").get().toString()))) {
-
+        if (profile.get("objectClass") == null || isDeleted) {
             profile = ctx.getAttributes("<GUID=" + guid + ">");
         }
 
@@ -476,11 +497,7 @@ public class ADSyncStrategy {
 
             handled.add(guid);
 
-            final javax.naming.directory.Attribute isDeleted =
-                    sr.getAttributes().get("isDeleted");
-
-            if (isDeleted != null
-                    && "true".equalsIgnoreCase(isDeleted.get().toString())) {
+            if (isDeleted) {
 
                 if (LOG.isOk()) {
                     LOG.ok("Deleted user {0}", sr.getNameInNamespace());
@@ -529,7 +546,8 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final String baseContextDn,
             final SyncDeltaType syncDeltaType,
-            final Attributes profile) throws NamingException {
+            final Attributes profile)
+            throws NamingException {
 
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
 
@@ -561,8 +579,7 @@ public class ADSyncStrategy {
 
         // Set Connector Object
         if (SyncDeltaType.DELETE != syncDeltaType) {
-            sdb.setObject(
-                    createConnectorObject(baseContextDn, profile, oclass));
+            sdb.setObject(createConnectorObject(baseContextDn, profile, oclass));
         }
 
         return sdb.build();
