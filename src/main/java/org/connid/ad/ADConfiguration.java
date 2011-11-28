@@ -39,13 +39,16 @@ public class ADConfiguration extends LdapConfiguration {
         super();
 
         super.setUidAttribute("sAMAccountName");
+        super.setSynchronizePasswords(true);
+
+        super.setSynchronizePasswords(false);
         super.setAccountUserNameAttributes("sAMAccountName");
         super.setObjectClassesToSynchronize(new String[]{"user"});
         super.setGroupMemberAttribute("member");
         super.setAccountObjectClasses(new String[]{
                     "top", "person", "organizationalPerson", "user"});
+
         super.setUsePagedResultControl(true);
-        super.setBlockSize(Integer.MAX_VALUE);
 
         memberships = new ArrayList<String>();
         retrieveDeletedUser = true;

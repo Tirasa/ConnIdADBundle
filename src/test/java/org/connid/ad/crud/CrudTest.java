@@ -80,9 +80,7 @@ public class CrudTest extends AbstractTest {
 
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
-        assertEquals(
-                Collections.singletonList(SAAN),
-                results.get(0).getValue());
+        assertEquals(Collections.singletonList(SAAN), results.get(0).getValue());
     }
 
     @Test

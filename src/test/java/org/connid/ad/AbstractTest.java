@@ -154,28 +154,32 @@ public abstract class AbstractTest {
 
     protected static ADConfiguration getSimpleConf(final Properties prop) {
         final ADConfiguration configuration = new ADConfiguration();
+
         configuration.setObjectClassesToSynchronize("user");
+
         configuration.setHost(prop.getProperty("host"));
         configuration.setPort(Integer.parseInt(prop.getProperty("port")));
-        configuration.setChangeLogBlockSize(100);
+
         configuration.setAccountObjectClasses(
                 "top", "person", "organizationalPerson", "user");
+
         configuration.setBaseContextsToSynchronize(
                 prop.getProperty("baseContextToSynchronize"));
-        configuration.setSynchronizePasswords(false);
-        configuration.setPasswordAttribute("userPassword");
-        configuration.setChangeNumberAttribute("fake");
+
+        configuration.setBaseContexts(USERCONTEXT);
+
         configuration.setPrincipal(prop.getProperty("principal"));
+
         configuration.setCredentials(new GuardedString(
                 prop.getProperty("credentials").toCharArray()));
-        configuration.setBaseContexts(USERCONTEXT);
-        configuration.setReadSchema(false);
+
         configuration.setMemberships(prop.getProperty("memberships").split(";"));
+
         configuration.setRetrieveDeletedUser(false);
 
         assertFalse(configuration.getMemberships() == null
                 || configuration.getMemberships().length == 0);
-        
+
         return configuration;
     }
 
