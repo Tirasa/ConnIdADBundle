@@ -128,7 +128,7 @@ public class SyncTest extends AbstractTest {
             // ----------------------------------
             // check sync with new user (token updated)
             // ----------------------------------
-            // user add sync
+            // user added sync
             uid11 = connector.create(
                     ObjectClass.ACCOUNT, getSimpleProfile(CN11), null);
 
@@ -168,8 +168,11 @@ public class SyncTest extends AbstractTest {
             final ADConfiguration configuration = getSimpleConf(prop);
             configuration.setMemberships();
 
-            LOG.ok("Configuration: {0}", configuration);
-            LOG.ok("Filter: {0}", DirSyncUtils.createLdapFilter(configuration));
+            if (LOG.isOk()) {
+                LOG.ok("\n Configuration: {0}\n Filter: {1}",
+                        configuration,
+                        DirSyncUtils.createLdapFilter(configuration));
+            }
 
             final ADConnection connection = new ADConnection(configuration);
             final LdapContext ctx = connection.getInitialContext();
@@ -235,11 +238,11 @@ public class SyncTest extends AbstractTest {
             // check sync with user 'OUT' group (token updated)
             // ----------------------------------
             mod = new ModificationItem[]{
-                        new ModificationItem(
-                        DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(
-                        "member",
-                        "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
-                    };
+                new ModificationItem(
+                DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(
+                "member",
+                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+            };
 
             try {
                 ctx.modifyAttributes(conf.getMemberships()[0], mod);
@@ -312,12 +315,8 @@ public class SyncTest extends AbstractTest {
 
                 newConnector.sync(
                         ObjectClass.ACCOUNT, token, hundler, oob.build());
+
                 assertFalse(deleted.isEmpty());
-
-                for (SyncDelta delta : deleted) {
-                    LOG.ok("AAA {0}", delta.getUid().getUidValue());
-                }
-
                 assertTrue(deleted.size() <= 2);
                 assertTrue(deleted.get(0).getUid().getUidValue().startsWith(
                         "SAAN_" + SyncTest.class.getSimpleName() + "1"));
@@ -347,7 +346,9 @@ public class SyncTest extends AbstractTest {
                 (byte[]) objectGUID.getValue().get(0));
         assertNotNull(guid);
 
-        LOG.ok("ObjectGUID (String): {0}", guid);
+        if (LOG.isOk()) {
+            LOG.ok("ObjectGUID (String): {0}", guid);
+        }
     }
 
     @Test

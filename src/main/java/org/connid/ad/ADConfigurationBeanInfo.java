@@ -38,6 +38,10 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             props.add(new PropertyDescriptor(
                     "ssl", LdapConfiguration.class));
 
+            // trustAllCerts
+            props.add(new PropertyDescriptor(
+                    "trustAllCerts", ADConfiguration.class));
+
             // failover
             props.add(new PropertyDescriptor(
                     "failover", LdapConfiguration.class));

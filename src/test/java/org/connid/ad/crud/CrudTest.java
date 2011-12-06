@@ -32,13 +32,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.connid.ad.AbstractTest;
+import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 
 import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
+import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
@@ -51,6 +55,21 @@ public class CrudTest extends AbstractTest {
     @BeforeClass
     public static void init() {
         init(CrudTest.class.getSimpleName());
+    }
+
+    @Test
+    public void schema() {
+        final Schema schema = connector.schema();
+        assertNotNull(schema);
+
+        final ObjectClassInfo info =
+                schema.findObjectClassInfo(ObjectClass.ACCOUNT_NAME);
+
+        assertNotNull(info);
+
+        assertNotNull(info.getAttributeInfo());
+        assertFalse(info.getAttributeInfo().isEmpty());
+        assertNotNull(schema.getOperationOptionInfo());
     }
 
     @Test
@@ -81,6 +100,8 @@ public class CrudTest extends AbstractTest {
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         assertEquals(Collections.singletonList(SAAN), results.get(0).getValue());
+
+        connector.schema();
     }
 
     @Test
@@ -115,8 +136,7 @@ public class CrudTest extends AbstractTest {
         assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
                 connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
 
-        final Set<Attribute> attributes =
-                getSimpleProfile(CN);
+        final Set<Attribute> attributes = getSimpleProfile(CN);
 
         final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
         assertNotNull(uid);
@@ -140,6 +160,19 @@ public class CrudTest extends AbstractTest {
                 new HashSet(Arrays.asList(conf.getMemberships())),
                 new HashSet(object.getAttributeByName("memberOf").getValue()));
 
+        assertEquals(SAAN, object.getUid().getUidValue());
+
+        assertEquals(getEntryDN(CN).toLowerCase(),
+                object.getName().getNameValue().toLowerCase());
+
+        final Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
         connector.delete(ObjectClass.ACCOUNT, uid, null);
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
@@ -149,13 +182,39 @@ public class CrudTest extends AbstractTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        String SAAN = "SAAN_" + CrudTest.class.getSimpleName() + "3";
+        final String SAAN = "SAAN_" + CrudTest.class.getSimpleName() + "3";
+
+        Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        Throwable t = null;
+        try {
+            authUid = connector.authenticate(
+                    ObjectClass.ACCOUNT, // object class
+                    SAAN, // uid
+                    new GuardedString("Password321".toCharArray()), // password
+                    null);
+        } catch (ConnectorException e) {
+            t = e;
+        }
+
+        assertNotNull(t);
+
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build("givenName", "gnupdate"),
+                    AttributeBuilder.buildPassword(
+                    new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(SAAN),
-                Collections.singleton(
-                AttributeBuilder.build("givenName", "gnupdate")), null);
+                new HashSet<Attribute>(attrToReplace),
+                null);
 
         assertNotNull(uid);
         assertEquals(SAAN, uid.getUidValue());
@@ -175,6 +234,90 @@ public class CrudTest extends AbstractTest {
         assertEquals(
                 Collections.singletonList("gnupdate"),
                 object.getAttributeByName("givenName").getValue());
+
+        t = null;
+
+        try {
+            authUid = connector.authenticate(
+                    ObjectClass.ACCOUNT, // object class
+                    SAAN, // uid
+                    new GuardedString("Password123".toCharArray()), // password
+                    null);
+        } catch (ConnectorException e) {
+            t = e;
+        }
+
+        assertNotNull(t);
+
+        authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password321".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+    }
+
+    @Test
+    public void disable() {
+
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String SAAN = "SAAN_" + CrudTest.class.getSimpleName() + "4";
+
+        Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        List<Attribute> attrToReplace = Arrays.asList(
+                new Attribute[]{AttributeBuilder.buildEnabled(false)});
+
+        Uid uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        Throwable t = null;
+        try {
+            authUid = connector.authenticate(
+                    ObjectClass.ACCOUNT, // object class
+                    SAAN, // uid
+                    new GuardedString("Password123".toCharArray()), // password
+                    null);
+        } catch (ConnectorException e) {
+            t = e;
+        }
+
+        assertNotNull(t);
+
+        attrToReplace = Arrays.asList(
+                new Attribute[]{AttributeBuilder.buildEnabled(true)});
+
+        uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
     }
 
     @AfterClass

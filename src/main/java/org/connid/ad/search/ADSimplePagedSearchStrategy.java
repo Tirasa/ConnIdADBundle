@@ -20,7 +20,7 @@
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
  */
-package org.connid.ad;
+package org.connid.ad.search;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -79,8 +79,11 @@ public class ADSimplePagedSearchStrategy extends SimplePagedSearchStrategy {
             final SearchControls searchControls,
             final SearchResultsHandler handler)
             throws IOException, NamingException {
-        LOG.ok("Searching in {0} with filter {1} and {2}",
-                baseDNs, query, searchControlsToString(searchControls));
+
+        if (LOG.isOk()) {
+            LOG.ok("Searching in {0} with filter {1} and {2}",
+                    baseDNs, query, searchControlsToString(searchControls));
+        }
 
         LdapContext ctx = initCtx.newInstance(null);
         try {

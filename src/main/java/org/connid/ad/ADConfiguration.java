@@ -34,6 +34,8 @@ public class ADConfiguration extends LdapConfiguration {
     private boolean retrieveDeletedUser;
 
     private List<String> memberships;
+    
+    private boolean trustAllCerts;
 
     public ADConfiguration() {
         super();
@@ -49,6 +51,9 @@ public class ADConfiguration extends LdapConfiguration {
                     "top", "person", "organizationalPerson", "user"});
 
         super.setUsePagedResultControl(true);
+
+        super.setPasswordAttribute("unicodePwd");
+        super.setSsl(true);
 
         memberships = new ArrayList<String>();
         retrieveDeletedUser = true;
@@ -84,5 +89,15 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setRetrieveDeletedUser(boolean retrieveDeletedUser) {
         this.retrieveDeletedUser = retrieveDeletedUser;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "trustAllCerts.display",
+    helpMessageKey = "trustAllCerts.help", required = true, order = 3)
+    public boolean isTrustAllCerts() {
+        return trustAllCerts;
+    }
+
+    public void setTrustAllCerts(final boolean trustAllCerts) {
+        this.trustAllCerts = trustAllCerts;
     }
 }

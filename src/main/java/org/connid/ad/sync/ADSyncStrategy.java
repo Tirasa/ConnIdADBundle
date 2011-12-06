@@ -23,10 +23,8 @@
 package org.connid.ad.sync;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -37,35 +35,24 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import org.connid.ad.ADConnection;
+import org.connid.ad.util.ADUtilities;
 import org.connid.ad.util.DeletedControl;
 import org.connid.ad.util.DirSyncControl;
 import org.connid.ad.util.DirSyncUtils;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.ConnectorObject;
-import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
-import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.SyncDelta;
 import org.identityconnectors.framework.common.objects.SyncDeltaBuilder;
 import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.GroupHelper;
-import org.identityconnectors.ldap.LdapConnection;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.LdapEntry;
-import org.identityconnectors.ldap.LdapUtil;
 import org.identityconnectors.ldap.search.LdapInternalSearch;
-import org.identityconnectors.ldap.search.LdapSearch;
 
 /**
  * An implementation of the sync operation based on the DirSync protocol,
@@ -75,135 +62,24 @@ public class ADSyncStrategy {
 
     private static final Log LOG = Log.getLog(ADSyncStrategy.class);
 
-    private static final String USERACCOUNTCONTROL_ATTR = "userAccountControl";
-
-    private final transient LdapConnection conn;
-
-    private final transient GroupHelper groupHelper;
+    private final transient ADConnection conn;
 
     private transient SyncToken latestSyncToken;
 
-    public ADSyncStrategy(final LdapConnection conn) {
+    public ADSyncStrategy(final ADConnection conn) {
 
         this.conn = conn;
-        this.groupHelper = new GroupHelper(conn);
     }
 
-    private Set<String> getAttributesToGet(final String[] attributesToGet,
-            final ObjectClass oclass) {
-
-        Set<String> result;
-        if (attributesToGet == null) {
-            // This should include Name.NAME,
-            // so no need to include it explicitly.
-            result = LdapSearch.getAttributesReturnedByDefault(conn, oclass);
-        } else {
-            result = CollectionUtil.newCaseInsensitiveSet();
-            result.addAll(Arrays.asList(attributesToGet));
-            result.add(Name.NAME);
-        }
-
-        // Since Uid is not in the schema,
-        // but it is required to construct a ConnectorObject.
-        result.add(Uid.NAME);
-
-        // Our password is marked as readable because of sync().
-        // We really can't return it from search.
-        if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
-            LOG.warn("Reading passwords not supported");
-        }
-
-        // AD specific, for checking wether a user is enabled or not
-        result.add(USERACCOUNTCONTROL_ATTR);
-
-        return result;
-    }
-
-    private ConnectorObject createConnectorObject(
-            final String baseDN,
-            final Attributes profile,
-            final ObjectClass oclass)
-            throws NamingException {
-
-        final LdapEntry entry = LdapEntry.create(baseDN, profile);
-
-        final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        builder.setObjectClass(oclass);
-        builder.setUid(conn.getSchemaMapping().createUid(oclass, entry));
-        builder.setName(conn.getSchemaMapping().createName(oclass, entry));
-
-        Attribute attribute;
-        List<String> ldapGroups;
-        Set<String> posixRefAttrs;
-        List<String> posixGroups;
-
-        final GuardedString emptyGS = new GuardedString();
-
-        final NamingEnumeration<String> attributeNames = profile.getIDs();
-        String attributeName;
-
-        while (attributeNames.hasMoreElements()) {
-            attributeName = attributeNames.next();
-
-            attribute = null;
-
-            if (LdapConstants.isLdapGroups(attributeName)) {
-                ldapGroups =
-                        groupHelper.getLdapGroups(entry.getDN().toString());
-                attribute = AttributeBuilder.build(
-                        LdapConstants.LDAP_GROUPS_NAME, ldapGroups);
-            } else if (LdapConstants.isPosixGroups(attributeName)) {
-                posixRefAttrs =
-                        LdapUtil.getStringAttrValues(entry.getAttributes(),
-                        GroupHelper.getPosixRefAttribute());
-                posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
-                attribute = AttributeBuilder.build(
-                        LdapConstants.POSIX_GROUPS_NAME, posixGroups);
-            } else if (LdapConstants.PASSWORD.is(attributeName)) {
-                attribute = AttributeBuilder.build(attributeName, emptyGS);
-            } else if (USERACCOUNTCONTROL_ATTR.equals(attributeName)) {
-                try {
-                    LOG.ok("User Account Control: {0}", profile.get(
-                            USERACCOUNTCONTROL_ATTR).get().toString());
-
-                    if (profile.get(USERACCOUNTCONTROL_ATTR).get().
-                            equals("512")) {
-                        attribute = AttributeBuilder.buildEnabled(true);
-                    }
-
-                    if (profile.get(USERACCOUNTCONTROL_ATTR).get().
-                            equals("514")) {
-                        attribute = AttributeBuilder.buildEnabled(false);
-                    }
-
-
-                } catch (NamingException e) {
-                    LOG.error(e, "While fetching " + USERACCOUNTCONTROL_ATTR);
-                }
-            } else {
-                attribute = conn.getSchemaMapping().createAttribute(
-                        oclass, attributeName, entry, false);
-            }
-
-            // Avoid attribute adding in case of attribute name not found
-            if (attribute != null) {
-                builder.addAttribute(attribute);
-            }
-        }
-
-        return builder.build();
-    }
-
-    private Map<String, Set<SearchResult>> search(final LdapContext ctx,
-            final String filter, final SearchControls searchCtls,
+    private Map<String, Set<SearchResult>> search(
+            final LdapContext ctx,
+            final String filter,
+            final SearchControls searchCtls,
             final boolean updateLastSyncToken) {
 
         final Map<String, Set<SearchResult>> result =
                 new HashMap<String, Set<SearchResult>>();
 
-        NamingEnumeration<SearchResult> answer;
-        Control[] rspCtls;
-        DirSyncResponseControl dirSyncRspCtl;
         for (String baseContextDn :
                 conn.getConfiguration().getBaseContextsToSynchronize()) {
 
@@ -216,29 +92,35 @@ public class ADSyncStrategy {
             }
 
             try {
-                answer = ctx.search(baseContextDn, filter, searchCtls);
+                final NamingEnumeration<SearchResult> answer =
+                        ctx.search(baseContextDn, filter, searchCtls);
+
                 while (answer.hasMoreElements()) {
                     result.get(baseContextDn).add(answer.nextElement());
                 }
+
                 if (LOG.isOk()) {
                     LOG.ok("Search found {0} items",
                             result.get(baseContextDn).size());
                 }
 
                 if (updateLastSyncToken) {
-                    rspCtls = ctx.getResponseControls();
+                    final Control[] rspCtls = ctx.getResponseControls();
+
                     if (rspCtls != null) {
                         if (LOG.isOk()) {
                             LOG.ok("Response Controls: {0}", rspCtls.length);
                         }
+
                         for (int i = 0; i < rspCtls.length; i++) {
                             if (rspCtls[i] instanceof DirSyncResponseControl) {
-                                dirSyncRspCtl =
+                                DirSyncResponseControl dirSyncRspCtl =
                                         (DirSyncResponseControl) rspCtls[i];
-                                latestSyncToken = new SyncToken(
-                                        dirSyncRspCtl.getCookie());
+                                latestSyncToken =
+                                        new SyncToken(dirSyncRspCtl.getCookie());
                             }
                         }
+
                         if (LOG.isOk()) {
                             LOG.ok("Latest sync token set to {0}",
                                     latestSyncToken);
@@ -286,7 +168,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Get Synchronization Context
         // -----------------------------------
-        LdapContext ctx = conn.getInitialContext();
+        final LdapContext ctx;
 
         try {
             if (token == null
@@ -297,12 +179,15 @@ public class ADSyncStrategy {
                 if (LOG.isOk()) {
                     LOG.ok("Synchronization with empty token.");
                 }
-                ctx.setRequestControls(new Control[]{new DirSyncControl()});
+
+                ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
+
             } else {
                 if (LOG.isOk()) {
                     LOG.ok("Synchronization with token.");
                 }
-                ctx.setRequestControls(new Control[]{
+
+                ctx = conn.getSyncContext(new Control[]{
                             new DirSyncControl((byte[]) token.getValue())});
             }
         } catch (Exception e) {
@@ -322,8 +207,7 @@ public class ADSyncStrategy {
             if (changes.containsKey(baseDN)) {
                 for (SearchResult sr : changes.get(baseDN)) {
                     try {
-                        handleSyncDelta(
-                                oclass, ctx, sr, baseDN, handler, handled);
+                        handleSyncDelta(oclass, ctx, sr, handler, handled);
                     } catch (NamingException e) {
                         LOG.error(e, "SyncDelta handling for '{0}' failed",
                                 sr.getName());
@@ -341,7 +225,6 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final LdapContext ctx,
             final SearchResult sr,
-            final String baseContext,
             final SyncResultsHandler handler,
             final Set<String> handled)
             throws NamingException {
@@ -418,6 +301,7 @@ public class ADSyncStrategy {
             member00 = sr.getAttributes().get("member;range=0-0");
 
             ctx.setRequestControls(null);
+
             String userDN;
 
             if (member11 != null) {
@@ -450,7 +334,7 @@ public class ADSyncStrategy {
 
                             handler.handle(getSyncDelta(
                                     oclass,
-                                    baseContext,
+                                    userDN,
                                     SyncDeltaType.CREATE_OR_UPDATE,
                                     profile));
                         }
@@ -483,7 +367,7 @@ public class ADSyncStrategy {
 
                         handler.handle(getSyncDelta(
                                 oclass,
-                                baseContext,
+                                userDN,
                                 SyncDeltaType.DELETE,
                                 profile));
                     }
@@ -505,7 +389,7 @@ public class ADSyncStrategy {
 
                 handler.handle(getSyncDelta(
                         oclass,
-                        baseContext,
+                        sr.getNameInNamespace(),
                         SyncDeltaType.DELETE,
                         profile));
             } else {
@@ -525,7 +409,7 @@ public class ADSyncStrategy {
 
                     handler.handle(getSyncDelta(
                             oclass,
-                            baseContext,
+                            sr.getNameInNamespace(),
                             SyncDeltaType.CREATE_OR_UPDATE,
                             profile));
                 } else {
@@ -544,7 +428,7 @@ public class ADSyncStrategy {
 
     private SyncDelta getSyncDelta(
             final ObjectClass oclass,
-            final String baseContextDn,
+            final String entryDN,
             final SyncDeltaType syncDeltaType,
             final Attributes profile)
             throws NamingException {
@@ -579,7 +463,8 @@ public class ADSyncStrategy {
 
         // Set Connector Object
         if (SyncDeltaType.DELETE != syncDeltaType) {
-            sdb.setObject(createConnectorObject(baseContextDn, profile, oclass));
+            sdb.setObject(new ADUtilities((ADConnection) conn).
+                    createConnectorObject(entryDN, profile, oclass));
         }
 
         return sdb.build();

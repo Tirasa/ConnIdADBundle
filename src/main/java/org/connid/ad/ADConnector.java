@@ -22,13 +22,26 @@
  */
 package org.connid.ad;
 
+import org.connid.ad.search.ADSearch;
+import org.connid.ad.crud.ADUpdate;
+import org.connid.ad.crud.ADDelete;
+import org.connid.ad.crud.ADCreate;
+import org.connid.ad.authentication.ADAuthenticate;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import org.connid.ad.sync.ADSyncStrategy;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.common.objects.Attribute;
+import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
+import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
+import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
 import org.identityconnectors.ldap.LdapConnector;
@@ -43,6 +56,21 @@ displayNameKey = "ADConnector")
 public class ADConnector extends LdapConnector {
 
     private static final Log LOG = Log.getLog(ADConnector.class);
+
+    public static final String UACCONTROL_ATTR = "userAccountControl";
+
+    //some useful constants from lmaccess.h
+    public static final int UF_ACCOUNTDISABLE = 0x0002;
+
+    public static final int UF_PASSWD_NOTREQD = 0x0020;
+
+    public static final int UF_PASSWD_CANT_CHANGE = 0x0040;
+
+    public static final int UF_NORMAL_ACCOUNT = 0x0200;
+
+    public static final int UF_DONT_EXPIRE_PASSWD = 0x10000;
+
+    public static final int UF_PASSWORD_EXPIRED = 0x800000;
 
     /**
      * The configuration for this connector instance.
@@ -88,7 +116,7 @@ public class ADConnector extends LdapConnector {
             final LdapFilter query,
             final ResultsHandler handler,
             final OperationOptions options) {
-        new ADLdapSearch(conn, oclass, query, options).executeADQuery(handler);
+        new ADSearch(conn, oclass, query, options).executeADQuery(handler);
     }
 
     @Override
@@ -101,5 +129,75 @@ public class ADConnector extends LdapConnector {
             final SyncResultsHandler handler, final OperationOptions options) {
 
         syncStrategy.sync(token, handler, options, oclass);
+    }
+
+    @Override
+    public Uid create(
+            final ObjectClass oclass,
+            final Set<Attribute> attrs,
+            final OperationOptions options) {
+
+        final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
+
+        // add groups
+        attributes.add(AttributeBuilder.build(
+                "ldapGroups", Arrays.asList(config.getMemberships())));
+
+        return new ADCreate(conn, oclass, attributes, options).create();
+    }
+
+    @Override
+    public Uid update(
+            final ObjectClass oclass,
+            final Uid uid,
+            Set<Attribute> attrs,
+            final OperationOptions options) {
+
+        return new ADUpdate(conn, oclass, uid).update(attrs);
+    }
+
+    @Override
+    public void delete(
+            final ObjectClass oclass,
+            final Uid uid,
+            final OperationOptions options) {
+
+        new ADDelete(conn, oclass, uid).delete();
+    }
+
+    @Override
+    public Schema schema() {
+        return conn.getADSchema().getSchema();
+    }
+
+    @Override
+    public Uid authenticate(
+            final ObjectClass objectClass,
+            final String username,
+            final GuardedString password,
+            final OperationOptions options) {
+
+        return new ADAuthenticate(conn, objectClass, username, options).
+                authenticate(password);
+    }
+
+    @Override
+    public Uid resolveUsername(
+            final ObjectClass objectClass,
+            final String username,
+            final OperationOptions options) {
+
+        return new ADAuthenticate(conn, objectClass, username, options).
+                resolveUsername();
+    }
+
+    @Override
+    public void test() {
+        conn.test();
+    }
+
+    @Override
+    public void checkAlive() {
+        conn.checkAlive();
     }
 }

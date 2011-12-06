@@ -20,7 +20,7 @@
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
  */
-package org.connid.ad;
+package org.connid.ad.search;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
 import com.sun.jndi.ldap.ctl.VirtualListViewResponseControl;
@@ -92,8 +92,11 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
             final SearchControls searchControls,
             final SearchResultsHandler handler)
             throws IOException, NamingException {
-        LOG.ok("Searching in {0} with filter {1} and {2}",
-                baseDNs, query, searchControlsToString(searchControls));
+
+        if (LOG.isOk()) {
+            LOG.ok("Searching in {0} with filter {1} and {2}",
+                    baseDNs, query, searchControlsToString(searchControls));
+        }
 
         Iterator<String> baseDNIter = baseDNs.iterator();
         boolean proceed = true;
@@ -116,7 +119,10 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
             final SearchControls searchControls,
             final SearchResultsHandler handler)
             throws IOException, NamingException {
-        LOG.ok("Searching in {0}", baseDN);
+
+        if (LOG.isOk()) {
+            LOG.ok("Searching in {0}", baseDN);
+        }
 
         index = 1;
         lastListSize = 0;
@@ -133,8 +139,11 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
                     index, lastListSize, 0, afterCount, Control.CRITICAL);
             vlvControl.setContextID(cookie);
 
-            LOG.ok("New search: target = {0}, afterCount = {1}",
-                    index, afterCount);
+            if (LOG.isOk()) {
+                LOG.ok("New search: target = {0}, afterCount = {1}",
+                        index, afterCount);
+            }
+
             ctx.setRequestControls(new Control[]{sortControl, vlvControl});
 
             // Need to process the response controls, which are available after
@@ -222,8 +231,11 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
                     if (vlvControl.getResultCode() == 0) {
                         lastListSize = vlvControl.getListSize();
                         cookie = vlvControl.getContextID();
-                        LOG.ok("Response control: lastListSize = {0}",
-                                lastListSize);
+
+                        if (LOG.isOk()) {
+                            LOG.ok("Response control: lastListSize = {0}",
+                                    lastListSize);
+                        }
                     } else {
                         throw vlvControl.getException();
                     }

@@ -25,7 +25,6 @@ package org.connid.ad;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 
 import java.util.HashSet;
@@ -115,6 +114,10 @@ public abstract class AbstractTest {
 
     }
 
+    protected String getEntryDN(final String cn) {
+        return "cn=" + cn + "," + USERCONTEXT;
+    }
+
     protected static Set<Attribute> getSimpleProfile(
             final String cn) {
         return getSimpleProfile(cn, conf);
@@ -125,34 +128,32 @@ public abstract class AbstractTest {
 
         final Set<Attribute> attributes = new HashSet<Attribute>();
 
-        attributes.add(new Name("cn=" + cn + "," + USERCONTEXT));
+        attributes.add(
+                new Name("cn=" + cn + "," + USERCONTEXT));
+
         attributes.add(AttributeBuilder.build(
-                "cn",
-                Collections.singletonList(cn)));
-        attributes.add(AttributeBuilder.build(
-                "sn",
-                Collections.singletonList("sntest")));
-        attributes.add(AttributeBuilder.build(
-                "givenName",
-                Collections.singletonList("gntest")));
-        attributes.add(AttributeBuilder.build(
-                "displayName",
-                Collections.singletonList("dntest")));
-        attributes.add(AttributeBuilder.build(
-                "sAMAccountName",
-                Collections.singletonList("SAAN_" + cn)));
-        attributes.add(AttributeBuilder.build(
-                "userPrincipalName",
-                Collections.singletonList(cn + "@tirasawin.local")));
+                Uid.NAME, Collections.singletonList("SAAN_" + cn)));
+
+        attributes.add(AttributeBuilder.buildEnabled(true));
+
         attributes.add(AttributeBuilder.buildPassword(
-                "password".toCharArray()));
+                "Password123".toCharArray()));
+
         attributes.add(AttributeBuilder.build(
-                "ldapGroups", Arrays.asList(conf.getMemberships())));
+                "sn", Collections.singletonList("sntest")));
+
+        attributes.add(AttributeBuilder.build(
+                "givenName", Collections.singletonList("gntest")));
+
+        attributes.add(AttributeBuilder.build(
+                "displayName", Collections.singletonList("dntest")));
+
 
         return attributes;
     }
 
     protected static ADConfiguration getSimpleConf(final Properties prop) {
+
         final ADConfiguration configuration = new ADConfiguration();
 
         configuration.setObjectClassesToSynchronize("user");
@@ -176,6 +177,8 @@ public abstract class AbstractTest {
         configuration.setMemberships(prop.getProperty("memberships").split(";"));
 
         configuration.setRetrieveDeletedUser(false);
+
+        configuration.setTrustAllCerts(true);
 
         assertFalse(configuration.getMemberships() == null
                 || configuration.getMemberships().length == 0);

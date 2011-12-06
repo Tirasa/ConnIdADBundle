@@ -20,7 +20,7 @@
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
  */
-package org.connid.ad;
+package org.connid.ad.search;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -74,9 +74,13 @@ public class ADDefaultSearchStrategy extends DefaultSearchStrategy {
             final List<String> baseDNs,
             final String query,
             final SearchControls searchControls,
-            final SearchResultsHandler handler) throws NamingException {
-        LOG.ok("Searching in {0} with filter {1} and {2}",
-                baseDNs, query, searchControlsToString(searchControls));
+            final SearchResultsHandler handler)
+            throws NamingException {
+
+        if (LOG.isOk()) {
+            LOG.ok("Searching in {0} with filter {1} and {2}",
+                    baseDNs, query, searchControlsToString(searchControls));
+        }
 
         Iterator<String> baseDNIter = baseDNs.iterator();
         boolean proceed = true;

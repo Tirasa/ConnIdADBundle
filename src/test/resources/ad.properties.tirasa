@@ -1,7 +1,0 @@
-host = acacia
-port = 389
-principal = cn=Administrator,cn=Users,dc=tirasawin,dc=local
-credentials = T1r4s4w1n1
-usersBaseContext = cn=Users,dc=tirasawin,dc=local
-baseContextToSynchronize = dc=tirasawin,dc=local
-memberships = CN=tosti1,CN=Users,DC=tirasawin,DC=local ; CN=tosti2,CN=Users,DC=tirasawin,DC=local
