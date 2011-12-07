@@ -178,6 +178,7 @@ class ADSchemaBuilder {
     private AttributeInfo handleAttribute(final String displayName) {
         final String IS_SINGLE_VALUE = "isSingleValued";
         final String SYSTEM_ONLY = "systemOnly";
+        final String LDAP_DISPLAY_NAME = "lDAPDisplayName";
 
         final Set<Flags> flags = EnumSet.noneOf(Flags.class);
 
@@ -191,6 +192,18 @@ class ADSchemaBuilder {
         final String[] baseContexts =
                 connection.getConfiguration().getBaseContextsToSynchronize();
 
+        // ------------------------------
+        // Search control
+        // ------------------------------
+        final SearchControls searchCtls =
+                LdapInternalSearch.createDefaultSearchControls();
+
+        searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+        searchCtls.setReturningAttributes(
+                new String[]{IS_SINGLE_VALUE, SYSTEM_ONLY});
+        // ------------------------------
+
         int i = 0;
         Attributes attributes = null;
 
@@ -198,16 +211,18 @@ class ADSchemaBuilder {
 
             final StringBuilder dn = new StringBuilder();
 
-            dn.append("cn=").
-                    append(displayName).
-                    append(",cn=schema, cn=configuration,").
-                    append(baseContexts[i]);
+            dn.append("cn=schema, cn=configuration,").append(baseContexts[i]);
 
             try {
 
-                attributes = ctx.getAttributes(
+                final NamingEnumeration<SearchResult> result = ctx.search(
                         dn.toString(),
-                        new String[]{IS_SINGLE_VALUE, SYSTEM_ONLY});
+                        LDAP_DISPLAY_NAME + "=" + displayName,
+                        searchCtls);
+
+                if (result != null && result.hasMoreElements()) {
+                    attributes = result.next().getAttributes();
+                }
 
             } catch (NamingException e) {
                 LOG.error(e, "Error retrieving attributes for {0}", dn);
@@ -218,6 +233,7 @@ class ADSchemaBuilder {
 
         if (attributes != null) {
             final Attribute isSingle = attributes.get(IS_SINGLE_VALUE);
+
             try {
                 if (isSingle == null
                         || isSingle.get() == null
