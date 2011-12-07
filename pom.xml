@@ -23,10 +23,7 @@
 * [name of copyright owner]"
 */
 -->
-<project
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -38,16 +35,16 @@
 
     <groupId>org.connid.bundles</groupId>
     <artifactId>org.connid.bundles.ad</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.9</version>
 
     <name>ConnId Bundles: AD</name>
 
     <packaging>jar</packaging>
 
     <scm>
-        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/csvdir/trunk/</connection>
-        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/csvdir/trunk/</developerConnection>
-        <url>http://connid.googlecode.com/svn/bundles/csvdir/trunk/</url>
+        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/csvdir/tags/org.connid.bundles.ad-0.9</connection>
+        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/csvdir/tags/org.connid.bundles.ad-0.9</developerConnection>
+        <url>http://connid.googlecode.com/svn/bundles/csvdir/tags/org.connid.bundles.ad-0.9</url>
     </scm>
 
     <properties>
