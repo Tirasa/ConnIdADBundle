@@ -156,9 +156,22 @@ public class CrudTest extends AbstractTest {
         // Returned attributes: memberOf, NAME and UID
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
-        assertEquals(// check on Set to ignore order
-                new HashSet(Arrays.asList(conf.getMemberships())),
-                new HashSet(object.getAttributeByName("memberOf").getValue()));
+
+        final Set<String> expected = new HashSet<String>();
+        for (String dn : conf.getMemberships()) {
+            expected.add(dn.toLowerCase());
+        }
+
+        final Set actual = new HashSet();
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString().toLowerCase());
+        }
+
+        assertEquals(expected.size(), actual.size());
+
+        for (String dn : expected) {
+            assertTrue(actual.contains(dn));
+        }
 
         assertEquals(SAAN, object.getUid().getUidValue());
 
