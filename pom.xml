@@ -42,9 +42,9 @@
     <packaging>jar</packaging>
 
     <scm>
-        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/csvdir/trunk/</connection>
-        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/csvdir/trunk/</developerConnection>
-        <url>http://connid.googlecode.com/svn/bundles/csvdir/trunk/</url>
+        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/ad/trunk/</connection>
+        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/ad/trunk/</developerConnection>
+        <url>http://connid.googlecode.com/svn/bundles/ad/trunk/</url>
     </scm>
 
     <properties>
