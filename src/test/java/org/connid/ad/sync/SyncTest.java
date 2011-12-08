@@ -107,6 +107,17 @@ public class SyncTest extends AbstractTest {
         // manually upadated the member attribute of a specified group
         assertFalse(updated.isEmpty());
 
+        // Since DirSync search is paginated we must loop on sync until returned
+        // handles will be empty
+        while (!updated.isEmpty() && !deleted.isEmpty()) {
+
+            updated.clear();
+            deleted.clear();
+
+            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+        }
+
         updated.clear();
         deleted.clear();
 
