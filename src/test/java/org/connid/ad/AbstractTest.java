@@ -148,7 +148,6 @@ public abstract class AbstractTest {
         attributes.add(AttributeBuilder.build(
                 "displayName", Collections.singletonList("dntest")));
 
-
         return attributes;
     }
 

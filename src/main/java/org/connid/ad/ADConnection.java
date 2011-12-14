@@ -72,7 +72,7 @@ public class ADConnection extends LdapConnection {
         if (pair.second != null) {
             quietClose(pair.second);
         }
-        
+
         if (LOG.isOk()) {
             LOG.ok("Authentication result: {0}", pair.first);
         }
@@ -180,6 +180,10 @@ public class ADConnection extends LdapConnection {
 
         String authentication = isNotBlank(principal) ? "simple" : "none";
         env.put(Context.SECURITY_AUTHENTICATION, authentication);
+
+        if (LOG.isOk()) {
+            LOG.ok("Initial context environment: {0}", env);
+        }
 
         if (isNotBlank(principal)) {
 

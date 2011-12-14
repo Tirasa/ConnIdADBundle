@@ -199,15 +199,19 @@ public class ADSyncStrategy {
         final Map<String, Set<SearchResult>> changes =
                 search(ctx, filter, searchCtls, true);
 
-        final Set<String> handled = new HashSet<String>();
-
         for (String baseDN :
                 conn.getConfiguration().getBaseContextsToSynchronize()) {
 
             if (changes.containsKey(baseDN)) {
                 for (SearchResult sr : changes.get(baseDN)) {
                     try {
-                        handleSyncDelta(oclass, ctx, sr, handler, handled);
+
+                        handleSyncDelta(
+                                oclass,
+                                ctx,
+                                sr,
+                                handler);
+
                     } catch (NamingException e) {
                         LOG.error(e, "SyncDelta handling for '{0}' failed",
                                 sr.getName());
@@ -225,8 +229,7 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final LdapContext ctx,
             final SearchResult sr,
-            final SyncResultsHandler handler,
-            final Set<String> handled)
+            final SyncResultsHandler handler)
             throws NamingException {
 
         if (ctx == null || sr == null) {
@@ -246,11 +249,6 @@ public class ADSyncStrategy {
 
         String guid = DirSyncUtils.getGuidAsString(
                 (byte[]) profile.get("objectGUID").get());
-
-        if (handled.contains(guid)) {
-            LOG.info("ObjectGUID {0} already handled", guid);
-            return;
-        }
 
         boolean isDeleted = false;
 
@@ -329,15 +327,11 @@ public class ADSyncStrategy {
                         guid = DirSyncUtils.getGuidAsString(
                                 (byte[]) profile.get("objectGUID").get());
 
-                        if (!handled.contains(guid)) {
-                            handled.add(guid);
-
-                            handler.handle(getSyncDelta(
-                                    oclass,
-                                    userDN,
-                                    SyncDeltaType.CREATE_OR_UPDATE,
-                                    profile));
-                        }
+                        handler.handle(getSyncDelta(
+                                oclass,
+                                userDN,
+                                SyncDeltaType.CREATE_OR_UPDATE,
+                                profile));
                     }
                 }
             }
@@ -362,15 +356,11 @@ public class ADSyncStrategy {
                     guid = DirSyncUtils.getGuidAsString(
                             (byte[]) profile.get("objectGUID").get());
 
-                    if (!handled.contains(guid)) {
-                        handled.add(guid);
-
-                        handler.handle(getSyncDelta(
-                                oclass,
-                                userDN,
-                                SyncDeltaType.DELETE,
-                                profile));
-                    }
+                    handler.handle(getSyncDelta(
+                            oclass,
+                            userDN,
+                            SyncDeltaType.DELETE,
+                            profile));
                 }
             }
         } else if (classes.contains("user")) {
@@ -378,8 +368,6 @@ public class ADSyncStrategy {
                 LOG.ok("Created/Updated/Deleted user {0}",
                         sr.getNameInNamespace());
             }
-
-            handled.add(guid);
 
             if (isDeleted) {
 
@@ -392,6 +380,7 @@ public class ADSyncStrategy {
                         sr.getNameInNamespace(),
                         SyncDeltaType.DELETE,
                         profile));
+
             } else {
                 // user to be created/updated
                 if (LOG.isOk()) {
@@ -412,6 +401,7 @@ public class ADSyncStrategy {
                             sr.getNameInNamespace(),
                             SyncDeltaType.CREATE_OR_UPDATE,
                             profile));
+
                 } else {
                     if (LOG.isOk()) {
                         LOG.ok("Ignore changes about user {0}",

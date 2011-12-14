@@ -34,26 +34,26 @@ public class ADConfiguration extends LdapConfiguration {
     private boolean retrieveDeletedUser;
 
     private List<String> memberships;
-    
+
     private boolean trustAllCerts;
 
     public ADConfiguration() {
         super();
 
-        super.setUidAttribute("sAMAccountName");
-        super.setSynchronizePasswords(true);
+        setUidAttribute("sAMAccountName");
+        setSynchronizePasswords(true);
 
-        super.setSynchronizePasswords(false);
-        super.setAccountUserNameAttributes("sAMAccountName");
-        super.setObjectClassesToSynchronize(new String[]{"user"});
-        super.setGroupMemberAttribute("member");
-        super.setAccountObjectClasses(new String[]{
+        setSynchronizePasswords(false);
+        setAccountUserNameAttributes("sAMAccountName");
+        setObjectClassesToSynchronize(new String[]{"user"});
+        setGroupMemberAttribute("member");
+        setAccountObjectClasses(new String[]{
                     "top", "person", "organizationalPerson", "user"});
 
-        super.setUsePagedResultControl(true);
+        setUsePagedResultControl(true);
 
-        super.setPasswordAttribute("unicodePwd");
-        super.setSsl(true);
+        setPasswordAttribute("unicodePwd");
+        setSsl(true);
 
         memberships = new ArrayList<String>();
         retrieveDeletedUser = true;

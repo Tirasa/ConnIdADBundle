@@ -89,7 +89,7 @@ public class BasicFeaturesTest {
 
         assertEquals(
                 "(|(&(objectClass=user)"
-                + "(|(memberOf=cn=groupA,cn=group,o=isp)"
+                + "(&(memberOf=cn=groupA,cn=group,o=isp)"
                 + "(memberOf=cn=groupB,cn=group,o=isp)"
                 + "(memberOf=cn=groupC,cn=group,o=isp)))"
                 + "(&(objectClass=group)"

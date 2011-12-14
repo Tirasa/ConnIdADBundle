@@ -150,7 +150,8 @@ public class SyncTest extends AbstractTest {
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
+            // user ccreation and group modification
+            assertEquals(2, updated.size());
 
             // chek for returned attributes
             assertEquals(4, updated.get(0).getObject().getAttributes().size());

@@ -47,7 +47,7 @@ public class DirSyncUtils {
 
         if (memberships != null && memberships.length > 0) {
             mfilter.append("(&(objectClass=group)(|");
-            ufilter.append("(|");
+            ufilter.append("(&");
 
             for (String group : memberships) {
                 mfilter.append("(distinguishedName=").append(group).append(")");
@@ -111,7 +111,10 @@ public class DirSyncUtils {
             final String dn,
             final AbstractConfiguration conf) {
 
-        final String filter = getFilter(conf);
+        final StringBuilder filter = new StringBuilder();
+        filter.append("(&(").append(createLdapFilter(conf)).append(")");
+
+        filter.append(getFilter(conf) != null ? getFilter(conf) : "").append(")");
 
         final SearchControls searchCtls =
                 LdapInternalSearch.createDefaultSearchControls();
@@ -121,10 +124,10 @@ public class DirSyncUtils {
 
         boolean found = true;
 
-        if (StringUtil.isNotBlank(filter)) {
+        if (StringUtil.isNotBlank(filter.toString())) {
             try {
                 final NamingEnumeration res =
-                        ctx.search(dn, filter, searchCtls);
+                        ctx.search(dn, filter.toString(), searchCtls);
 
                 found = res != null && res.hasMoreElements();
             } catch (NamingException ex) {
