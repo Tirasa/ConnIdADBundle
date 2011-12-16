@@ -33,13 +33,12 @@ import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 public class DirSyncUtils {
 
-    public static String createLdapFilter(final AbstractConfiguration conf) {
+    public static String createLdapFilter(final ADConfiguration conf) {
 
-        final String[] memberships =
-                ((ADConfiguration) conf).getMemberships();
+        final String[] memberships = conf.getMemberships();
 
-        final String isDeleted = String.valueOf(
-                ((ADConfiguration) conf).isRetrieveDeletedUser()).toUpperCase();
+        final String isDeleted =
+                String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
 
         final StringBuilder filter = new StringBuilder();
         final StringBuilder mfilter = new StringBuilder();
@@ -47,7 +46,7 @@ public class DirSyncUtils {
 
         if (memberships != null && memberships.length > 0) {
             mfilter.append("(&(objectClass=group)(|");
-            ufilter.append("(&");
+            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
 
             for (String group : memberships) {
                 mfilter.append("(distinguishedName=").append(group).append(")");
@@ -106,10 +105,54 @@ public class DirSyncUtils {
         return strGUID;
     }
 
+    /**
+     * Verify custom filter (used to validate any retrieved user).
+     * @param ctx ldap context.
+     * @param dn user distinguished name.
+     * @param conf connector configuration.
+     * @return TRUE if verified; FALSE otherwise.
+     */
+    public static boolean verifyCustomFilter(
+            final LdapContext ctx,
+            final String dn,
+            final ADConfiguration conf) {
+
+        final String filter = getFilter(conf);
+
+        final SearchControls searchCtls =
+                LdapInternalSearch.createDefaultSearchControls();
+
+        searchCtls.setSearchScope(SearchControls.OBJECT_SCOPE);
+        searchCtls.setReturningAttributes(new String[]{});
+
+        boolean found = true;
+
+        if (StringUtil.isNotBlank(filter)) {
+            try {
+                final NamingEnumeration res =
+                        ctx.search(dn, filter, searchCtls);
+
+                found = res != null && res.hasMoreElements();
+            } catch (NamingException ex) {
+                found = false;
+            }
+        }
+
+        return found;
+    }
+
+    /**
+     * Verify complete filter including the custom one.
+     * This method is used to validate users 'IN' group.
+     * @param ctx ldap context.
+     * @param dn user distinguished name.
+     * @param conf connector configuration.
+     * @return TRUE if verified; FALSE otherwise.
+     */
     public static boolean verifyFilter(
             final LdapContext ctx,
             final String dn,
-            final AbstractConfiguration conf) {
+            final ADConfiguration conf) {
 
         final StringBuilder filter = new StringBuilder();
         filter.append("(&(").append(createLdapFilter(conf)).append(")");

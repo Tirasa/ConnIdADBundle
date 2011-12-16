@@ -38,6 +38,14 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             props.add(new PropertyDescriptor(
                     "trustAllCerts", ADConfiguration.class));
 
+            // membershipsInOr
+            props.add(new PropertyDescriptor(
+                    "membershipsInOr", ADConfiguration.class));
+            
+            // loading
+            props.add(new PropertyDescriptor(
+                    "loading", ADConfiguration.class));
+
             // failover
             props.add(new PropertyDescriptor(
                     "failover", LdapConfiguration.class));
@@ -57,10 +65,6 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // accountSearchFilter
             props.add(new PropertyDescriptor(
                     "accountSearchFilter", LdapConfiguration.class));
-
-            // latestSyncToken
-            props.add(new PropertyDescriptor(
-                    "latestSyncToken", ADConfiguration.class));
 
             // retrieveDeletedUser
             props.add(new PropertyDescriptor(

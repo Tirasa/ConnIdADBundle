@@ -109,7 +109,7 @@ public class SyncTest extends AbstractTest {
 
         // Since DirSync search is paginated we must loop on sync until returned
         // handles will be empty
-        while (!updated.isEmpty() && !deleted.isEmpty()) {
+        while (!updated.isEmpty() || !deleted.isEmpty()) {
 
             updated.clear();
             deleted.clear();
@@ -266,8 +266,21 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            // sync user delete (member out is like a user delete)
+            conf.setRetrieveDeletedUser(true);
+
+            final ConnectorFacadeFactory factory =
+                    ConnectorFacadeFactory.getInstance();
+
+            final APIConfiguration impl =
+                    TestHelpers.createTestConfiguration(
+                    ADConnector.class, conf);
+
+            final ConnectorFacade newConnector = factory.newInstance(impl);
+
+            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(updated.isEmpty());
             assertEquals(1, deleted.size());
@@ -337,6 +350,102 @@ public class SyncTest extends AbstractTest {
     }
 
     @Test
+    public void initialLoading() {
+        // We need to have several operation in the right sequence in order
+        // to verify synchronization ...
+
+        // ----------------------------------
+        // Handler specification
+        // ----------------------------------
+
+        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
+        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
+
+        final SyncResultsHandler hundler = new SyncResultsHandler() {
+
+            @Override
+            public boolean handle(final SyncDelta sd) {
+                if (sd.getDeltaType() == SyncDeltaType.DELETE) {
+                    return deleted.add(sd);
+                } else {
+                    return updated.add(sd);
+                }
+            }
+        };
+        // ----------------------------------
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(
+                Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
+
+        SyncToken token = null;
+
+        conf.setRetrieveDeletedUser(false);
+        conf.setLoading(true);
+
+        ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+
+        APIConfiguration impl = TestHelpers.createTestConfiguration(
+                ADConnector.class, conf);
+
+        ConnectorFacade newConnector = factory.newInstance(impl);
+
+        // ----------------------------------
+        // check initial loading
+        // ----------------------------------
+        newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+        token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+        assertFalse(updated.isEmpty());
+        assertTrue(deleted.isEmpty());
+
+        // Since DirSync search is paginated we must loop on sync until returned
+        // handles will be empty
+        while (!updated.isEmpty() || !deleted.isEmpty()) {
+            updated.clear();
+            deleted.clear();
+
+            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+        }
+
+        // ----------------------------------
+        // check sync with new user (token updated)
+        // ----------------------------------conf.setRetrieveDeletedUser(false);
+        conf.setLoading(false);
+
+        factory = ConnectorFacadeFactory.getInstance();
+        impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        newConnector = factory.newInstance(impl);
+
+        final String CN13 = SyncTest.class.getSimpleName() + "13";
+
+        Uid uid13 = null;
+
+        try {
+            // user added sync
+            uid13 = connector.create(
+                    ObjectClass.ACCOUNT, getSimpleProfile(CN13), null);
+
+            updated.clear();
+            deleted.clear();
+
+            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            assertTrue(deleted.isEmpty());
+            // user ccreation and group modification
+            assertEquals(2, updated.size());
+        } finally {
+            if (uid13 != null) {
+                connector.delete(ObjectClass.ACCOUNT, uid13, null);
+            }
+        }
+        // ----------------------------------
+    }
+
+    @Test
     public void verifyObjectGUID() {
         String SAAN = "SAAN_" + SyncTest.class.getSimpleName() + "4";
 
@@ -374,17 +483,17 @@ public class SyncTest extends AbstractTest {
         final ADConnection connection = new ADConnection(configuration);
         final LdapContext ctx = connection.getInitialContext();
 
-        assertTrue(DirSyncUtils.verifyFilter(ctx, DN, configuration));
+        assertTrue(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
 
         configuration.setAccountSearchFilter("(&(Objectclass=user)"
                 + "(cn=" + SyncTest.class.getSimpleName() + "5))");
 
-        assertTrue(DirSyncUtils.verifyFilter(ctx, DN, configuration));
+        assertTrue(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
 
         configuration.setAccountSearchFilter("(&(Objectclass=user)"
                 + "(cn=" + SyncTest.class.getSimpleName() + "6))");
 
-        assertFalse(DirSyncUtils.verifyFilter(ctx, DN, configuration));
+        assertFalse(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
     }
 
     @AfterClass

@@ -29,13 +29,15 @@ import org.identityconnectors.ldap.LdapConfiguration;
 
 public class ADConfiguration extends LdapConfiguration {
 
-    private String latestSyncToken;
-
     private boolean retrieveDeletedUser;
 
     private List<String> memberships;
 
     private boolean trustAllCerts;
+
+    private boolean loading = false;
+
+    private boolean membershipsInOr = false;
 
     public ADConfiguration() {
         super();
@@ -51,20 +53,14 @@ public class ADConfiguration extends LdapConfiguration {
                     "top", "person", "organizationalPerson", "user"});
 
         setUsePagedResultControl(true);
+        setBlockSize(100);
+        setUseBlocks(true);
 
         setPasswordAttribute("unicodePwd");
         setSsl(true);
 
         memberships = new ArrayList<String>();
         retrieveDeletedUser = true;
-    }
-
-    public String getLatestSyncToken() {
-        return latestSyncToken;
-    }
-
-    public void setLatestSyncToken(String latestSyncToken) {
-        this.latestSyncToken = latestSyncToken;
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
@@ -99,5 +95,25 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setTrustAllCerts(final boolean trustAllCerts) {
         this.trustAllCerts = trustAllCerts;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "loading.display",
+    helpMessageKey = "loading.help", required = true, order = 4)
+    public boolean isLoading() {
+        return loading;
+    }
+
+    public void setLoading(boolean loading) {
+        this.loading = loading;
+    }
+
+    public boolean isMembershipsInOr() {
+        return membershipsInOr;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
+    helpMessageKey = "membershipsInOr.help", required = true, order = 5)
+    public void setMembershipsInOr(boolean membershipsInOr) {
+        this.membershipsInOr = membershipsInOr;
     }
 }

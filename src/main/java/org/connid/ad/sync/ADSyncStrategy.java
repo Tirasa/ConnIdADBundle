@@ -35,6 +35,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import org.connid.ad.ADConfiguration;
 import org.connid.ad.ADConnection;
 import org.connid.ad.util.ADUtilities;
 import org.connid.ad.util.DeletedControl;
@@ -146,8 +147,8 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search filter
         // -----------------------------------
-        final String filter =
-                DirSyncUtils.createLdapFilter(conn.getConfiguration());
+        final String filter = DirSyncUtils.createLdapFilter(
+                (ADConfiguration) conn.getConfiguration());
 
         if (LOG.isOk()) {
             LOG.ok("Search filter: " + filter);
@@ -285,6 +286,8 @@ public class ADSyncStrategy {
             classes.add(objectClasses.next());
         }
 
+        final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
+
         final javax.naming.directory.Attribute member11;
         final javax.naming.directory.Attribute member00;
 
@@ -302,7 +305,7 @@ public class ADSyncStrategy {
 
             String userDN;
 
-            if (member11 != null) {
+            if (member11 != null && !conf.isLoading()) {
                 if (LOG.isOk()) {
                     LOG.ok("Found users 'IN' ...");
                 }
@@ -315,8 +318,7 @@ public class ADSyncStrategy {
                     // for each new user "in" we must verify custom ldap filter
                     userDN = userDNs.next();
 
-                    if (DirSyncUtils.verifyFilter(
-                            ctx, userDN, conn.getConfiguration())) {
+                    if (DirSyncUtils.verifyFilter(ctx, userDN, conf)) {
 
                         if (LOG.isOk()) {
                             LOG.ok("IN user {0}", userDN);
@@ -336,7 +338,7 @@ public class ADSyncStrategy {
                 }
             }
 
-            if (member00 != null) {
+            if (member00 != null && conf.isRetrieveDeletedUser()) {
                 // users to be removed
                 if (LOG.isOk()) {
                     LOG.ok("Found users 'OUT' ...");
@@ -346,21 +348,25 @@ public class ADSyncStrategy {
                         (NamingEnumeration<String>) member00.getAll();
 
                 while (userDNs.hasMoreElements()) {
+                    // for each user "out" we must verify custom ldap filter
                     userDN = userDNs.next();
-                    if (LOG.isOk()) {
-                        LOG.ok("OUT user {0}", userDN);
+
+                    if (!DirSyncUtils.verifyFilter(ctx, userDN, conf)) {
+                        if (LOG.isOk()) {
+                            LOG.ok("OUT user {0}", userDN);
+                        }
+
+                        profile = ctx.getAttributes(userDN);
+
+                        guid = DirSyncUtils.getGuidAsString(
+                                (byte[]) profile.get("objectGUID").get());
+
+                        handler.handle(getSyncDelta(
+                                oclass,
+                                userDN,
+                                SyncDeltaType.DELETE,
+                                profile));
                     }
-
-                    profile = ctx.getAttributes(userDN);
-
-                    guid = DirSyncUtils.getGuidAsString(
-                            (byte[]) profile.get("objectGUID").get());
-
-                    handler.handle(getSyncDelta(
-                            oclass,
-                            userDN,
-                            SyncDeltaType.DELETE,
-                            profile));
                 }
             }
         } else if (classes.contains("user")) {
@@ -388,9 +394,7 @@ public class ADSyncStrategy {
                 }
 
                 if (DirSyncUtils.verifyFilter(
-                        ctx,
-                        sr.getNameInNamespace(),
-                        conn.getConfiguration())) {
+                        ctx, sr.getNameInNamespace(), conf)) {
 
                     if (LOG.isOk()) {
                         LOG.ok("Matched user {0}", sr.getNameInNamespace());
