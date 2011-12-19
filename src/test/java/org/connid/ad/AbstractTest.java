@@ -179,6 +179,8 @@ public abstract class AbstractTest {
 
         configuration.setTrustAllCerts(true);
 
+        configuration.setMembershipsInOr(true);
+        
         assertFalse(configuration.getMemberships() == null
                 || configuration.getMemberships().length == 0);
 

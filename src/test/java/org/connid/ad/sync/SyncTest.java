@@ -151,7 +151,7 @@ public class SyncTest extends AbstractTest {
 
             assertTrue(deleted.isEmpty());
             // user ccreation and group modification
-            assertEquals(2, updated.size());
+            assertEquals(3, updated.size());
 
             // chek for returned attributes
             assertEquals(4, updated.get(0).getObject().getAttributes().size());
@@ -436,7 +436,7 @@ public class SyncTest extends AbstractTest {
 
             assertTrue(deleted.isEmpty());
             // user ccreation and group modification
-            assertEquals(2, updated.size());
+            assertEquals(3, updated.size());
         } finally {
             if (uid13 != null) {
                 connector.delete(ObjectClass.ACCOUNT, uid13, null);
