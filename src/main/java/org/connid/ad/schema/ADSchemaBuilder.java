@@ -107,6 +107,9 @@ class ADSchemaBuilder {
 
         final Set<String> schemaNames = new HashSet<String>();
 
+        // Issue http://code.google.com/p/connid/issues/detail?id=24
+        schemaNames.add(conf.getUidAttribute());
+
         final String schemaConfigurationPath = "CN=Schema,CN=Configuration";
 
         for (String suffix : conf.getBaseContextsToSynchronize()) {
