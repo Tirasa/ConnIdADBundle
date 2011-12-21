@@ -92,8 +92,8 @@ public class SyncTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(
-                Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
+        oob.setAttributesToGet(Arrays.asList(
+                new String[]{"sAMAccountName", "givenName", "memberOf"}));
 
         SyncToken token = null;
 
@@ -153,13 +153,15 @@ public class SyncTest extends AbstractTest {
             // user ccreation and group modification
             assertEquals(3, updated.size());
 
-            // chek for returned attributes
-            assertEquals(4, updated.get(0).getObject().getAttributes().size());
             final ConnectorObject obj = updated.get(0).getObject();
+
+            // chek for returned attributes
+            assertEquals(5, updated.get(0).getObject().getAttributes().size());
             assertNotNull(obj.getAttributeByName("sAMAccountName"));
             assertNotNull(obj.getAttributeByName("givenName"));
             assertNotNull(obj.getAttributeByName("__NAME__"));
             assertNotNull(obj.getAttributeByName("__UID__"));
+            assertNotNull(obj.getAttributeByName("memberOf"));
             assertEquals("SAAN_" + CN11, updated.get(0).getUid().getUidValue());
 
             updated.clear();
@@ -244,6 +246,29 @@ public class SyncTest extends AbstractTest {
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
+
+            mod = new ModificationItem[]{
+                new ModificationItem(
+                DirContext.ADD_ATTRIBUTE, new BasicAttribute(
+                "member",
+                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+            };
+
+            try {
+                ctx.modifyAttributes(conf.getMemberships()[1], mod);
+            } catch (NamingException e) {
+                LOG.error(e, "Error adding membership to {0}", CN12);
+                assert (false);
+            }
+
+            updated.clear();
+            deleted.clear();
+
+            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            assertTrue(deleted.isEmpty());
+            assertEquals(1, updated.size());
             // ----------------------------------
 
             // ----------------------------------
@@ -266,7 +291,6 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-
             // sync user delete (member out is like a user delete)
             conf.setRetrieveDeletedUser(true);
 
@@ -278,6 +302,76 @@ public class SyncTest extends AbstractTest {
                     ADConnector.class, conf);
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
+
+            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            assertTrue(deleted.isEmpty());
+            assertEquals(1, updated.size());
+
+            assertNotNull(
+                    updated.get(0).getObject().getAttributeByName("memberOf"));
+
+            assertNotNull(
+                    updated.get(0).getObject().getAttributeByName("memberOf").
+                    getValue());
+
+            assertEquals(1,
+                    updated.get(0).getObject().getAttributeByName("memberOf").
+                    getValue().size());
+
+            // add user to a group not involved into the filter
+            mod = new ModificationItem[]{
+                new ModificationItem(
+                DirContext.ADD_ATTRIBUTE, new BasicAttribute(
+                "member",
+                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+            };
+
+            try {
+                ctx.modifyAttributes("CN=HelpServicesGroup,CN=Users,"
+                        + conf.getBaseContextsToSynchronize()[0], mod);
+            } catch (NamingException e) {
+                LOG.error(e, "Error adding membership to {0}", CN12);
+                assert (false);
+            }
+
+            updated.clear();
+            deleted.clear();
+
+            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            assertTrue(deleted.isEmpty());
+            assertEquals(1, updated.size());
+
+            assertNotNull(
+                    updated.get(0).getObject().getAttributeByName("memberOf"));
+
+            assertNotNull(
+                    updated.get(0).getObject().getAttributeByName("memberOf").
+                    getValue());
+
+            assertEquals(2,
+                    updated.get(0).getObject().getAttributeByName("memberOf").
+                    getValue().size());
+
+            mod = new ModificationItem[]{
+                new ModificationItem(
+                DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(
+                "member",
+                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+            };
+
+            try {
+                ctx.modifyAttributes(conf.getMemberships()[1], mod);
+            } catch (NamingException e) {
+                LOG.error(e, "Error adding membership to {0}", CN12);
+                assert (false);
+            }
+
+            updated.clear();
+            deleted.clear();
 
             newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);

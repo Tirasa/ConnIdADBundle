@@ -33,6 +33,39 @@ import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 public class DirSyncUtils {
 
+    public static String createDirSyncFilter(final ADConfiguration conf) {
+
+        final String[] memberships = conf.getMemberships();
+
+        final String isDeleted =
+                String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
+
+        final StringBuilder filter = new StringBuilder();
+        final StringBuilder mfilter = new StringBuilder();
+        final StringBuilder ufilter = new StringBuilder();
+
+        mfilter.append("(objectClass=group)");
+
+        if (memberships != null && memberships.length > 0) {
+            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
+
+            for (String group : memberships) {
+                ufilter.append("(memberOf=").append(group).append(")");
+            }
+
+            ufilter.append(")");
+        }
+
+        ufilter.insert(0, "(&(objectClass=user)").append(")");
+
+        filter.append("(|").append(ufilter).append(mfilter).
+                append("(&(isDeleted=").
+                append(isDeleted).
+                append(")(objectClass=user)))");
+
+        return filter.toString();
+    }
+
     public static String createLdapFilter(final ADConfiguration conf) {
 
         final String[] memberships = conf.getMemberships();

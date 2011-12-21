@@ -147,7 +147,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search filter
         // -----------------------------------
-        final String filter = DirSyncUtils.createLdapFilter(
+        final String filter = DirSyncUtils.createDirSyncFilter(
                 (ADConfiguration) conn.getConfiguration());
 
         if (LOG.isOk()) {
@@ -272,12 +272,8 @@ public class ADSyncStrategy {
             LOG.error(t, "Error retrieving isDeleted attribute");
         }
 
-        // We need for this beacause DirSync return an uncomplete profile
-        // in case of entries updated or deleted.
-        // We don't need to search for complete profile for new created users.
-        if (profile.get("objectClass") == null || isDeleted) {
-            profile = ctx.getAttributes("<GUID=" + guid + ">");
-        }
+        // We need for this beacause DirSync can return an uncomplete profile.
+        profile = ctx.getAttributes("<GUID=" + guid + ">");
 
         final NamingEnumeration<String> objectClasses =
                 (NamingEnumeration<String>) profile.get("objectClass").getAll();
@@ -351,22 +347,36 @@ public class ADSyncStrategy {
                     // for each user "out" we must verify custom ldap filter
                     userDN = userDNs.next();
 
+                    profile = ctx.getAttributes(userDN);
+
+                    guid = DirSyncUtils.getGuidAsString(
+                            (byte[]) profile.get("objectGUID").get());
+
+                    SyncDeltaType deltaType;
+
                     if (!DirSyncUtils.verifyFilter(ctx, userDN, conf)) {
                         if (LOG.isOk()) {
-                            LOG.ok("OUT user {0}", userDN);
+                            LOG.ok("OUT user {0} - delete", userDN);
                         }
 
-                        profile = ctx.getAttributes(userDN);
+                        deltaType = SyncDeltaType.DELETE;
 
-                        guid = DirSyncUtils.getGuidAsString(
-                                (byte[]) profile.get("objectGUID").get());
+                    } else {
+                        // update user i order to update memberOf
+                        // issue http://code.google.com/p/connid/issues/detail?id=25
 
-                        handler.handle(getSyncDelta(
-                                oclass,
-                                userDN,
-                                SyncDeltaType.DELETE,
-                                profile));
+                        if (LOG.isOk()) {
+                            LOG.ok("OUT user {0} - update", userDN);
+                        }
+
+                        deltaType = SyncDeltaType.CREATE_OR_UPDATE;
                     }
+
+                    handler.handle(getSyncDelta(
+                            oclass,
+                            userDN,
+                            deltaType,
+                            profile));
                 }
             }
         } else if (classes.contains("user")) {

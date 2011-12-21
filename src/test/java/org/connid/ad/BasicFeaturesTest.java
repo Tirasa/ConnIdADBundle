@@ -98,4 +98,24 @@ public class BasicFeaturesTest {
                 + "(distinguishedName=cn=groupC,cn=group,o=isp)))"
                 + "(&(isDeleted=TRUE)(objectClass=user)))", filter);
     }
+    
+    @Test
+    public void createDirSyncFilter() {
+        assertNotNull(connector);
+        assertNotNull(connector.getConfiguration());
+
+        final String filter = DirSyncUtils.createDirSyncFilter(
+                (ADConfiguration) connector.getConfiguration());
+
+        assertNotNull(filter);
+        assertFalse(filter.isEmpty());
+
+        assertEquals(
+                "(|(&(objectClass=user)"
+                + "(&(memberOf=cn=groupA,cn=group,o=isp)"
+                + "(memberOf=cn=groupB,cn=group,o=isp)"
+                + "(memberOf=cn=groupC,cn=group,o=isp)))"
+                + "(objectClass=group)"
+                + "(&(isDeleted=TRUE)(objectClass=user)))", filter);
+    }
 }
