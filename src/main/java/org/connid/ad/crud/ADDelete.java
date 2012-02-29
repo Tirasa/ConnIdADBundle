@@ -22,9 +22,6 @@
  */
 package org.connid.ad.crud;
 
-import java.util.List;
-import java.util.Set;
-
 import javax.naming.NamingException;
 
 import org.connid.ad.ADConnection;
@@ -32,7 +29,6 @@ import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.ldap.LdapModifyOperation;
-import org.identityconnectors.ldap.GroupHelper.GroupMembership;
 import org.identityconnectors.ldap.search.LdapSearches;
 
 public class ADDelete extends LdapModifyOperation {
@@ -58,17 +54,7 @@ public class ADDelete extends LdapModifyOperation {
     public void delete() {
         final String entryDN = LdapSearches.getEntryDN(conn, oclass, uid);
 
-        if (conn.getConfiguration().isMaintainLdapGroupMembership()) {
-            final List<String> ldapGroups = groupHelper.getLdapGroups(entryDN);
-            groupHelper.removeLdapGroupMemberships(entryDN, ldapGroups);
-        }
-
-        if (conn.getConfiguration().isMaintainPosixGroupMembership()) {
-            final PosixGroupMember posixMember = new PosixGroupMember(entryDN);
-            final Set<GroupMembership> memberships =
-                    posixMember.getPosixGroupMemberships();
-            groupHelper.removePosixGroupMemberships(memberships);
-        }
+        groupHelper.removeLdapGroupMemberships(entryDN, groupHelper.getLdapGroups(entryDN));
 
         try {
             conn.getInitialContext().destroySubcontext(entryDN);

@@ -22,19 +22,21 @@
  */
 package org.connid.ad;
 
-import org.connid.ad.search.ADSearch;
-import org.connid.ad.crud.ADUpdate;
-import org.connid.ad.crud.ADDelete;
-import org.connid.ad.crud.ADCreate;
-import org.connid.ad.authentication.ADAuthenticate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import org.connid.ad.authentication.ADAuthenticate;
+import org.connid.ad.crud.ADCreate;
+import org.connid.ad.crud.ADDelete;
+import org.connid.ad.crud.ADUpdate;
+import org.connid.ad.search.ADSearch;
 import org.connid.ad.sync.ADSyncStrategy;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
@@ -45,10 +47,12 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
 import org.identityconnectors.ldap.LdapConnector;
+import org.identityconnectors.ldap.LdapConstants;
 import org.identityconnectors.ldap.search.LdapFilter;
 
 /**
  * All-java, agent-less Active Directory connector, extending LDAP connector.
+ *
  * @see org.identityconnectors.ldap.LdapConnector
  */
 @ConnectorClass(configurationClass = ADConfiguration.class,
@@ -78,8 +82,7 @@ public class ADConnector extends LdapConnector {
     private transient ADConfiguration config;
 
     /**
-     * The relative DirSyncSyncStrategy instance which sync-related
-     * operations are delegated to.
+     * The relative DirSyncSyncStrategy instance which sync-related operations are delegated to.
      */
     private transient ADSyncStrategy syncStrategy;
 
@@ -97,6 +100,7 @@ public class ADConnector extends LdapConnector {
     public void init(final Configuration cfg) {
 
         config = (ADConfiguration) cfg;
+
         // TODO: easier and more efficient if conn was protected in superclass
         conn = new ADConnection(config);
 
@@ -139,9 +143,20 @@ public class ADConnector extends LdapConnector {
 
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
 
+        final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
+
+        final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
+
+        if (ldapGroups != null) {
+            attributes.remove(ldapGroups);
+            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null ? Collections.EMPTY_LIST : ldapGroups.getValue());
+        }
+
+        ldapGroupsToBeAdded.addAll(
+                config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
+
         // add groups
-        attributes.add(AttributeBuilder.build(
-                "ldapGroups", Arrays.asList(config.getMemberships())));
+        attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
 
         return new ADCreate(conn, oclass, attributes, options).create();
     }
@@ -153,7 +168,24 @@ public class ADConnector extends LdapConnector {
             Set<Attribute> attrs,
             final OperationOptions options) {
 
-        return new ADUpdate(conn, oclass, uid).update(attrs);
+        final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
+
+        final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
+
+        final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
+
+        if (ldapGroups != null) {
+            attributes.remove(ldapGroups);
+            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null ? Collections.EMPTY_LIST : ldapGroups.getValue());
+        }
+
+        ldapGroupsToBeAdded.addAll(
+                config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
+
+        // add groups
+        attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
+
+        return new ADUpdate(conn, oclass, uid).update(attributes);
     }
 
     @Override
@@ -177,8 +209,7 @@ public class ADConnector extends LdapConnector {
             final GuardedString password,
             final OperationOptions options) {
 
-        return new ADAuthenticate(conn, objectClass, username, options).
-                authenticate(password);
+        return new ADAuthenticate(conn, objectClass, username, options).authenticate(password);
     }
 
     @Override
@@ -187,8 +218,7 @@ public class ADConnector extends LdapConnector {
             final String username,
             final OperationOptions options) {
 
-        return new ADAuthenticate(conn, objectClass, username, options).
-                resolveUsername();
+        return new ADAuthenticate(conn, objectClass, username, options).resolveUsername();
     }
 
     @Override

@@ -105,15 +105,16 @@ public class ADAuthenticate {
     private ConnectorObject getObjectToAuthenticate() {
         List<String> userNameAttrs = getUserNameAttributes();
         Map<String, ConnectorObject> entryDN2Object = new HashMap<String, ConnectorObject>();
+        
         for (String baseContext : conn.getConfiguration().getBaseContexts()) {
             for (String userNameAttr : userNameAttrs) {
                 Attribute attr = AttributeBuilder.build(userNameAttr, username);
-                for (ConnectorObject object : LdapSearches.findObjects(conn,
-                        oclass, baseContext, attr, "entryDN")) {
-                    String entryDN = object.getAttributeByName("entryDN").
-                            getValue().get(0).toString();
+                
+                for (ConnectorObject object : LdapSearches.findObjects(conn, oclass, baseContext, attr, "entryDN")) {
+                    String entryDN = object.getAttributeByName("entryDN").getValue().get(0).toString();
                     entryDN2Object.put(entryDN, object);
                 }
+                
                 // If we found more than one authentication candidates, no need to continue
                 if (entryDN2Object.size() > 1) {
                     throw new ConnectorSecurityException(conn.format(
@@ -121,9 +122,11 @@ public class ADAuthenticate {
                 }
             }
         }
+        
         if (!entryDN2Object.isEmpty()) {
             return entryDN2Object.values().iterator().next();
         }
+        
         return null;
     }
 

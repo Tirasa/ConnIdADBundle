@@ -571,8 +571,7 @@ public class SyncTest extends AbstractTest {
         // instatiate a new configuration to avoid collisions with sync test
         final ADConfiguration configuration = getSimpleConf(prop);
 
-        final String DN = "CN=" + SyncTest.class.getSimpleName() + "5,"
-                + configuration.getBaseContexts()[0];
+        final String DN = "CN=" + SyncTest.class.getSimpleName() + "5,CN=Users," + configuration.getBaseContexts()[0];
 
         final ADConnection connection = new ADConnection(configuration);
         final LdapContext ctx = connection.getInitialContext();

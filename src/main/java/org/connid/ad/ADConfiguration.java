@@ -39,6 +39,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean membershipsInOr = false;
 
+    private String defaultPeopleContainer;
+
     public ADConfiguration() {
         super();
 
@@ -115,5 +117,15 @@ public class ADConfiguration extends LdapConfiguration {
     helpMessageKey = "membershipsInOr.help", required = true, order = 5)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
+    helpMessageKey = "defaultPeopleContainer.help", required = true, order = 6)
+    public String getDefaultPeopleContainer() {
+        return defaultPeopleContainer;
+    }
+
+    public void setDefaultPeopleContainer(String defaultPeopleContainer) {
+        this.defaultPeopleContainer = defaultPeopleContainer;
     }
 }

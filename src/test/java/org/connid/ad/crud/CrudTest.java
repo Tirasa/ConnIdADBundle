@@ -27,17 +27,17 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import org.connid.ad.AbstractTest;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
-
+import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
@@ -78,8 +78,7 @@ public class CrudTest extends AbstractTest {
         String SAAN = "SAAN_" + CrudTest.class.getSimpleName() + "1";
 
         // create filter
-        final Filter filter = FilterBuilder.equalTo(
-                AttributeBuilder.build("sAMAccountName", SAAN));
+        final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", SAAN));
 
         // create results handler
         final List<Attribute> results = new ArrayList<Attribute>();
@@ -112,17 +111,15 @@ public class CrudTest extends AbstractTest {
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet(Collections.singleton("sAMAccountName"));
 
-        final ConnectorObject object = connector.getObject(
-                ObjectClass.ACCOUNT, new Uid(SAAN), oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), oob.build());
 
         assertNotNull(object);
         assertNotNull(object.getAttributes());
+
         // Returned attributes: sAMAccountName, NAME and UID
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("sAMAccountName"));
-        assertEquals(
-                Collections.singletonList(SAAN),
-                object.getAttributeByName("sAMAccountName").getValue());
+        assertEquals(Collections.singletonList(SAAN), object.getAttributeByName("sAMAccountName").getValue());
     }
 
     @Test
@@ -147,36 +144,88 @@ public class CrudTest extends AbstractTest {
         oob.setAttributesToGet(Collections.singleton("memberOf"));
 
         // retrieve created object
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // check for memberOf attribute
+        assertNotNull(object);
+        assertNotNull(object.getAttributes());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(3, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
+
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString());
+        }
+
+        assertEquals(expected, actual);
+
+        assertEquals(SAAN, object.getUid().getUidValue());
+
+        assertEquals(getEntryDN(CN).toLowerCase(), object.getName().getNameValue().toLowerCase());
+
+        final Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+    }
+
+    @Test
+    public void createWithoutDN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String CN = CrudTest.class.getSimpleName() + "nodn11";
+        final String SAAN = "SAAN_" + CN;
+
+        assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
+
+        final Set<Attribute> attributes = getSimpleProfile(CN, false);
+
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        // Ask just for memberOf
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singleton("memberOf"));
+
+        // retrieve created object
         final ConnectorObject object =
                 connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         // check for memberOf attribute
         assertNotNull(object);
         assertNotNull(object.getAttributes());
+
         // Returned attributes: memberOf, NAME and UID
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
 
-        final Set<String> expected = new HashSet<String>();
-        for (String dn : conf.getMemberships()) {
-            expected.add(dn.toLowerCase());
-        }
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new HashSet();
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
-            actual.add(dn.toString().toLowerCase());
+            actual.add(dn.toString());
         }
 
-        assertEquals(expected.size(), actual.size());
-
-        for (String dn : expected) {
-            assertTrue(actual.contains(dn));
-        }
+        assertEquals(expected, actual);
 
         assertEquals(SAAN, object.getUid().getUidValue());
 
-        assertEquals(getEntryDN(CN).toLowerCase(),
-                object.getName().getNameValue().toLowerCase());
+        assertEquals(getEntryDN(CN).toLowerCase(), object.getName().getNameValue().toLowerCase());
 
         final Uid authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -269,6 +318,180 @@ public class CrudTest extends AbstractTest {
                 null);
 
         assertNotNull(authUid);
+    }
+
+    @Test
+    public void rename() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String CN = CrudTest.class.getSimpleName() + "5";
+        final String SAAN = "SAAN_" + CN;
+
+        String baseContext = prop.getProperty("usersBaseContext");
+        final String DN = "cn=" + CN + ",cn=Computers," + baseContext;
+
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build(Name.NAME, DN),
+                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+
+        Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        uid = connector.authenticate(ObjectClass.ACCOUNT, SAAN, new GuardedString("Password321".toCharArray()), null);
+        assertNotNull(uid);
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singleton("memberOf"));
+
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(3, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+        assertTrue(DN.equalsIgnoreCase(object.getName().getNameValue()));
+
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
+
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString());
+        }
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void noRenameWithTheSameCN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String CN = CrudTest.class.getSimpleName() + "6";
+        final String SAAN = "SAAN_" + CN;
+
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build(Name.NAME, CN),
+                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+
+        Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        uid = connector.authenticate(ObjectClass.ACCOUNT, SAAN, new GuardedString("Password321".toCharArray()), null);
+        assertNotNull(uid);
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singleton("memberOf"));
+
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(3, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+
+        assertTrue(getEntryDN(CN).equalsIgnoreCase(object.getName().getNameValue()));
+
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
+
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString());
+        }
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void noRenameWithTheSameDN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String CN = CrudTest.class.getSimpleName() + "6";
+        final String SAAN = "SAAN_" + CN;
+
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build(Name.NAME, getEntryDN(CN)),
+                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+
+        Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        uid = connector.authenticate(ObjectClass.ACCOUNT, SAAN, new GuardedString("Password321".toCharArray()), null);
+        assertNotNull(uid);
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singleton("memberOf"));
+
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(3, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+
+        assertTrue(getEntryDN(CN).equalsIgnoreCase(object.getName().getNameValue()));
+
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
+
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString());
+        }
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void renameWithoutDN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String CN = CrudTest.class.getSimpleName() + "7";
+        final String SAAN = "SAAN_" + CN;
+
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build(Name.NAME, CN + "a"),
+                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+
+        Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        uid = connector.authenticate(ObjectClass.ACCOUNT, SAAN, new GuardedString("Password321".toCharArray()), null);
+        assertNotNull(uid);
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singleton("memberOf"));
+
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(3, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+
+        assertTrue(getEntryDN(CN + "a").equalsIgnoreCase(object.getName().getNameValue()));
+
+        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        expected.addAll(Arrays.asList(conf.getMemberships()));
+
+        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
+            actual.add(dn.toString());
+        }
+
+        assertEquals(expected, actual);
     }
 
     @Test

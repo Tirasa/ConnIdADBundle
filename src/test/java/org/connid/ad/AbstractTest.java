@@ -93,8 +93,7 @@ public abstract class AbstractTest {
             cn = prefix + i;
 
             assertNull("Please remove user 'sAMAccountName: SAAN_" + cn + "'",
-                    connector.getObject(
-                    ObjectClass.ACCOUNT, new Uid("SAAN_" + cn), null));
+                    connector.getObject(ObjectClass.ACCOUNT, new Uid("SAAN_" + cn), null));
         }
 
         Set<Attribute> attributes;
@@ -105,8 +104,7 @@ public abstract class AbstractTest {
 
             attributes = getSimpleProfile(cn);
 
-            final Uid uid = connector.create(
-                    ObjectClass.ACCOUNT, attributes, null);
+            final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
 
             assertNotNull(uid);
             assertEquals("SAAN_" + cn, uid.getUidValue());
@@ -115,38 +113,40 @@ public abstract class AbstractTest {
     }
 
     protected String getEntryDN(final String cn) {
-        return "cn=" + cn + "," + USERCONTEXT;
+        return "cn=" + cn + ",CN=Users," + USERCONTEXT;
+    }
+
+    protected static Set<Attribute> getSimpleProfile(final String cn, final boolean withDN) {
+        return getSimpleProfile(cn, conf, withDN);
+    }
+
+    protected static Set<Attribute> getSimpleProfile(final String cn) {
+        return getSimpleProfile(cn, conf, true);
     }
 
     protected static Set<Attribute> getSimpleProfile(
-            final String cn) {
-        return getSimpleProfile(cn, conf);
-    }
-
-    protected static Set<Attribute> getSimpleProfile(
-            final String cn, final ADConfiguration conf) {
+            final String cn, final ADConfiguration conf, final boolean withDN) {
 
         final Set<Attribute> attributes = new HashSet<Attribute>();
 
-        attributes.add(
-                new Name("cn=" + cn + "," + USERCONTEXT));
+        if (withDN) {
+            attributes.add(new Name("cn=" + cn + ",CN=Users," + USERCONTEXT));
+        } else {
+            attributes.add(new Name("SAAN_" + cn));
+            attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
+        }
 
-        attributes.add(AttributeBuilder.build(
-                Uid.NAME, Collections.singletonList("SAAN_" + cn)));
+        attributes.add(AttributeBuilder.build(Uid.NAME, Collections.singletonList("SAAN_" + cn)));
 
         attributes.add(AttributeBuilder.buildEnabled(true));
 
-        attributes.add(AttributeBuilder.buildPassword(
-                "Password123".toCharArray()));
+        attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
 
-        attributes.add(AttributeBuilder.build(
-                "sn", Collections.singletonList("sntest")));
+        attributes.add(AttributeBuilder.build("sn", Collections.singletonList("sntest")));
 
-        attributes.add(AttributeBuilder.build(
-                "givenName", Collections.singletonList("gntest")));
+        attributes.add(AttributeBuilder.build("givenName", Collections.singletonList("gntest")));
 
-        attributes.add(AttributeBuilder.build(
-                "displayName", Collections.singletonList("dntest")));
+        attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
 
         return attributes;
     }
@@ -155,23 +155,22 @@ public abstract class AbstractTest {
 
         final ADConfiguration configuration = new ADConfiguration();
 
+        configuration.setDefaultPeopleContainer("CN=Users," + USERCONTEXT);
+
         configuration.setObjectClassesToSynchronize("user");
 
         configuration.setHost(prop.getProperty("host"));
         configuration.setPort(Integer.parseInt(prop.getProperty("port")));
 
-        configuration.setAccountObjectClasses(
-                "top", "person", "organizationalPerson", "user");
+        configuration.setAccountObjectClasses("top", "person", "organizationalPerson", "user");
 
-        configuration.setBaseContextsToSynchronize(
-                prop.getProperty("baseContextToSynchronize"));
+        configuration.setBaseContextsToSynchronize(prop.getProperty("baseContextToSynchronize"));
 
         configuration.setBaseContexts(USERCONTEXT);
 
         configuration.setPrincipal(prop.getProperty("principal"));
 
-        configuration.setCredentials(new GuardedString(
-                prop.getProperty("credentials").toCharArray()));
+        configuration.setCredentials(new GuardedString(prop.getProperty("credentials").toCharArray()));
 
         configuration.setMemberships(prop.getProperty("memberships").split(";"));
 
@@ -180,9 +179,8 @@ public abstract class AbstractTest {
         configuration.setTrustAllCerts(true);
 
         configuration.setMembershipsInOr(true);
-        
-        assertFalse(configuration.getMemberships() == null
-                || configuration.getMemberships().length == 0);
+
+        assertFalse(configuration.getMemberships() == null || configuration.getMemberships().length == 0);
 
         return configuration;
     }

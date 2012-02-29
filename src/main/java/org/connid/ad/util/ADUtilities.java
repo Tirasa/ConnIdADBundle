@@ -22,18 +22,23 @@
  */
 package org.connid.ad.util;
 
-import static org.connid.ad.ADConnector.*;
-
 import java.util.List;
 import java.util.Set;
+import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
+import javax.naming.ldap.LdapName;
+import org.connid.ad.ADConfiguration;
 import org.connid.ad.ADConnection;
+import static org.connid.ad.ADConnector.UACCONTROL_ATTR;
+import static org.connid.ad.ADConnector.UF_ACCOUNTDISABLE;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -130,5 +135,50 @@ public class ADUtilities {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Create a DN string starting from a set attributes and a default people
+     * container. This method has to be used if __NAME__ attribute is not
+     * provided or it it is not a DN.
+     *
+     * @param attrs set of user attributes.
+     * @param defaulContainer default people container.
+     * @return distinguished name string.
+     */
+    public final String getDN(final Set<Attribute> attrs) {
+
+        String cn;
+
+        final Attribute cnAttr = AttributeUtil.find("cn", attrs);
+
+        if (cnAttr == null || cnAttr.getValue() == null
+                || cnAttr.getValue().isEmpty()
+                || StringUtil.isBlank(cnAttr.getValue().get(0).toString())) {
+            // Get the name attribute and consider this as the principal name.
+            // Use the principal name as the CN to generate DN.
+            cn = AttributeUtil.getNameFromAttributes(attrs).getNameValue();
+        } else {
+            // Get the common name and use this to generate the DN.
+            cn = cnAttr.getValue().get(0).toString();
+        }
+
+        return "cn=" + cn + ","
+                + ((ADConfiguration) (connection.getConfiguration())).
+                getDefaultPeopleContainer();
+    }
+
+    /**
+     * Check if the String is an ldap DN.
+     *
+     * @param dn string to be checked.
+     * @return TRUE if the value provided is a DN; FALSE otherwise.
+     */
+    public final boolean isDN(final String dn) {
+        try {
+            return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
+        } catch (InvalidNameException ex) {
+            return false;
+        }
     }
 }

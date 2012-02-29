@@ -57,8 +57,7 @@ public class ADConnection extends LdapConnection {
     }
 
     @Override
-    public AuthenticationResult authenticate(
-            final String entryDN, final GuardedString password) {
+    public AuthenticationResult authenticate(final String entryDN, final GuardedString password) {
 
         assert entryDN != null;
 
@@ -66,8 +65,7 @@ public class ADConnection extends LdapConnection {
             LOG.ok("Attempting to authenticate {0}", entryDN);
         }
 
-        final Pair<AuthenticationResult, LdapContext> pair =
-                createContext(entryDN, password);
+        final Pair<AuthenticationResult, LdapContext> pair = createContext(entryDN, password);
 
         if (pair.second != null) {
             quietClose(pair.second);
@@ -159,8 +157,7 @@ public class ADConnection extends LdapConnection {
                 new ArrayList<Pair<AuthenticationResult, LdapContext>>(1);
 
         @SuppressWarnings("UseOfObsoleteCollectionType")
-        final java.util.Hashtable<Object, Object> env =
-                new java.util.Hashtable<Object, Object>();
+        final java.util.Hashtable<Object, Object> env = new java.util.Hashtable<Object, Object>();
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CTX_FACTORY);
         env.put(Context.PROVIDER_URL, getLdapUrls());
@@ -170,8 +167,7 @@ public class ADConnection extends LdapConnection {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
 
             if (config.isTrustAllCerts()) {
-                env.put(LDAP_CTX_SOCKET_FACTORY,
-                        "org.connid.ad.util.TrustAllSocketFactory");
+                env.put(LDAP_CTX_SOCKET_FACTORY, "org.connid.ad.util.TrustAllSocketFactory");
             }
         }
 
@@ -194,8 +190,7 @@ public class ADConnection extends LdapConnection {
 
                     @Override
                     public void access(char[] clearChars) {
-                        env.put(Context.SECURITY_CREDENTIALS,
-                                new String(clearChars));
+                        env.put(Context.SECURITY_CREDENTIALS, new String(clearChars));
                     }
                 });
             }

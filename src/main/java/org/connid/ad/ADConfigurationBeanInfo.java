@@ -57,6 +57,10 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // baseContexts
             props.add(new PropertyDescriptor(
                     "baseContexts", LdapConfiguration.class));
+            
+            // baseContexts
+            props.add(new PropertyDescriptor(
+                    "defaultPeopleContainer", ADConfiguration.class));
 
             // memberships
             props.add(new PropertyDescriptor(
