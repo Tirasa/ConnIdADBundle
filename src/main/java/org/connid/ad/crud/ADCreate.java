@@ -35,6 +35,7 @@ import org.connid.ad.util.ADGuardedPasswordAttribute.Accessor;
 import org.connid.ad.util.ADUtilities;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -98,7 +99,16 @@ public class ADCreate extends LdapModifyOperation {
         if (utils.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
+            
+            Uid uidAttr = AttributeUtil.getUidAttribute(attrs);
+
+            if (uidAttr == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
+                uidAttr = new Uid(nameAttr.getNameValue());
+                attrs.add(uidAttr);
+            }
+
             name = new Name(utils.getDN(attrs));
+            
         }
         // -------------------------------------------------
 

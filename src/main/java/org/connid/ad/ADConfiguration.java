@@ -51,8 +51,7 @@ public class ADConfiguration extends LdapConfiguration {
         setAccountUserNameAttributes("sAMAccountName");
         setObjectClassesToSynchronize(new String[]{"user"});
         setGroupMemberAttribute("member");
-        setAccountObjectClasses(new String[]{
-                    "top", "person", "organizationalPerson", "user"});
+        setAccountObjectClasses(new String[]{"top", "person", "organizationalPerson", "user"});
 
         setUsePagedResultControl(true);
         setBlockSize(100);
@@ -74,8 +73,10 @@ public class ADConfiguration extends LdapConfiguration {
     public void setMemberships(String... memberships) {
         this.memberships = new ArrayList<String>();
 
-        for (String membership : memberships) {
-            this.memberships.add(membership.trim());
+        if (memberships != null) {
+            for (String membership : memberships) {
+                this.memberships.add(membership.trim());
+            }
         }
     }
 
