@@ -56,8 +56,7 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 /**
- * An implementation of the sync operation based on the DirSync protocol,
- * for Active Directory.
+ * An implementation of the sync operation based on the DirSync protocol, for Active Directory.
  */
 public class ADSyncStrategy {
 
@@ -197,11 +196,9 @@ public class ADSyncStrategy {
         }
         // -----------------------------------
 
-        final Map<String, Set<SearchResult>> changes =
-                search(ctx, filter, searchCtls, true);
+        final Map<String, Set<SearchResult>> changes = search(ctx, filter, searchCtls, true);
 
-        for (String baseDN :
-                conn.getConfiguration().getBaseContextsToSynchronize()) {
+        for (String baseDN : conn.getConfiguration().getBaseContextsToSynchronize()) {
 
             if (changes.containsKey(baseDN)) {
                 for (SearchResult sr : changes.get(baseDN)) {
@@ -248,15 +245,13 @@ public class ADSyncStrategy {
 
         final Set<String> classes = CollectionUtil.newCaseInsensitiveSet();
 
-        String guid = DirSyncUtils.getGuidAsString(
-                (byte[]) profile.get("objectGUID").get());
+        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
         boolean isDeleted = false;
 
         try {
 
-            javax.naming.directory.Attribute attributeIsDeleted =
-                    profile.get("isDeleted");
+            javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
 
             isDeleted =
                     attributeIsDeleted != null
@@ -275,8 +270,7 @@ public class ADSyncStrategy {
         // We need for this beacause DirSync can return an uncomplete profile.
         profile = ctx.getAttributes("<GUID=" + guid + ">");
 
-        final NamingEnumeration<String> objectClasses =
-                (NamingEnumeration<String>) profile.get("objectClass").getAll();
+        final NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) profile.get("objectClass").getAll();
 
         while (objectClasses.hasMoreElements()) {
             classes.add(objectClasses.next());
@@ -450,8 +444,7 @@ public class ADSyncStrategy {
         Uid uid = null;
 
         if (StringUtil.isNotBlank(conn.getConfiguration().getUidAttribute())) {
-            uidAttribute =
-                    profile.get(conn.getConfiguration().getUidAttribute());
+            uidAttribute = profile.get(conn.getConfiguration().getUidAttribute());
 
             if (uidAttribute != null) {
                 uid = new Uid(uidAttribute.get().toString());
@@ -467,8 +460,7 @@ public class ADSyncStrategy {
 
         // Set Connector Object
         if (SyncDeltaType.DELETE != syncDeltaType) {
-            sdb.setObject(new ADUtilities((ADConnection) conn).
-                    createConnectorObject(entryDN, profile, oclass));
+            sdb.setObject(new ADUtilities((ADConnection) conn).createConnectorObject(entryDN, profile, oclass));
         }
 
         return sdb.build();
