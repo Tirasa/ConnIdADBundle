@@ -35,16 +35,16 @@
 
     <groupId>org.connid.bundles</groupId>
     <artifactId>org.connid.bundles.ad</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
 
     <name>ConnId Bundles: AD</name>
 
     <packaging>jar</packaging>
 
     <scm>
-        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/ad/tags/org.connid.bundles.ad-1.0.1</connection>
-        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/ad/tags/org.connid.bundles.ad-1.0.1</developerConnection>
-        <url>http://connid.googlecode.com/svn/bundles/ad/tags/org.connid.bundles.ad-1.0.1</url>
+        <connection>scm:svn:http://connid.googlecode.com/svn/bundles/ad/trunk/</connection>
+        <developerConnection>scm:svn:https://connid.googlecode.com/svn/bundles/ad/trunk/</developerConnection>
+        <url>http://connid.googlecode.com/svn/bundles/ad/trunk/</url>
     </scm>
 
     <properties>
