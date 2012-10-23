@@ -24,12 +24,9 @@ package org.connid.ad.sync;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import javax.naming.NamingException;
-import org.identityconnectors.framework.common.objects.SyncDelta;
-import static org.junit.Assert.*;
-
 import java.util.Collections;
 import java.util.List;
+import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
@@ -49,12 +46,14 @@ import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
+import org.identityconnectors.framework.common.objects.SyncDelta;
 import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -77,7 +76,7 @@ public class SyncTest extends AbstractTest {
         final List<SyncDelta> updated = new ArrayList<SyncDelta>();
         final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
 
-        final SyncResultsHandler hundler = new SyncResultsHandler() {
+        final SyncResultsHandler handler = new SyncResultsHandler() {
 
             @Override
             public boolean handle(final SyncDelta sd) {
@@ -100,7 +99,7 @@ public class SyncTest extends AbstractTest {
         // ----------------------------------
         // check sync without modification and deleted users (token: null)
         // ----------------------------------
-        connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+        connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
         token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         // deleted set could not be verified now beacause someone could have
@@ -114,7 +113,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
         }
 
@@ -122,7 +121,7 @@ public class SyncTest extends AbstractTest {
         deleted.clear();
 
         // Check with updated token without any modification
-        connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+        connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
         token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         assertTrue(deleted.isEmpty());
@@ -140,17 +139,17 @@ public class SyncTest extends AbstractTest {
             // check sync with new user (token updated)
             // ----------------------------------
             // user added sync
-            uid11 = connector.create(
-                    ObjectClass.ACCOUNT, getSimpleProfile(CN11), null);
+            uid11 = connector.create(ObjectClass.ACCOUNT, getSimpleProfile(CN11), null);
 
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
-            // user ccreation and group modification
+
+            // user creation and group modification
             assertEquals(3, updated.size());
 
             final ConnectorObject obj = updated.get(0).getObject();
@@ -168,7 +167,7 @@ public class SyncTest extends AbstractTest {
             deleted.clear();
 
             // check with updated token and without any modification
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -218,7 +217,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -241,7 +240,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -264,7 +263,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -303,7 +302,7 @@ public class SyncTest extends AbstractTest {
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
 
-            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -323,14 +322,12 @@ public class SyncTest extends AbstractTest {
             // add user to a group not involved into the filter
             mod = new ModificationItem[]{
                 new ModificationItem(
-                DirContext.ADD_ATTRIBUTE, new BasicAttribute(
-                "member",
-                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+                DirContext.ADD_ATTRIBUTE,
+                new BasicAttribute("member", "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
             };
 
             try {
-                ctx.modifyAttributes("CN=HelpServicesGroup,CN=Users,"
-                        + conf.getBaseContextsToSynchronize()[0], mod);
+                ctx.modifyAttributes("CN=Cert Publishers,CN=Users," + conf.getBaseContextsToSynchronize()[0], mod);
             } catch (NamingException e) {
                 LOG.error(e, "Error adding membership to {0}", CN12);
                 assert (false);
@@ -339,28 +336,22 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
 
-            assertNotNull(
-                    updated.get(0).getObject().getAttributeByName("memberOf"));
+            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
 
-            assertNotNull(
-                    updated.get(0).getObject().getAttributeByName("memberOf").
-                    getValue());
+            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
 
-            assertEquals(2,
-                    updated.get(0).getObject().getAttributeByName("memberOf").
-                    getValue().size());
+            assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             mod = new ModificationItem[]{
                 new ModificationItem(
-                DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(
-                "member",
-                "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
+                DirContext.REMOVE_ATTRIBUTE,
+                new BasicAttribute("member", "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
             };
 
             try {
@@ -373,7 +364,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(updated.isEmpty());
@@ -393,7 +384,7 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -403,7 +394,7 @@ public class SyncTest extends AbstractTest {
             deleted.clear();
 
             // check with updated token and without any modification
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
@@ -432,8 +423,7 @@ public class SyncTest extends AbstractTest {
                 updated.clear();
                 deleted.clear();
 
-                newConnector.sync(
-                        ObjectClass.ACCOUNT, token, hundler, oob.build());
+                newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
                 assertFalse(deleted.isEmpty());
                 assertTrue(deleted.size() <= 2);
@@ -455,7 +445,7 @@ public class SyncTest extends AbstractTest {
         final List<SyncDelta> updated = new ArrayList<SyncDelta>();
         final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
 
-        final SyncResultsHandler hundler = new SyncResultsHandler() {
+        final SyncResultsHandler handler = new SyncResultsHandler() {
 
             @Override
             public boolean handle(final SyncDelta sd) {
@@ -470,8 +460,7 @@ public class SyncTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(
-                Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
+        oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
 
         SyncToken token = null;
 
@@ -480,15 +469,14 @@ public class SyncTest extends AbstractTest {
 
         ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
-        APIConfiguration impl = TestHelpers.createTestConfiguration(
-                ADConnector.class, conf);
+        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
 
         ConnectorFacade newConnector = factory.newInstance(impl);
 
         // ----------------------------------
         // check initial loading
         // ----------------------------------
-        newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+        newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
         token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         assertFalse(updated.isEmpty());
@@ -500,18 +488,19 @@ public class SyncTest extends AbstractTest {
             updated.clear();
             deleted.clear();
 
-            newConnector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
         }
 
         // ----------------------------------
         // check sync with new user (token updated)
-        // ----------------------------------conf.setRetrieveDeletedUser(false);
+        // ----------------------------------
+        conf.setRetrieveDeletedUser(false);
         conf.setLoading(false);
 
         factory = ConnectorFacadeFactory.getInstance();
         impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        newConnector = factory.newInstance(impl);
+        factory.newInstance(impl);
 
         final String CN13 = SyncTest.class.getSimpleName() + "13";
 
@@ -519,17 +508,17 @@ public class SyncTest extends AbstractTest {
 
         try {
             // user added sync
-            uid13 = connector.create(
-                    ObjectClass.ACCOUNT, getSimpleProfile(CN13), null);
+            uid13 = connector.create(ObjectClass.ACCOUNT, getSimpleProfile(CN13), null);
 
             updated.clear();
             deleted.clear();
 
-            connector.sync(ObjectClass.ACCOUNT, token, hundler, oob.build());
+            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
-            // user ccreation and group modification
+
+            // user creation and group modification
             assertEquals(3, updated.size());
         } finally {
             if (uid13 != null) {

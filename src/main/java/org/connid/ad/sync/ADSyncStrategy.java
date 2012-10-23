@@ -100,8 +100,7 @@ public class ADSyncStrategy {
                 }
 
                 if (LOG.isOk()) {
-                    LOG.ok("Search found {0} items",
-                            result.get(baseContextDn).size());
+                    LOG.ok("Search found {0} items", result.get(baseContextDn).size());
                 }
 
                 if (updateLastSyncToken) {
@@ -146,8 +145,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search filter
         // -----------------------------------
-        final String filter = DirSyncUtils.createDirSyncFilter(
-                (ADConfiguration) conn.getConfiguration());
+        final String filter = DirSyncUtils.createDirSyncFilter((ADConfiguration) conn.getConfiguration());
 
         if (LOG.isOk()) {
             LOG.ok("Search filter: " + filter);
@@ -157,8 +155,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search control
         // -----------------------------------
-        final SearchControls searchCtls =
-                LdapInternalSearch.createDefaultSearchControls();
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
 
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
@@ -187,12 +184,10 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[]{
-                            new DirSyncControl((byte[]) token.getValue())});
+                ctx = conn.getSyncContext(new Control[]{new DirSyncControl((byte[]) token.getValue())});
             }
         } catch (Exception e) {
-            throw new ConnectorException(
-                    "Could not set DirSync request controls", e);
+            throw new ConnectorException("Could not set DirSync request controls", e);
         }
         // -----------------------------------
 
@@ -211,8 +206,7 @@ public class ADSyncStrategy {
                                 handler);
 
                     } catch (NamingException e) {
-                        LOG.error(e, "SyncDelta handling for '{0}' failed",
-                                sr.getName());
+                        LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                     }
                 }
             }
@@ -301,8 +295,7 @@ public class ADSyncStrategy {
                 }
 
                 // users to be created/updated
-                final NamingEnumeration<String> userDNs =
-                        (NamingEnumeration<String>) member11.getAll();
+                final NamingEnumeration<String> userDNs = (NamingEnumeration<String>) member11.getAll();
 
                 while (userDNs.hasMoreElements()) {
                     // for each new user "in" we must verify custom ldap filter
@@ -316,8 +309,7 @@ public class ADSyncStrategy {
 
                         profile = ctx.getAttributes(userDN);
 
-                        guid = DirSyncUtils.getGuidAsString(
-                                (byte[]) profile.get("objectGUID").get());
+                        guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
                         handler.handle(getSyncDelta(
                                 oclass,
@@ -343,8 +335,7 @@ public class ADSyncStrategy {
 
                     profile = ctx.getAttributes(userDN);
 
-                    guid = DirSyncUtils.getGuidAsString(
-                            (byte[]) profile.get("objectGUID").get());
+                    guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
                     SyncDeltaType deltaType;
 

@@ -73,11 +73,9 @@ public abstract class AbstractTest {
         assertNotNull(conf);
         conf.validate();
 
-        final ConnectorFacadeFactory factory =
-                ConnectorFacadeFactory.getInstance();
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
-        final APIConfiguration impl =
-                TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
 
         connector = factory.newInstance(impl);
 

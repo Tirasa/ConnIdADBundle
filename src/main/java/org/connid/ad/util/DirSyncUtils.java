@@ -140,6 +140,7 @@ public class DirSyncUtils {
 
     /**
      * Verify custom filter (used to validate any retrieved user).
+     *
      * @param ctx ldap context.
      * @param dn user distinguished name.
      * @param conf connector configuration.
@@ -175,8 +176,8 @@ public class DirSyncUtils {
     }
 
     /**
-     * Verify complete filter including the custom one.
-     * This method is used to validate users 'IN' group.
+     * Verify complete filter including the custom one. This method is used to validate users 'IN' group.
+     *
      * @param ctx ldap context.
      * @param dn user distinguished name.
      * @param conf connector configuration.
@@ -202,10 +203,10 @@ public class DirSyncUtils {
 
         if (StringUtil.isNotBlank(filter.toString())) {
             try {
-                final NamingEnumeration res =
-                        ctx.search(dn, filter.toString(), searchCtls);
 
+                final NamingEnumeration res = ctx.search(dn, filter.toString(), searchCtls);
                 found = res != null && res.hasMoreElements();
+
             } catch (NamingException ex) {
                 found = false;
             }
