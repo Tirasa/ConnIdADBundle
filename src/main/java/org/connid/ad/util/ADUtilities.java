@@ -22,6 +22,7 @@
  */
 package org.connid.ad.util;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
@@ -42,6 +43,7 @@ import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.ldap.GroupHelper;
 import org.identityconnectors.ldap.LdapConstants;
 import org.identityconnectors.ldap.LdapEntry;
@@ -137,10 +139,28 @@ public class ADUtilities {
         return builder.build();
     }
 
+    public ConnectorObject createDeletedObject(
+            final String baseDN,
+            final Uid uid,
+            final Attributes profile,
+            final ObjectClass oclass)
+            throws NamingException {
+
+        final LdapEntry entry = LdapEntry.create(baseDN, profile);
+
+        final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
+        builder.setObjectClass(oclass);
+
+        builder.setUid(uid);
+        builder.setName("fake-dn");
+        builder.addAttributes(Collections.EMPTY_SET);
+
+        return builder.build();
+    }
+
     /**
-     * Create a DN string starting from a set attributes and a default people
-     * container. This method has to be used if __NAME__ attribute is not
-     * provided or it it is not a DN.
+     * Create a DN string starting from a set attributes and a default people container. This method has to be used if
+     * __NAME__ attribute is not provided or it it is not a DN.
      *
      * @param attrs set of user attributes.
      * @param defaulContainer default people container.
@@ -164,8 +184,7 @@ public class ADUtilities {
         }
 
         return "cn=" + cn + ","
-                + ((ADConfiguration) (connection.getConfiguration())).
-                getDefaultPeopleContainer();
+                + ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer();
     }
 
     /**

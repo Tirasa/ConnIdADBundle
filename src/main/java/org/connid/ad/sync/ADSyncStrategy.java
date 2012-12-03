@@ -450,7 +450,9 @@ public class ADSyncStrategy {
         sdb.setUid(uid);
 
         // Set Connector Object
-        if (SyncDeltaType.DELETE != syncDeltaType) {
+        if (SyncDeltaType.DELETE == syncDeltaType) {
+            sdb.setObject(new ADUtilities((ADConnection) conn).createDeletedObject(entryDN, uid, profile, oclass));
+        } else {
             sdb.setObject(new ADUtilities((ADConnection) conn).createConnectorObject(entryDN, profile, oclass));
         }
 
