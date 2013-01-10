@@ -45,6 +45,7 @@
     <connection>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</connection>
     <url>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</url>
     <developerConnection>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</developerConnection>
+    <tag>1_0_X</tag>
   </scm>
 
   <properties>
