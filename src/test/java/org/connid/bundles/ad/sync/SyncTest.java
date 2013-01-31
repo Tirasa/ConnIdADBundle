@@ -96,37 +96,11 @@ public class SyncTest extends AbstractTest {
 
         SyncToken token = null;
 
-        // ----------------------------------
-        // check sync without modification and deleted users (token: null)
-        // ----------------------------------
-        connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-        token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
-
-        // deleted set could not be verified now beacause someone could have
-        // manually upadated the member attribute of a specified group
-        assertFalse(updated.isEmpty());
-
-        // Since DirSync search is paginated we must loop on sync until returned
-        // handles will be empty
-        while (!updated.isEmpty() || !deleted.isEmpty()) {
-
-            updated.clear();
-            deleted.clear();
-
-            connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
-        }
-
-        updated.clear();
-        deleted.clear();
-
-        // Check with updated token without any modification
         connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
         token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         assertTrue(deleted.isEmpty());
         assertTrue(updated.isEmpty());
-        // ----------------------------------
 
         final String CN11 = SyncTest.class.getSimpleName() + "11";
         final String CN12 = SyncTest.class.getSimpleName() + "12";
@@ -462,46 +436,24 @@ public class SyncTest extends AbstractTest {
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
 
-        SyncToken token = null;
-
         conf.setRetrieveDeletedUser(false);
         conf.setLoading(true);
 
-        ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
 
-        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        SyncToken token = null;
 
-        ConnectorFacade newConnector = factory.newInstance(impl);
-
-        // ----------------------------------
-        // check initial loading
-        // ----------------------------------
         newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
         token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
-        assertFalse(updated.isEmpty());
         assertTrue(deleted.isEmpty());
-
-        // Since DirSync search is paginated we must loop on sync until returned
-        // handles will be empty
-        while (!updated.isEmpty() || !deleted.isEmpty()) {
-            updated.clear();
-            deleted.clear();
-
-            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
-        }
+        assertTrue(updated.isEmpty());
 
         // ----------------------------------
         // check sync with new user (token updated)
         // ----------------------------------
-        conf.setRetrieveDeletedUser(false);
-        conf.setLoading(false);
-
-        factory = ConnectorFacadeFactory.getInstance();
-        impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        factory.newInstance(impl);
-
         final String CN13 = SyncTest.class.getSimpleName() + "13";
 
         Uid uid13 = null;

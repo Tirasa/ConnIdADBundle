@@ -54,6 +54,7 @@ public class CrudTest extends AbstractTest {
 
     @BeforeClass
     public static void init() {
+        
         init(CrudTest.class.getSimpleName());
     }
 

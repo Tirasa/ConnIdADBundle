@@ -143,16 +143,6 @@ public class ADSyncStrategy {
             final ObjectClass oclass) {
 
         // -----------------------------------
-        // Create search filter
-        // -----------------------------------
-        final String filter = DirSyncUtils.createDirSyncFilter((ADConfiguration) conn.getConfiguration());
-
-        if (LOG.isOk()) {
-            LOG.ok("Search filter: " + filter);
-        }
-        // -----------------------------------
-
-        // -----------------------------------
         // Create search control
         // -----------------------------------
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
@@ -179,6 +169,11 @@ public class ADSyncStrategy {
 
                 ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
 
+                if (((ADConfiguration) conn.getConfiguration()).isStartSyncFromToday()) {
+                    search(ctx, "(cn=__CONNID-NORES__)", searchCtls, true);
+                    return;
+                }
+
             } else {
                 if (LOG.isOk()) {
                     LOG.ok("Synchronization with token.");
@@ -188,6 +183,16 @@ public class ADSyncStrategy {
             }
         } catch (Exception e) {
             throw new ConnectorException("Could not set DirSync request controls", e);
+        }
+        // -----------------------------------
+
+        // -----------------------------------
+        // Create search filter
+        // -----------------------------------
+        final String filter = DirSyncUtils.createDirSyncFilter((ADConfiguration) conn.getConfiguration());
+
+        if (LOG.isOk()) {
+            LOG.ok("Search filter: " + filter);
         }
         // -----------------------------------
 

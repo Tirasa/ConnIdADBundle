@@ -86,6 +86,10 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             props.add(new PropertyDescriptor(
                     "connectorMessages", AbstractConfiguration.class));
 
+            // startSyncFromToday
+            props.add(new PropertyDescriptor(
+                    "startSyncFromToday", ADConfiguration.class));
+            
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();

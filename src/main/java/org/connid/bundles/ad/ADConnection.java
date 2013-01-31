@@ -18,6 +18,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import org.connid.bundles.ad.util.TrustAllSocketFactory;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -167,7 +168,7 @@ public class ADConnection extends LdapConnection {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
 
             if (config.isTrustAllCerts()) {
-                env.put(LDAP_CTX_SOCKET_FACTORY, "org.connid.ad.util.TrustAllSocketFactory");
+                env.put(LDAP_CTX_SOCKET_FACTORY, TrustAllSocketFactory.class.getName());
             }
         }
 

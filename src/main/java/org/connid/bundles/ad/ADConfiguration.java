@@ -41,6 +41,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private String defaultPeopleContainer;
 
+    private boolean startSyncFromToday = true;
+
     public ADConfiguration() {
         super();
 
@@ -128,5 +130,15 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setDefaultPeopleContainer(String defaultPeopleContainer) {
         this.defaultPeopleContainer = defaultPeopleContainer;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
+    helpMessageKey = "startSyncFromToday.help", required = true, order = 7)
+    public boolean isStartSyncFromToday() {
+        return startSyncFromToday;
+    }
+
+    public void setStartSyncFromToday(boolean startSyncFromToday) {
+        this.startSyncFromToday = startSyncFromToday;
     }
 }
