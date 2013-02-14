@@ -22,19 +22,23 @@
  */
 package org.connid.bundles.ad.crud;
 
+import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static org.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
+import static org.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
+import static org.identityconnectors.common.CollectionUtil.isEmpty;
+import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
+
 import java.util.List;
 import java.util.Set;
 import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import org.connid.bundles.ad.ADConnection;
-import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
-import static org.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
 import org.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import org.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import org.connid.bundles.ad.util.ADUtilities;
-import static org.identityconnectors.common.CollectionUtil.isEmpty;
-import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.commons.LdapModifyOperation;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -45,9 +49,6 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.LdapModifyOperation;
-import static org.identityconnectors.ldap.LdapUtil.checkedListByFilter;
 
 public class ADCreate extends LdapModifyOperation {
 
@@ -99,7 +100,7 @@ public class ADCreate extends LdapModifyOperation {
         if (utils.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
-            
+
             Uid uidAttr = AttributeUtil.getUidAttribute(attrs);
 
             if (uidAttr == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
@@ -108,7 +109,7 @@ public class ADCreate extends LdapModifyOperation {
             }
 
             name = new Name(utils.getDN(attrs));
-            
+
         }
         // -------------------------------------------------
 

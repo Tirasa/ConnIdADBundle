@@ -41,6 +41,7 @@ import org.connid.bundles.ad.util.ADUtilities;
 import org.connid.bundles.ad.util.DeletedControl;
 import org.connid.bundles.ad.util.DirSyncControl;
 import org.connid.bundles.ad.util.DirSyncUtils;
+import org.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -53,7 +54,6 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 /**
  * An implementation of the sync operation based on the DirSync protocol, for Active Directory.
@@ -222,21 +222,22 @@ public class ADSyncStrategy {
         return latestSyncToken;
     }
 
+    @SuppressWarnings("unchecked")
     private void handleSyncDelta(
             final ObjectClass oclass,
             final LdapContext ctx,
-            final SearchResult sr,
+            final SearchResult result,
             final SyncResultsHandler handler)
             throws NamingException {
 
-        if (ctx == null || sr == null) {
+        if (ctx == null || result == null) {
             throw new ConnectorException("Invalid context or search result.");
         }
 
         ctx.setRequestControls(new Control[]{new DeletedControl()});
 
         // Just used to retrieve object classes and to pass to getSyncDelta
-        Attributes profile = sr.getAttributes();
+        Attributes profile = result.getAttributes();
 
         if (LOG.isOk()) {
             LOG.ok("Object profile: {0}", profile);
@@ -269,7 +270,8 @@ public class ADSyncStrategy {
         // We need for this beacause DirSync can return an uncomplete profile.
         profile = ctx.getAttributes("<GUID=" + guid + ">");
 
-        final NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) profile.get("objectClass").getAll();
+        final NamingEnumeration<String> objectClasses = 
+                (NamingEnumeration<String>) profile.get("objectClass").getAll();
 
         while (objectClasses.hasMoreElements()) {
             classes.add(objectClasses.next());
@@ -284,11 +286,11 @@ public class ADSyncStrategy {
             // search for users in adn users out
 
             if (LOG.isOk()) {
-                LOG.ok("Modified group {0}", sr.getNameInNamespace());
+                LOG.ok("Modified group {0}", result.getNameInNamespace());
             }
 
-            member11 = sr.getAttributes().get("member;range=1-1");
-            member00 = sr.getAttributes().get("member;range=0-0");
+            member11 = result.getAttributes().get("member;range=1-1");
+            member00 = result.getAttributes().get("member;range=0-0");
 
             ctx.setRequestControls(null);
 
@@ -372,44 +374,44 @@ public class ADSyncStrategy {
         } else if (classes.contains("user")) {
             if (LOG.isOk()) {
                 LOG.ok("Created/Updated/Deleted user {0}",
-                        sr.getNameInNamespace());
+                        result.getNameInNamespace());
             }
 
             if (isDeleted) {
 
                 if (LOG.isOk()) {
-                    LOG.ok("Deleted user {0}", sr.getNameInNamespace());
+                    LOG.ok("Deleted user {0}", result.getNameInNamespace());
                 }
 
                 handler.handle(getSyncDelta(
                         oclass,
-                        sr.getNameInNamespace(),
+                        result.getNameInNamespace(),
                         SyncDeltaType.DELETE,
                         profile));
 
             } else {
                 // user to be created/updated
                 if (LOG.isOk()) {
-                    LOG.ok("Created/Updated user {0}", sr.getNameInNamespace());
+                    LOG.ok("Created/Updated user {0}", result.getNameInNamespace());
                 }
 
                 if (DirSyncUtils.verifyFilter(
-                        ctx, sr.getNameInNamespace(), conf)) {
+                        ctx, result.getNameInNamespace(), conf)) {
 
                     if (LOG.isOk()) {
-                        LOG.ok("Matched user {0}", sr.getNameInNamespace());
+                        LOG.ok("Matched user {0}", result.getNameInNamespace());
                     }
 
                     handler.handle(getSyncDelta(
                             oclass,
-                            sr.getNameInNamespace(),
+                            result.getNameInNamespace(),
                             SyncDeltaType.CREATE_OR_UPDATE,
                             profile));
 
                 } else {
                     if (LOG.isOk()) {
                         LOG.ok("Ignore changes about user {0}",
-                                sr.getNameInNamespace());
+                                result.getNameInNamespace());
                     }
                 }
             }

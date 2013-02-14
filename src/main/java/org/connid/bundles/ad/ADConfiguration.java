@@ -24,8 +24,8 @@ package org.connid.bundles.ad;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.connid.bundles.ldap.LdapConfiguration;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
-import org.identityconnectors.ldap.LdapConfiguration;
 
 public class ADConfiguration extends LdapConfiguration {
 

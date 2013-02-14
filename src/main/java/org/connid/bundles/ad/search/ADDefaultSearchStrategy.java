@@ -32,9 +32,9 @@ import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
+import org.connid.bundles.ldap.search.DefaultSearchStrategy;
+import org.connid.bundles.ldap.search.SearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.ldap.search.DefaultSearchStrategy;
-import org.identityconnectors.ldap.search.SearchResultsHandler;
 
 public class ADDefaultSearchStrategy extends DefaultSearchStrategy {
 

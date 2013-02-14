@@ -32,6 +32,9 @@ import org.connid.bundles.ad.crud.ADDelete;
 import org.connid.bundles.ad.crud.ADUpdate;
 import org.connid.bundles.ad.search.ADSearch;
 import org.connid.bundles.ad.sync.ADSyncStrategy;
+import org.connid.bundles.ldap.LdapConnector;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.search.LdapFilter;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -46,9 +49,6 @@ import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
-import org.identityconnectors.ldap.LdapConnector;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.search.LdapFilter;
 
 /**
  * All-java, agent-less Active Directory connector, extending LDAP connector.
@@ -149,11 +149,13 @@ public class ADConnector extends LdapConnector {
 
         if (ldapGroups != null) {
             attributes.remove(ldapGroups);
-            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null ? Collections.EMPTY_LIST : ldapGroups.getValue());
+            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null
+                    ? Collections.<String>emptyList()
+                    : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
         }
 
-        ldapGroupsToBeAdded.addAll(
-                config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
+        ldapGroupsToBeAdded.addAll(config.getMemberships() == null
+                ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
 
         // add groups
         attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
@@ -165,7 +167,7 @@ public class ADConnector extends LdapConnector {
     public Uid update(
             final ObjectClass oclass,
             final Uid uid,
-            Set<Attribute> attrs,
+            final Set<Attribute> attrs,
             final OperationOptions options) {
 
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
@@ -176,11 +178,13 @@ public class ADConnector extends LdapConnector {
 
         if (ldapGroups != null) {
             attributes.remove(ldapGroups);
-            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null ? Collections.EMPTY_LIST : ldapGroups.getValue());
+            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null
+                    ? Collections.<String>emptyList()
+                    : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
         }
 
-        ldapGroupsToBeAdded.addAll(
-                config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
+        ldapGroupsToBeAdded.addAll(config.getMemberships() == null
+                ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
 
         // add groups
         attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));

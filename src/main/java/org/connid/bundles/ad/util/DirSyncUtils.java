@@ -27,9 +27,9 @@ import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
+import org.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.framework.spi.AbstractConfiguration;
-import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 public class DirSyncUtils {
 

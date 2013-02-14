@@ -158,7 +158,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -217,7 +217,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -358,7 +358,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -401,7 +401,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -444,7 +444,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -487,7 +487,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
