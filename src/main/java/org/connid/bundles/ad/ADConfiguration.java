@@ -83,7 +83,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "retrieveDeletedUser.display",
-    helpMessageKey = "retrieveDeletedUser.help", required = true, order = 2)
+    helpMessageKey = "retrieveDeletedUser.help", order = 2)
     public boolean isRetrieveDeletedUser() {
         return retrieveDeletedUser;
     }
@@ -93,7 +93,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "trustAllCerts.display",
-    helpMessageKey = "trustAllCerts.help", required = true, order = 3)
+    helpMessageKey = "trustAllCerts.help", order = 3)
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
@@ -103,7 +103,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "loading.display",
-    helpMessageKey = "loading.help", required = true, order = 4)
+    helpMessageKey = "loading.help", order = 4)
     public boolean isLoading() {
         return loading;
     }
@@ -117,13 +117,13 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
-    helpMessageKey = "membershipsInOr.help", required = true, order = 5)
+    helpMessageKey = "membershipsInOr.help", order = 5)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-    helpMessageKey = "defaultPeopleContainer.help", required = true, order = 6)
+    helpMessageKey = "defaultPeopleContainer.help", order = 6)
     public String getDefaultPeopleContainer() {
         return defaultPeopleContainer;
     }
@@ -133,7 +133,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-    helpMessageKey = "startSyncFromToday.help", required = true, order = 7)
+    helpMessageKey = "startSyncFromToday.help", order = 7)
     public boolean isStartSyncFromToday() {
         return startSyncFromToday;
     }
