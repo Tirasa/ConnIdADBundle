@@ -61,6 +61,7 @@ public class ADConfiguration extends LdapConfiguration {
 
         setPasswordAttribute("unicodePwd");
         setSsl(true);
+        setPort(636);
 
         memberships = new ArrayList<String>();
         retrieveDeletedUser = true;
