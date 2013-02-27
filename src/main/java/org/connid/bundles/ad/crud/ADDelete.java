@@ -25,11 +25,11 @@ package org.connid.bundles.ad.crud;
 import javax.naming.NamingException;
 
 import org.connid.bundles.ad.ADConnection;
+import org.connid.bundles.ldap.commons.LdapModifyOperation;
+import org.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.LdapModifyOperation;
-import org.identityconnectors.ldap.search.LdapSearches;
 
 public class ADDelete extends LdapModifyOperation {
 

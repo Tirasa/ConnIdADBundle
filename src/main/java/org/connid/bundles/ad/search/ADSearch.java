@@ -22,9 +22,8 @@
  */
 package org.connid.bundles.ad.search;
 
-import static org.connid.bundles.ad.ADConnector.*;
-
 import static java.util.Collections.singletonList;
+import static org.connid.bundles.ad.ADConnector.*;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.StringUtil.isBlank;
@@ -39,6 +38,16 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.PagedResultsControl;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.util.ADUtilities;
+import org.connid.bundles.ldap.LdapConnection;
+import org.connid.bundles.ldap.commons.GroupHelper;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.commons.LdapEntry;
+import org.connid.bundles.ldap.schema.LdapSchemaMapping;
+import org.connid.bundles.ldap.search.LdapFilter;
+import org.connid.bundles.ldap.search.LdapInternalSearch;
+import org.connid.bundles.ldap.search.LdapSearchStrategy;
+import org.connid.bundles.ldap.search.LdapSearches;
+import org.connid.bundles.ldap.search.SearchResultsHandler;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
@@ -50,16 +59,6 @@ import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.QualifiedUid;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.GroupHelper;
-import org.identityconnectors.ldap.LdapConnection;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.LdapEntry;
-import org.identityconnectors.ldap.schema.LdapSchemaMapping;
-import org.identityconnectors.ldap.search.LdapFilter;
-import org.identityconnectors.ldap.search.LdapInternalSearch;
-import org.identityconnectors.ldap.search.LdapSearchStrategy;
-import org.identityconnectors.ldap.search.LdapSearches;
-import org.identityconnectors.ldap.search.SearchResultsHandler;
 
 public class ADSearch {
 

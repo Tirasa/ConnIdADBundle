@@ -35,8 +35,7 @@ public class DirSyncControl extends BasicControl {
     private static final long serialVersionUID = -930993758829518418L;
 
     /**
-     * LDAP_DIRSYNC_INCREMENTAL_VALUES | LDAP_DIRSYNC_ANCESTORS_FIRST_ORDER |
-     * LDAP_DIRSYNC_OBJECT_SECURITY
+     * LDAP_DIRSYNC_INCREMENTAL_VALUES | LDAP_DIRSYNC_ANCESTORS_FIRST_ORDER | LDAP_DIRSYNC_OBJECT_SECURITY
      */
     private int flags = 0x80000801;
 

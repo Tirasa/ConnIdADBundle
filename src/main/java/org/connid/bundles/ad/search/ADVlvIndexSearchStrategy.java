@@ -22,6 +22,8 @@
  */
 package org.connid.bundles.ad.search;
 
+import static org.identityconnectors.common.StringUtil.isNotBlank;
+
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
 import com.sun.jndi.ldap.ctl.VirtualListViewResponseControl;
 import java.io.IOException;
@@ -37,11 +39,9 @@ import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.SortControl;
 import javax.naming.ldap.SortResponseControl;
-import static org.identityconnectors.common.StringUtil.isNotBlank;
-
+import org.connid.bundles.ldap.search.SearchResultsHandler;
+import org.connid.bundles.ldap.search.VlvIndexSearchStrategy;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.ldap.search.SearchResultsHandler;
-import org.identityconnectors.ldap.search.VlvIndexSearchStrategy;
 
 public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
 

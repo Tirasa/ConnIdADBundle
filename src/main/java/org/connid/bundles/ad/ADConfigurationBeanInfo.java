@@ -5,9 +5,9 @@ import java.beans.PropertyDescriptor;
 import java.beans.SimpleBeanInfo;
 import java.util.ArrayList;
 import java.util.List;
+import org.connid.bundles.ldap.LdapConfiguration;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.spi.AbstractConfiguration;
-import org.identityconnectors.ldap.LdapConfiguration;
 
 public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
@@ -19,77 +19,58 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
                 new ArrayList<PropertyDescriptor>();
         try {
             // host
-            props.add(new PropertyDescriptor(
-                    "host", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("host", LdapConfiguration.class));
 
             // port
-            props.add(new PropertyDescriptor(
-                    "port", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("port", LdapConfiguration.class));
 
             // principal
-            props.add(new PropertyDescriptor(
-                    "principal", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("principal", LdapConfiguration.class));
 
             // credentials
-            props.add(new PropertyDescriptor(
-                    "credentials", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("credentials", LdapConfiguration.class));
 
             // trustAllCerts
-            props.add(new PropertyDescriptor(
-                    "trustAllCerts", ADConfiguration.class));
+            props.add(new PropertyDescriptor("trustAllCerts", ADConfiguration.class));
 
             // membershipsInOr
-            props.add(new PropertyDescriptor(
-                    "membershipsInOr", ADConfiguration.class));
-            
+            props.add(new PropertyDescriptor("membershipsInOr", ADConfiguration.class));
+
             // loading
-            props.add(new PropertyDescriptor(
-                    "loading", ADConfiguration.class));
+            props.add(new PropertyDescriptor("loading", ADConfiguration.class));
 
             // failover
-            props.add(new PropertyDescriptor(
-                    "failover", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("failover", LdapConfiguration.class));
 
             // baseContextsToSynchronize
-            props.add(new PropertyDescriptor(
-                    "baseContextsToSynchronize", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("baseContextsToSynchronize", LdapConfiguration.class));
 
             // baseContexts
-            props.add(new PropertyDescriptor(
-                    "baseContexts", LdapConfiguration.class));
-            
+            props.add(new PropertyDescriptor("baseContexts", LdapConfiguration.class));
+
             // baseContexts
-            props.add(new PropertyDescriptor(
-                    "defaultPeopleContainer", ADConfiguration.class));
+            props.add(new PropertyDescriptor("defaultPeopleContainer", ADConfiguration.class));
 
             // memberships
-            props.add(new PropertyDescriptor(
-                    "memberships", ADConfiguration.class));
+            props.add(new PropertyDescriptor("memberships", ADConfiguration.class));
 
             // accountSearchFilter
-            props.add(new PropertyDescriptor(
-                    "accountSearchFilter", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("accountSearchFilter", LdapConfiguration.class));
 
             // retrieveDeletedUser
-            props.add(new PropertyDescriptor(
-                    "retrieveDeletedUser", ADConfiguration.class));
+            props.add(new PropertyDescriptor("retrieveDeletedUser", ADConfiguration.class));
 
             // accountObjectClasses
-            props.add(new PropertyDescriptor(
-                    "accountObjectClasses", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("accountObjectClasses", LdapConfiguration.class));
 
             // objectClassesToSynchronize
-            props.add(new PropertyDescriptor(
-                    "objectClassesToSynchronize", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("objectClassesToSynchronize", LdapConfiguration.class));
 
             // _connectorMessages
-            props.add(new PropertyDescriptor(
-                    "connectorMessages", AbstractConfiguration.class));
+            props.add(new PropertyDescriptor("connectorMessages", AbstractConfiguration.class));
 
             // startSyncFromToday
-            props.add(new PropertyDescriptor(
-                    "startSyncFromToday", ADConfiguration.class));
-            
+            props.add(new PropertyDescriptor("startSyncFromToday", ADConfiguration.class));
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();

@@ -37,6 +37,7 @@ import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.ADConnector;
+import org.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
@@ -47,7 +48,6 @@ import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.ObjectClassInfoBuilder;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SchemaBuilder;
-import org.identityconnectors.ldap.search.LdapInternalSearch;
 
 class ADSchemaBuilder {
 

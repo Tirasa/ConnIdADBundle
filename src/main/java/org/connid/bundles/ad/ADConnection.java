@@ -4,12 +4,12 @@
  */
 package org.connid.bundles.ad;
 
-import org.connid.bundles.ad.schema.ADSchema;
+import static org.connid.bundles.ldap.commons.LdapUtil.nullAsEmpty;
 import static org.identityconnectors.common.StringUtil.isNotBlank;
-import static org.identityconnectors.ldap.LdapUtil.nullAsEmpty;
 
 import com.sun.jndi.ldap.ctl.PasswordExpiredResponseControl;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
@@ -18,13 +18,16 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import org.connid.bundles.ad.schema.ADSchema;
 import org.connid.bundles.ad.util.TrustAllSocketFactory;
+import org.connid.bundles.ldap.LdapConnection;
+import org.connid.bundles.ldap.LdapConnection.AuthenticationResult;
+import org.connid.bundles.ldap.LdapConnection.AuthenticationResultType;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.common.security.GuardedString.Accessor;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
-import org.identityconnectors.ldap.LdapConnection;
 
 /**
  *
@@ -103,9 +106,8 @@ public class ADConnection extends LdapConnection {
         LdapContext ctx = null;
 
         try {
-            @SuppressWarnings("UseOfObsoleteCollectionType")
-            final java.util.Hashtable env = new java.util.Hashtable(
-                    getInitialContext().getEnvironment());
+            @SuppressWarnings({"UseOfObsoleteCollectionType", "rawtypes", "unchecked"})
+            final Hashtable env = new Hashtable(getInitialContext().getEnvironment());
 
             ctx = new InitialLdapContext(env, null);
             ctx.setRequestControls(control);

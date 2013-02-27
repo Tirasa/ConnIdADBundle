@@ -23,18 +23,16 @@
 package org.connid.bundles.ad.crud;
 
 import static org.connid.bundles.ad.ADConnector.*;
-
+import static org.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
-import static org.identityconnectors.ldap.LdapUtil.checkedListByFilter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.naming.InvalidNameException;
-
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -44,11 +42,16 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
-
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import org.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import org.connid.bundles.ad.util.ADUtilities;
+import org.connid.bundles.ldap.commons.GroupHelper.GroupMembership;
+import org.connid.bundles.ldap.commons.GroupHelper.Modification;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.commons.LdapModifyOperation;
+import org.connid.bundles.ldap.search.LdapFilter;
+import org.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -60,12 +63,6 @@ import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.LdapModifyOperation;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.GroupHelper.GroupMembership;
-import org.identityconnectors.ldap.GroupHelper.Modification;
-import org.identityconnectors.ldap.search.LdapFilter;
-import org.identityconnectors.ldap.search.LdapSearches;
 
 public class ADUpdate extends LdapModifyOperation {
 

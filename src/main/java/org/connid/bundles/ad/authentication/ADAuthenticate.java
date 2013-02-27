@@ -27,6 +27,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.connid.bundles.ad.ADConnection;
+import org.connid.bundles.ldap.LdapConnection.AuthenticationResult;
+import org.connid.bundles.ldap.LdapConnection.AuthenticationResultType;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorSecurityException;
@@ -38,10 +42,6 @@ import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.LdapConnection.AuthenticationResult;
-import org.identityconnectors.ldap.LdapConnection.AuthenticationResultType;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.search.LdapSearches;
 
 public class ADAuthenticate {
 
@@ -105,16 +105,16 @@ public class ADAuthenticate {
     private ConnectorObject getObjectToAuthenticate() {
         List<String> userNameAttrs = getUserNameAttributes();
         Map<String, ConnectorObject> entryDN2Object = new HashMap<String, ConnectorObject>();
-        
+
         for (String baseContext : conn.getConfiguration().getBaseContexts()) {
             for (String userNameAttr : userNameAttrs) {
                 Attribute attr = AttributeBuilder.build(userNameAttr, username);
-                
+
                 for (ConnectorObject object : LdapSearches.findObjects(conn, oclass, baseContext, attr, "entryDN")) {
                     String entryDN = object.getAttributeByName("entryDN").getValue().get(0).toString();
                     entryDN2Object.put(entryDN, object);
                 }
-                
+
                 // If we found more than one authentication candidates, no need to continue
                 if (entryDN2Object.size() > 1) {
                     throw new ConnectorSecurityException(conn.format(
@@ -122,11 +122,11 @@ public class ADAuthenticate {
                 }
             }
         }
-        
+
         if (!entryDN2Object.isEmpty()) {
             return entryDN2Object.values().iterator().next();
         }
-        
+
         return null;
     }
 

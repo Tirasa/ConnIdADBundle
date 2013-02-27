@@ -34,9 +34,9 @@ import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.PagedResultsControl;
 import javax.naming.ldap.PagedResultsResponseControl;
+import org.connid.bundles.ldap.search.SearchResultsHandler;
+import org.connid.bundles.ldap.search.SimplePagedSearchStrategy;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.ldap.search.SearchResultsHandler;
-import org.identityconnectors.ldap.search.SimplePagedSearchStrategy;
 
 public class ADSimplePagedSearchStrategy extends SimplePagedSearchStrategy {
 

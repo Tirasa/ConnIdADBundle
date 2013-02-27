@@ -22,6 +22,9 @@
  */
 package org.connid.bundles.ad.util;
 
+import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
+import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -32,8 +35,10 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.LdapName;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
-import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
-import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import org.connid.bundles.ldap.commons.GroupHelper;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.commons.LdapEntry;
+import org.connid.bundles.ldap.commons.LdapUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -44,10 +49,6 @@ import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.GroupHelper;
-import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.LdapEntry;
-import org.identityconnectors.ldap.LdapUtil;
 
 public class ADUtilities {
 
@@ -153,7 +154,7 @@ public class ADUtilities {
 
         builder.setUid(uid);
         builder.setName("fake-dn");
-        builder.addAttributes(Collections.EMPTY_SET);
+        builder.addAttributes(Collections.<Attribute>emptySet());
 
         return builder.build();
     }
