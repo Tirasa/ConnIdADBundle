@@ -29,7 +29,7 @@ import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 public class ADConfiguration extends LdapConfiguration {
 
-    private boolean retrieveDeletedUser;
+    private boolean retrieveDeletedUser = true;
 
     private List<String> memberships;
 
@@ -64,7 +64,6 @@ public class ADConfiguration extends LdapConfiguration {
         setPort(636);
 
         memberships = new ArrayList<String>();
-        retrieveDeletedUser = true;
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
