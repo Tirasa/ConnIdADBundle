@@ -81,7 +81,7 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.3.3-SNAPSHOT</connid.version>
+    <connid.version>1.3.3</connid.version>
     <connid.ldap.version>1.3.5-SNAPSHOT</connid.ldap.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
