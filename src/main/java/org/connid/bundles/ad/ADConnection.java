@@ -20,10 +20,6 @@
  * "Portions Copyrighted [year] [name of copyright owner]"
  * ====================
  */
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.connid.bundles.ad;
 
 import static org.connid.bundles.ldap.commons.LdapUtil.nullAsEmpty;
@@ -51,10 +47,6 @@ import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.common.security.GuardedString.Accessor;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 
-/**
- *
- * @author fabio
- */
 public class ADConnection extends LdapConnection {
 
     private static final Log LOG = Log.getLog(ADConnection.class);
