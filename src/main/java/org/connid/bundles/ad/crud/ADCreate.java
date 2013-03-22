@@ -133,6 +133,12 @@ public class ADCreate extends LdapModifyOperation {
                     adAttrs.put(
                             new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
                 }
+            } else if (attr.is(ADConfiguration.LOCK_OUT_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
+                    adAttrs.put(
+                            new BasicAttribute(ADConfiguration.LOCK_OUT_FLAG, ADConfiguration.LOCK_OUT_DEFAULT_VALUE));
+                }
             } else if (LdapConstants.isLdapGroups(attr.getName())) {
 
                 ldapGroups = checkedListByFilter(nullAsEmpty(attr.getValue()), String.class);
