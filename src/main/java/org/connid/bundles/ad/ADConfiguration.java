@@ -31,6 +31,14 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean retrieveDeletedUser = true;
 
+    public static final String PROMPT_USER_FLAG = "pwdLastSet";
+
+    public static final String PROMPT_USER_VALUE = "0";
+
+    public static final String LOCK_OUT_FLAG = "lockoutTime";
+
+    public static final String LOCK_OUT_DEFAULT_VALUE = "0";
+
     private List<String> memberships;
 
     private boolean trustAllCerts;

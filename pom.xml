@@ -56,7 +56,7 @@
     <url>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</url>
     <developerConnection>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</developerConnection>
   </scm>
-
+  
   <issueManagement>
     <system>jira</system>
     <url>https://connid.atlassian.net/browse/AD</url>
