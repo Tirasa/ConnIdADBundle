@@ -233,6 +233,12 @@ public class ADUpdate extends LdapModifyOperation {
                     ldapAttrs.put(
                             new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
                 }
+            } else if (attr.is(ADConfiguration.LOCK_OUT_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
+                    ldapAttrs.put(
+                            new BasicAttribute(ADConfiguration.LOCK_OUT_FLAG, ADConfiguration.LOCK_OUT_DEFAULT_VALUE));
+                }
             } else if (LdapConstants.isLdapGroups(attr.getName())) {
                 // Handled elsewhere.
             } else if (attr.is(OperationalAttributes.PASSWORD_NAME)) {
