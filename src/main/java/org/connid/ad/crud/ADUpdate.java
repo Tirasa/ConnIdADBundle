@@ -23,7 +23,6 @@
 package org.connid.ad.crud;
 
 import static org.connid.ad.ADConnector.*;
-
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
@@ -34,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.naming.InvalidNameException;
-
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -44,7 +42,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
-
+import org.connid.ad.ADConfiguration;
 import org.connid.ad.ADConnection;
 import org.connid.ad.util.ADGuardedPasswordAttribute;
 import org.connid.ad.util.ADGuardedPasswordAttribute.Accessor;
@@ -60,10 +58,10 @@ import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.LdapModifyOperation;
-import org.identityconnectors.ldap.LdapConstants;
 import org.identityconnectors.ldap.GroupHelper.GroupMembership;
 import org.identityconnectors.ldap.GroupHelper.Modification;
+import org.identityconnectors.ldap.LdapConstants;
+import org.identityconnectors.ldap.LdapModifyOperation;
 import org.identityconnectors.ldap.search.LdapFilter;
 import org.identityconnectors.ldap.search.LdapSearches;
 
@@ -229,6 +227,12 @@ public class ADUpdate extends LdapModifyOperation {
                 // Such a change would have been handled in update() above.
                 throw new IllegalArgumentException("Unable to modify an object's name");
 
+            } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
+                    ldapAttrs.put(
+                            new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
+                }
             } else if (LdapConstants.isLdapGroups(attr.getName())) {
                 // Handled elsewhere.
             } else if (attr.is(OperationalAttributes.PASSWORD_NAME)) {

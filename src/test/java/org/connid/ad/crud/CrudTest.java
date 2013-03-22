@@ -267,7 +267,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(t);
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
                     AttributeBuilder.build("givenName", "gnupdate"),
                     AttributeBuilder.buildPassword(
                     new GuardedString("Password321".toCharArray()))});
@@ -318,6 +318,32 @@ public class CrudTest extends AbstractTest {
                 null);
 
         assertNotNull(authUid);
+
+        // --------------------------
+        // force change password
+        // --------------------------
+        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("pwdLastSet", true)});
+
+        uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        t = null;
+
+        try {
+            authUid = connector.authenticate(
+                    ObjectClass.ACCOUNT, // object class
+                    SAAN, // uid
+                    new GuardedString("Password123".toCharArray()), // password
+                    null);
+        } catch (ConnectorException e) {
+            t = e;
+        }
+
+        assertNotNull(t);
+        // --------------------------
     }
 
     @Test

@@ -49,6 +49,8 @@ import org.identityconnectors.ldap.LdapConstants;
 import org.identityconnectors.ldap.LdapModifyOperation;
 import static org.identityconnectors.ldap.LdapUtil.checkedListByFilter;
 
+import org.connid.ad.ADConfiguration;
+
 public class ADCreate extends LdapModifyOperation {
 
     private static final Log LOG = Log.getLog(ADConnection.class);
@@ -99,7 +101,7 @@ public class ADCreate extends LdapModifyOperation {
         if (utils.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
-            
+
             Uid uidAttr = AttributeUtil.getUidAttribute(attrs);
 
             if (uidAttr == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
@@ -108,7 +110,7 @@ public class ADCreate extends LdapModifyOperation {
             }
 
             name = new Name(utils.getDN(attrs));
-            
+
         }
         // -------------------------------------------------
 
@@ -125,6 +127,12 @@ public class ADCreate extends LdapModifyOperation {
 
             if (attr.is(Name.NAME)) {
                 // Handled already.
+            } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
+                    adAttrs.put(
+                            new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
+                }
             } else if (LdapConstants.isLdapGroups(attr.getName())) {
 
                 ldapGroups = checkedListByFilter(nullAsEmpty(attr.getValue()), String.class);
