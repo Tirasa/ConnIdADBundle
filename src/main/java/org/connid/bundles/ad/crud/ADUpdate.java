@@ -131,8 +131,6 @@ public class ADUpdate extends LdapModifyOperation {
         // ---------------------------------
         final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrToBeUpdated);
 
-        final Attributes ldapAttrs = attrToModify.first;
-
         // Update the attributes.
         modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
 
@@ -158,13 +156,19 @@ public class ADUpdate extends LdapModifyOperation {
             final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();
 
             if (!newMemberships.equals(oldMemberships)) {
-                oldMemberships.addAll(newMemberships);
+                final Set<String> toBeRemoved = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+                toBeRemoved.addAll(oldMemberships);
+                toBeRemoved.removeAll(newMemberships);
 
-                for (String membership : oldMemberships) {
+                for (String membership : toBeRemoved) {
                     ldapGroupMod.remove(new GroupMembership(entryDN, membership));
                 }
 
-                for (String membership : newMemberships) {
+                final Set<String> toBeAdded = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+                toBeAdded.addAll(newMemberships);
+                toBeAdded.removeAll(oldMemberships);
+
+                for (String membership : toBeAdded) {
                     ldapGroupMod.add(new GroupMembership(entryDN, membership));
                 }
             }

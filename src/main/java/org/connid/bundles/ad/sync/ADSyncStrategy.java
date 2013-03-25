@@ -1,28 +1,23 @@
 /**
- * ====================
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ * ==================== DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 2008-2009 Sun Microsystems, Inc. All rights reserved.
- * Copyright 2011-2013 Tirasa. All rights reserved.
+ * Copyright 2008-2009 Sun Microsystems, Inc. All rights reserved. Copyright 2011-2013 Tirasa. All rights reserved.
  *
- * The contents of this file are subject to the terms of the Common Development
- * and Distribution License("CDDL") (the "License"). You may not use this file
- * except in compliance with the License.
+ * The contents of this file are subject to the terms of the Common Development and Distribution License("CDDL") (the
+ * "License"). You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the License at https://oss.oracle.com/licenses/CDDL
- * See the License for the specific language governing permissions and limitations
- * under the License.
+ * You can obtain a copy of the License at https://oss.oracle.com/licenses/CDDL See the License for the specific
+ * language governing permissions and limitations under the License.
  *
- * When distributing the Covered Code, include this CDDL Header Notice in each file
- * and include the License file at https://oss.oracle.com/licenses/CDDL.
- * If applicable, add the following below this CDDL Header, with the fields
- * enclosed by brackets [] replaced by your own identifying information:
- * "Portions Copyrighted [year] [name of copyright owner]"
- * ====================
+ * When distributing the Covered Code, include this CDDL Header Notice in each file and include the License file at
+ * https://oss.oracle.com/licenses/CDDL. If applicable, add the following below this CDDL Header, with the fields
+ * enclosed by brackets [] replaced by your own identifying information: "Portions Copyrighted [year] [name of copyright
+ * owner]" ====================
  */
 package org.connid.bundles.ad.sync;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -66,9 +61,11 @@ public class ADSyncStrategy {
 
     private transient SyncToken latestSyncToken;
 
-    public ADSyncStrategy(final ADConnection conn) {
+    private final ADUtilities utils;
 
+    public ADSyncStrategy(final ADConnection conn) {
         this.conn = conn;
+        this.utils = new ADUtilities(conn);
     }
 
     private Map<String, Set<SearchResult>> search(
@@ -196,6 +193,9 @@ public class ADSyncStrategy {
         }
         // -----------------------------------
 
+        final String[] attrsToGetOption = options.getAttributesToGet();
+        final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
+
         final Map<String, Set<SearchResult>> changes = search(ctx, filter, searchCtls, true);
 
         for (String baseDN : conn.getConfiguration().getBaseContextsToSynchronize()) {
@@ -208,6 +208,7 @@ public class ADSyncStrategy {
                                 oclass,
                                 ctx,
                                 sr,
+                                attrsToGet,
                                 handler);
 
                     } catch (NamingException e) {
@@ -227,6 +228,7 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final LdapContext ctx,
             final SearchResult result,
+            final Collection<String> attrsToGet,
             final SyncResultsHandler handler)
             throws NamingException {
 
@@ -270,7 +272,7 @@ public class ADSyncStrategy {
         // We need for this beacause DirSync can return an uncomplete profile.
         profile = ctx.getAttributes("<GUID=" + guid + ">");
 
-        final NamingEnumeration<String> objectClasses = 
+        final NamingEnumeration<String> objectClasses =
                 (NamingEnumeration<String>) profile.get("objectClass").getAll();
 
         while (objectClasses.hasMoreElements()) {
@@ -316,13 +318,12 @@ public class ADSyncStrategy {
 
                         profile = ctx.getAttributes(userDN);
 
-                        guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
-
                         handler.handle(getSyncDelta(
                                 oclass,
                                 userDN,
                                 SyncDeltaType.CREATE_OR_UPDATE,
-                                profile));
+                                profile,
+                                attrsToGet));
                     }
                 }
             }
@@ -341,8 +342,6 @@ public class ADSyncStrategy {
                     userDN = userDNs.next();
 
                     profile = ctx.getAttributes(userDN);
-
-                    guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
                     SyncDeltaType deltaType;
 
@@ -368,7 +367,8 @@ public class ADSyncStrategy {
                             oclass,
                             userDN,
                             deltaType,
-                            profile));
+                            profile,
+                            attrsToGet));
                 }
             }
         } else if (classes.contains("user")) {
@@ -387,7 +387,8 @@ public class ADSyncStrategy {
                         oclass,
                         result.getNameInNamespace(),
                         SyncDeltaType.DELETE,
-                        profile));
+                        profile,
+                        attrsToGet));
 
             } else {
                 // user to be created/updated
@@ -406,7 +407,8 @@ public class ADSyncStrategy {
                             oclass,
                             result.getNameInNamespace(),
                             SyncDeltaType.CREATE_OR_UPDATE,
-                            profile));
+                            profile,
+                            attrsToGet));
 
                 } else {
                     if (LOG.isOk()) {
@@ -426,7 +428,8 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final String entryDN,
             final SyncDeltaType syncDeltaType,
-            final Attributes profile)
+            final Attributes profile,
+            final Collection<String> attrsToGet)
             throws NamingException {
 
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
@@ -458,9 +461,9 @@ public class ADSyncStrategy {
 
         // Set Connector Object
         if (SyncDeltaType.DELETE == syncDeltaType) {
-            sdb.setObject(new ADUtilities((ADConnection) conn).createDeletedObject(entryDN, uid, profile, oclass));
+            sdb.setObject(utils.createDeletedObject(entryDN, uid, profile, oclass));
         } else {
-            sdb.setObject(new ADUtilities((ADConnection) conn).createConnectorObject(entryDN, profile, oclass));
+            sdb.setObject(utils.createConnectorObject(entryDN, profile, attrsToGet, oclass));
         }
 
         return sdb.build();
