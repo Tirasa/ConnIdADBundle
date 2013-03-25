@@ -22,8 +22,6 @@
  */
 package org.connid.bundles.ad;
 
-import org.connid.bundles.ad.ADConnector;
-import org.connid.bundles.ad.ADConfiguration;
 import static org.junit.Assert.*;
 
 import org.connid.bundles.ad.util.DirSyncUtils;
@@ -83,8 +81,7 @@ public class BasicFeaturesTest {
         assertNotNull(connector);
         assertNotNull(connector.getConfiguration());
 
-        final String filter = DirSyncUtils.createLdapFilter(
-                (ADConfiguration) connector.getConfiguration());
+        final String filter = DirSyncUtils.createLdapUFilter((ADConfiguration) connector.getConfiguration());
 
         assertNotNull(filter);
         assertFalse(filter.isEmpty());
@@ -100,14 +97,13 @@ public class BasicFeaturesTest {
                 + "(distinguishedName=cn=groupC,cn=group,o=isp)))"
                 + "(&(isDeleted=TRUE)(objectClass=user)))", filter);
     }
-    
+
     @Test
     public void createDirSyncFilter() {
         assertNotNull(connector);
         assertNotNull(connector.getConfiguration());
 
-        final String filter = DirSyncUtils.createDirSyncFilter(
-                (ADConfiguration) connector.getConfiguration());
+        final String filter = DirSyncUtils.createDirSyncUFilter((ADConfiguration) connector.getConfiguration());
 
         assertNotNull(filter);
         assertFalse(filter.isEmpty());

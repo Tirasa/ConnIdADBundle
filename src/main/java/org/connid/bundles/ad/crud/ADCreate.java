@@ -109,7 +109,7 @@ public class ADCreate extends LdapModifyOperation {
                 attrs.add(uidAttr);
             }
 
-            name = new Name(utils.getDN(attrs));
+            name = new Name(utils.getDN(oclass, attrs));
 
         }
         // -------------------------------------------------
@@ -164,26 +164,28 @@ public class ADCreate extends LdapModifyOperation {
 
         final String pwdAttrName = conn.getConfiguration().getPasswordAttribute();
 
-        if (pwdAttr != null) {
-            pwdAttr.access(new Accessor() {
+        if (oclass == ObjectClass.ACCOUNT) {
+            if (pwdAttr != null) {
+                pwdAttr.access(new Accessor() {
 
-                @Override
-                public void access(BasicAttribute attr) {
-                    try {
-                        if (attr.get() != null && !attr.get().toString().isEmpty()) {
-                            adAttrs.put(attr);
+                    @Override
+                    public void access(BasicAttribute attr) {
+                        try {
+                            if (attr.get() != null && !attr.get().toString().isEmpty()) {
+                                adAttrs.put(attr);
+                            }
+                        } catch (NamingException e) {
+                            LOG.error(e, "Error retrieving password value");
                         }
-                    } catch (NamingException e) {
-                        LOG.error(e, "Error retrieving password value");
                     }
-                }
-            });
-        }
+                });
+            }
 
-        if (enabled && adAttrs.get(pwdAttrName) != null) {
-            adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT));
-        } else {
-            adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE));
+            if (enabled && adAttrs.get(pwdAttrName) != null) {
+                adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT));
+            } else {
+                adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE));
+            }
         }
 
         entryDN[0] = conn.getSchemaMapping().create(oclass, name, adAttrs);

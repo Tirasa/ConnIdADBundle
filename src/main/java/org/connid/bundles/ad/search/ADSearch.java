@@ -33,6 +33,7 @@ import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.PagedResultsControl;
+import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.util.ADUtilities;
 import org.connid.bundles.ldap.LdapConnection;
@@ -86,7 +87,9 @@ public class ADSearch {
             final LdapFilter filter,
             final OperationOptions options) {
 
-        this(conn, oclass, filter, options, conn.getConfiguration().getBaseContexts());
+        this(conn, oclass, filter, options, oclass == ObjectClass.ACCOUNT
+                ? conn.getConfiguration().getBaseContexts()
+                : ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts());
     }
 
     public final void executeADQuery(final ResultsHandler handler) {
@@ -147,14 +150,16 @@ public class ADSearch {
         controls.setSearchScope(searchScope);
 
         final String optionsFilter = LdapConstants.getSearchFilter(options);
-        String userFilter = null;
-        if (oclass.equals(ObjectClass.ACCOUNT)) {
-            userFilter = conn.getConfiguration().getAccountSearchFilter();
-        }
+        
+        final String searchFilter = oclass.equals(ObjectClass.ACCOUNT)
+                ? conn.getConfiguration().getAccountSearchFilter()
+                : ((ADConfiguration) conn.getConfiguration()).getGroupSearchFilter();
+
         final String nativeFilter = filter != null ? filter.getNativeFilter() : null;
+        
         return new LdapInternalSearch(
                 conn,
-                getSearchFilter(optionsFilter, nativeFilter, userFilter),
+                getSearchFilter(optionsFilter, nativeFilter, searchFilter),
                 dns,
                 strategy,
                 controls);
@@ -256,12 +261,20 @@ public class ADSearch {
 
     private int getLdapSearchScope() {
         String scope = options.getScope();
+
+        if (scope == null) {
+            if (oclass == ObjectClass.ACCOUNT) {
+                scope = ((ADConfiguration) conn.getConfiguration()).getUserSearchScope();
+            } else {
+                scope = ((ADConfiguration) conn.getConfiguration()).getGroupSearchScope();
+            }
+        }
+
         if (OperationOptions.SCOPE_OBJECT.equals(scope)) {
             return SearchControls.OBJECT_SCOPE;
         } else if (OperationOptions.SCOPE_ONE_LEVEL.equals(scope)) {
             return SearchControls.ONELEVEL_SCOPE;
-        } else if (OperationOptions.SCOPE_SUBTREE.equals(scope)
-                || scope == null) {
+        } else if (OperationOptions.SCOPE_SUBTREE.equals(scope) || scope == null) {
             return SearchControls.SUBTREE_SCOPE;
         } else {
             throw new IllegalArgumentException("Invalid search scope " + scope);

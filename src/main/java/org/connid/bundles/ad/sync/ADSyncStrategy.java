@@ -24,13 +24,12 @@ package org.connid.bundles.ad.sync;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
@@ -43,7 +42,6 @@ import org.connid.bundles.ad.util.DeletedControl;
 import org.connid.bundles.ad.util.DirSyncControl;
 import org.connid.bundles.ad.util.DirSyncUtils;
 import org.connid.bundles.ldap.search.LdapInternalSearch;
-import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -74,36 +72,25 @@ public class ADSyncStrategy {
         this.utils = new ADUtilities(conn);
     }
 
-    private Map<String, Set<SearchResult>> search(
+    private Set<SearchResult> search(
             final LdapContext ctx,
             final String filter,
             final SearchControls searchCtls,
             final boolean updateLastSyncToken) {
 
-        final Map<String, Set<SearchResult>> result =
-                new HashMap<String, Set<SearchResult>>();
+        final Set<SearchResult> result = new HashSet<SearchResult>();
 
-        for (String baseContextDn :
-                conn.getConfiguration().getBaseContextsToSynchronize()) {
+        for (String baseContextDn : conn.getConfiguration().getBaseContextsToSynchronize()) {
 
             if (LOG.isOk()) {
                 LOG.ok("Searching from " + baseContextDn);
             }
 
-            if (!result.containsKey(baseContextDn)) {
-                result.put(baseContextDn, new HashSet<SearchResult>());
-            }
-
             try {
-                final NamingEnumeration<SearchResult> answer =
-                        ctx.search(baseContextDn, filter, searchCtls);
+                final NamingEnumeration<SearchResult> answer = ctx.search(baseContextDn, filter, searchCtls);
 
                 while (answer.hasMoreElements()) {
-                    result.get(baseContextDn).add(answer.nextElement());
-                }
-
-                if (LOG.isOk()) {
-                    LOG.ok("Search found {0} items", result.get(baseContextDn).size());
+                    result.add(answer.nextElement());
                 }
 
                 if (updateLastSyncToken) {
@@ -116,22 +103,18 @@ public class ADSyncStrategy {
 
                         for (int i = 0; i < rspCtls.length; i++) {
                             if (rspCtls[i] instanceof DirSyncResponseControl) {
-                                DirSyncResponseControl dirSyncRspCtl =
-                                        (DirSyncResponseControl) rspCtls[i];
-                                latestSyncToken =
-                                        new SyncToken(dirSyncRspCtl.getCookie());
+                                DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtls[i];
+                                latestSyncToken = new SyncToken(dirSyncRspCtl.getCookie());
                             }
                         }
 
                         if (LOG.isOk()) {
-                            LOG.ok("Latest sync token set to {0}",
-                                    latestSyncToken);
+                            LOG.ok("Latest sync token set to {0}", latestSyncToken);
                         }
                     }
                 }
             } catch (NamingException e) {
-                LOG.error(e, "While searching base context {0} with filter {1} "
-                        + "and search controls {2}",
+                LOG.error(e, "While searching base context {0} with filter {1} and search controls {2}",
                         baseContextDn, filter.toString(), searchCtls);
             }
         }
@@ -192,7 +175,11 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search filter
         // -----------------------------------
-        final String filter = DirSyncUtils.createDirSyncFilter((ADConfiguration) conn.getConfiguration());
+        final String filter = oclass == ObjectClass.ACCOUNT
+                ? // get user filter
+                DirSyncUtils.createDirSyncUFilter((ADConfiguration) conn.getConfiguration())
+                : // get group filter
+                DirSyncUtils.createDirSyncGFilter((ADConfiguration) conn.getConfiguration());
 
         if (LOG.isOk()) {
             LOG.ok("Search filter: " + filter);
@@ -202,24 +189,26 @@ public class ADSyncStrategy {
         final String[] attrsToGetOption = options.getAttributesToGet();
         final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
 
-        final Map<String, Set<SearchResult>> changes = search(ctx, filter, searchCtls, true);
+        final Set<SearchResult> changes = search(ctx, filter, searchCtls, true);
 
-        for (String baseDN : conn.getConfiguration().getBaseContextsToSynchronize()) {
+        if (oclass == ObjectClass.ACCOUNT) {
+            for (SearchResult sr : changes) {
+                try {
 
-            if (changes.containsKey(baseDN)) {
-                for (SearchResult sr : changes.get(baseDN)) {
-                    try {
+                    handleSyncUDelta(ctx, sr, attrsToGet, handler);
 
-                        handleSyncDelta(
-                                oclass,
-                                ctx,
-                                sr,
-                                attrsToGet,
-                                handler);
+                } catch (NamingException e) {
+                    LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                }
+            }
+        } else {
+            for (SearchResult sr : changes) {
+                try {
 
-                    } catch (NamingException e) {
-                        LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
-                    }
+                    handleSyncGDelta(ctx, sr, attrsToGet, handler);
+
+                } catch (NamingException e) {
+                    LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                 }
             }
         }
@@ -230,8 +219,7 @@ public class ADSyncStrategy {
     }
 
     @SuppressWarnings("unchecked")
-    private void handleSyncDelta(
-            final ObjectClass oclass,
+    private void handleSyncUDelta(
             final LdapContext ctx,
             final SearchResult result,
             final Collection<String> attrsToGet,
@@ -250,8 +238,6 @@ public class ADSyncStrategy {
         if (LOG.isOk()) {
             LOG.ok("Object profile: {0}", profile);
         }
-
-        final Set<String> classes = CollectionUtil.newCaseInsensitiveSet();
 
         String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
@@ -278,19 +264,14 @@ public class ADSyncStrategy {
         // We need for this beacause DirSync can return an uncomplete profile.
         profile = ctx.getAttributes("<GUID=" + guid + ">");
 
-        final NamingEnumeration<String> objectClasses =
-                (NamingEnumeration<String>) profile.get("objectClass").getAll();
-
-        while (objectClasses.hasMoreElements()) {
-            classes.add(objectClasses.next());
-        }
+        final Attribute objectClasses = profile.get("objectClass");
 
         final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
 
         final javax.naming.directory.Attribute member11;
         final javax.naming.directory.Attribute member00;
 
-        if (classes.contains("group")) {
+        if (objectClasses.contains("group")) {
             // search for users in adn users out
 
             if (LOG.isOk()) {
@@ -309,29 +290,14 @@ public class ADSyncStrategy {
                     LOG.ok("Found users 'IN' ...");
                 }
 
-                // users to be created/updated
-                final NamingEnumeration<String> userDNs = (NamingEnumeration<String>) member11.getAll();
-
-                while (userDNs.hasMoreElements()) {
-                    // for each new user "in" we must verify custom ldap filter
-                    userDN = userDNs.next();
-
-                    if (DirSyncUtils.verifyFilter(ctx, userDN, conf)) {
-
-                        if (LOG.isOk()) {
-                            LOG.ok("IN user {0}", userDN);
-                        }
-
-                        profile = ctx.getAttributes(userDN);
-
-                        handler.handle(getSyncDelta(
-                                oclass,
-                                userDN,
-                                SyncDeltaType.CREATE_OR_UPDATE,
-                                profile,
-                                attrsToGet));
-                    }
-                }
+                handleInOutEntries(
+                        ctx,
+                        ObjectClass.ACCOUNT,
+                        (NamingEnumeration<String>) member11.getAll(),
+                        DirSyncUtils.getUserFilter(conf),
+                        handler,
+                        conf,
+                        attrsToGet);
             }
 
             if (member00 != null && conf.isRetrieveDeletedUser()) {
@@ -340,44 +306,16 @@ public class ADSyncStrategy {
                     LOG.ok("Found users 'OUT' ...");
                 }
 
-                final NamingEnumeration<String> userDNs =
-                        (NamingEnumeration<String>) member00.getAll();
-
-                while (userDNs.hasMoreElements()) {
-                    // for each user "out" we must verify custom ldap filter
-                    userDN = userDNs.next();
-
-                    profile = ctx.getAttributes(userDN);
-
-                    SyncDeltaType deltaType;
-
-                    if (!DirSyncUtils.verifyFilter(ctx, userDN, conf)) {
-                        if (LOG.isOk()) {
-                            LOG.ok("OUT user {0} - delete", userDN);
-                        }
-
-                        deltaType = SyncDeltaType.DELETE;
-
-                    } else {
-                        // update user i order to update memberOf
-                        // issue http://code.google.com/p/connid/issues/detail?id=25
-
-                        if (LOG.isOk()) {
-                            LOG.ok("OUT user {0} - update", userDN);
-                        }
-
-                        deltaType = SyncDeltaType.CREATE_OR_UPDATE;
-                    }
-
-                    handler.handle(getSyncDelta(
-                            oclass,
-                            userDN,
-                            deltaType,
-                            profile,
-                            attrsToGet));
-                }
+                handleInOutEntries(
+                        ctx,
+                        ObjectClass.ACCOUNT,
+                        (NamingEnumeration<String>) member00.getAll(),
+                        DirSyncUtils.getUserFilter(conf),
+                        handler,
+                        conf,
+                        attrsToGet);
             }
-        } else if (classes.contains("user")) {
+        } else if (objectClasses.contains("user")) {
             if (LOG.isOk()) {
                 LOG.ok("Created/Updated/Deleted user {0}",
                         result.getNameInNamespace());
@@ -389,12 +327,14 @@ public class ADSyncStrategy {
                     LOG.ok("Deleted user {0}", result.getNameInNamespace());
                 }
 
-                handler.handle(getSyncDelta(
-                        oclass,
-                        result.getNameInNamespace(),
-                        SyncDeltaType.DELETE,
-                        profile,
-                        attrsToGet));
+                if (conf.isRetrieveDeletedUser()) {
+                    handler.handle(getSyncDelta(
+                            ObjectClass.ACCOUNT,
+                            result.getNameInNamespace(),
+                            SyncDeltaType.DELETE,
+                            profile,
+                            attrsToGet));
+                }
 
             } else {
                 // user to be created/updated
@@ -402,30 +342,140 @@ public class ADSyncStrategy {
                     LOG.ok("Created/Updated user {0}", result.getNameInNamespace());
                 }
 
-                if (DirSyncUtils.verifyFilter(
-                        ctx, result.getNameInNamespace(), conf)) {
+                handleEntry(
+                        ctx,
+                        ObjectClass.ACCOUNT,
+                        result.getNameInNamespace(),
+                        DirSyncUtils.getUserFilter(conf),
+                        handler,
+                        conf,
+                        attrsToGet);
+            }
+        } else {
+            if (LOG.isInfo()) {
+                LOG.info("Invalid object type {0}", objectClasses);
+            }
+        }
+    }
 
-                    if (LOG.isOk()) {
-                        LOG.ok("Matched user {0}", result.getNameInNamespace());
-                    }
+    private void handleSyncGDelta(
+            final LdapContext ctx,
+            final SearchResult sr,
+            final Collection<String> attrsToGet,
+            final SyncResultsHandler handler)
+            throws NamingException {
 
+        if (ctx == null || sr == null) {
+            throw new ConnectorException("Invalid context or search result.");
+        }
+
+        ctx.setRequestControls(new Control[]{new DeletedControl()});
+
+        // Just used to retrieve object classes and to pass to getSyncDelta
+        Attributes profile = sr.getAttributes();
+
+        if (LOG.isOk()) {
+            LOG.ok("Object profile: {0}", profile);
+        }
+
+        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
+
+        boolean isDeleted = false;
+
+        try {
+
+            javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
+
+            isDeleted =
+                    attributeIsDeleted != null
+                    && attributeIsDeleted.get() != null
+                    && Boolean.parseBoolean(
+                    attributeIsDeleted.get().toString());
+
+        } catch (NoSuchElementException e) {
+            if (LOG.isOk()) {
+                LOG.ok("Cannot find the isDeleted element for group.");
+            }
+        } catch (Throwable t) {
+            LOG.error(t, "Error retrieving isDeleted attribute");
+        }
+
+        // We need for this beacause DirSync can return an uncomplete profile.
+        profile = ctx.getAttributes("<GUID=" + guid + ">");
+
+        final Attribute objectClasses = profile.get("objectClass");
+
+        if (objectClasses.contains("group")) {
+            final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
+
+            if (LOG.isOk()) {
+                LOG.ok("Created/Updated/Deleted group {0}", sr.getNameInNamespace());
+            }
+
+            if (isDeleted) {
+
+                if (LOG.isOk()) {
+                    LOG.ok("Deleted group {0}", sr.getNameInNamespace());
+                }
+
+                if (conf.isRetrieveDeletedGroup()) {
                     handler.handle(getSyncDelta(
-                            oclass,
-                            result.getNameInNamespace(),
-                            SyncDeltaType.CREATE_OR_UPDATE,
+                            ObjectClass.GROUP,
+                            sr.getNameInNamespace(),
+                            SyncDeltaType.DELETE,
                             profile,
                             attrsToGet));
+                }
 
-                } else {
+            } else {
+                // user to be created/updated
+                if (LOG.isOk()) {
+                    LOG.ok("Created/Updated group {0}", sr.getNameInNamespace());
+                }
+
+                String userDN = sr.getNameInNamespace();
+
+                handleEntry(ctx, ObjectClass.GROUP, userDN, conf.getGroupSearchFilter(), handler, conf, attrsToGet);
+
+                final javax.naming.directory.Attribute member11 = sr.getAttributes().get("member;range=1-1");
+                final javax.naming.directory.Attribute member00 = sr.getAttributes().get("member;range=0-0");
+
+                ctx.setRequestControls(null);
+
+                if (member11 != null && !conf.isLoading()) {
                     if (LOG.isOk()) {
-                        LOG.ok("Ignore changes about user {0}",
-                                result.getNameInNamespace());
+                        LOG.ok("Found entry 'IN' ...");
                     }
+
+                    handleInOutEntries(
+                            ctx,
+                            ObjectClass.GROUP,
+                            (NamingEnumeration<String>) member11.getAll(),
+                            "(&(objectclass=group)" + conf.getGroupSearchFilter() + ")",
+                            handler,
+                            conf,
+                            attrsToGet);
+                }
+
+                if (member00 != null && !conf.isLoading()) {
+                    // users to be removed
+                    if (LOG.isOk()) {
+                        LOG.ok("Found entry 'OUT' ...");
+                    }
+
+                    handleInOutEntries(
+                            ctx,
+                            ObjectClass.GROUP,
+                            (NamingEnumeration<String>) member00.getAll(),
+                            "(&(objectclass=group)" + conf.getGroupSearchFilter() + ")",
+                            handler,
+                            conf,
+                            attrsToGet);
                 }
             }
         } else {
             if (LOG.isInfo()) {
-                LOG.info("Invalid object type {0}", classes);
+                LOG.info("Invalid object type {0}", objectClasses);
             }
         }
     }
@@ -473,5 +523,72 @@ public class ADSyncStrategy {
         }
 
         return sdb.build();
+    }
+
+    private void handleInOutEntries(
+            final LdapContext ctx,
+            final ObjectClass oclass,
+            final NamingEnumeration<String> dns,
+            final String filter,
+            final SyncResultsHandler handler,
+            final ADConfiguration conf,
+            final Collection<String> attrsToGet)
+            throws NamingException {
+
+        while (dns.hasMoreElements()) {
+            // for each new user "in" we must verify custom ldap filter
+            handleEntry(ctx, oclass, dns.next(), filter, handler, conf, attrsToGet);
+        }
+    }
+
+    private void handleEntry(
+            final LdapContext ctx,
+            final ObjectClass oclass,
+            final String dn,
+            final String filter,
+            final SyncResultsHandler handler,
+            final ADConfiguration conf,
+            final Collection<String> attrsToGet)
+            throws NamingException {
+
+        final Attributes profile = ctx.getAttributes(dn);
+
+        final Attribute objectClasses = profile.get("objectClass");
+
+        if (ObjectClass.ACCOUNT == oclass && !objectClasses.contains("user")
+                || ObjectClass.GROUP == oclass && !objectClasses.contains("group")) {
+            LOG.info("Invalid type: skip object {0}", dn);
+            return;
+        }
+
+        final SyncDeltaType deltaType;
+
+        if (DirSyncUtils.verifyFilter(ctx, dn, filter)) {
+            if (LOG.isOk()) {
+                LOG.ok("Entry {0} - update", dn);
+            }
+
+            deltaType = SyncDeltaType.CREATE_OR_UPDATE;
+
+        } else {
+            // new memberOf could invalidate the custom filter
+            if (LOG.isOk()) {
+                LOG.ok("Entry {0} - delete", dn);
+            }
+
+            deltaType = SyncDeltaType.DELETE;
+        }
+
+        if (deltaType != SyncDeltaType.DELETE
+                || (ObjectClass.GROUP == oclass && conf.isRetrieveDeletedGroup())
+                || (ObjectClass.ACCOUNT == oclass && conf.isRetrieveDeletedUser())) {
+
+            handler.handle(getSyncDelta(
+                    oclass,
+                    dn,
+                    deltaType,
+                    profile,
+                    attrsToGet));
+        }
     }
 }

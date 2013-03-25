@@ -29,16 +29,18 @@ import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
+import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.spi.AbstractConfiguration;
 
 public class DirSyncUtils {
 
-    public static String createDirSyncFilter(final ADConfiguration conf) {
+    private static final Log LOG = Log.getLog(DirSyncUtils.class);
+
+    public static String createDirSyncUFilter(final ADConfiguration conf) {
 
         final String[] memberships = conf.getMemberships();
 
-        final String isDeleted =
-                String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
+        final String isDeleted = String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
 
         final StringBuilder filter = new StringBuilder();
         final StringBuilder mfilter = new StringBuilder();
@@ -59,19 +61,29 @@ public class DirSyncUtils {
         ufilter.insert(0, "(&(objectClass=user)").append(")");
 
         filter.append("(|").append(ufilter).append(mfilter).
-                append("(&(isDeleted=").
-                append(isDeleted).
-                append(")(objectClass=user)))");
+                append("(&(isDeleted=").append(isDeleted).append(")(objectClass=user)))");
 
         return filter.toString();
     }
 
-    public static String createLdapFilter(final ADConfiguration conf) {
+    public static String createDirSyncGFilter(final ADConfiguration conf) {
+
+        final StringBuilder filter = new StringBuilder();
+
+        if (conf.isRetrieveDeletedGroup()) {
+            filter.append("(objectClass=group)");
+        } else {
+            filter.append("(&(objectClass=group)(! (isDeleted=TRUE)))");
+        }
+
+        return filter.toString();
+    }
+
+    public static String createLdapUFilter(final ADConfiguration conf) {
 
         final String[] memberships = conf.getMemberships();
 
-        final String isDeleted =
-                String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
+        final String isDeleted = String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
 
         final StringBuilder filter = new StringBuilder();
         final StringBuilder mfilter = new StringBuilder();
@@ -93,9 +105,7 @@ public class DirSyncUtils {
         ufilter.insert(0, "(&(objectClass=user)").append(")");
 
         filter.append("(|").append(ufilter).append(mfilter).
-                append("(&(isDeleted=").
-                append(isDeleted).
-                append(")(objectClass=user)))");
+                append("(&(isDeleted=").append(isDeleted).append(")(objectClass=user)))");
 
         return filter.toString();
     }
@@ -150,11 +160,30 @@ public class DirSyncUtils {
             final LdapContext ctx,
             final String dn,
             final ADConfiguration conf) {
+        return verifyFilter(ctx, dn, getFilter(conf));
+    }
 
-        final String filter = getFilter(conf);
+    /**
+     * Verify complete filter including the custom one. This method is used to validate users 'IN' group.
+     *
+     * @param conf connector configuration.
+     * @return TRUE if verified; FALSE otherwise.
+     */
+    public static String getUserFilter(final ADConfiguration conf) {
 
-        final SearchControls searchCtls =
-                LdapInternalSearch.createDefaultSearchControls();
+        final StringBuilder filter = new StringBuilder();
+        filter.append("(&(").append(createLdapUFilter(conf)).append(")");
+
+        filter.append(getFilter(conf) != null ? getFilter(conf) : "").append(")");
+
+        return filter.toString();
+    }
+
+    public static boolean verifyFilter(
+            final LdapContext ctx,
+            final String dn,
+            final String filter) {
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
 
         searchCtls.setSearchScope(SearchControls.OBJECT_SCOPE);
         searchCtls.setReturningAttributes(new String[]{});
@@ -163,51 +192,12 @@ public class DirSyncUtils {
 
         if (StringUtil.isNotBlank(filter)) {
             try {
-                final NamingEnumeration res =
-                        ctx.search(dn, filter, searchCtls);
 
-                found = res != null && res.hasMoreElements();
-            } catch (NamingException ex) {
-                found = false;
-            }
-        }
-
-        return found;
-    }
-
-    /**
-     * Verify complete filter including the custom one. This method is used to validate users 'IN' group.
-     *
-     * @param ctx ldap context.
-     * @param dn user distinguished name.
-     * @param conf connector configuration.
-     * @return TRUE if verified; FALSE otherwise.
-     */
-    public static boolean verifyFilter(
-            final LdapContext ctx,
-            final String dn,
-            final ADConfiguration conf) {
-
-        final StringBuilder filter = new StringBuilder();
-        filter.append("(&(").append(createLdapFilter(conf)).append(")");
-
-        filter.append(getFilter(conf) != null ? getFilter(conf) : "").append(")");
-
-        final SearchControls searchCtls =
-                LdapInternalSearch.createDefaultSearchControls();
-
-        searchCtls.setSearchScope(SearchControls.OBJECT_SCOPE);
-        searchCtls.setReturningAttributes(new String[]{});
-
-        boolean found = true;
-
-        if (StringUtil.isNotBlank(filter.toString())) {
-            try {
-
-                final NamingEnumeration res = ctx.search(dn, filter.toString(), searchCtls);
+                final NamingEnumeration res = ctx.search(dn, filter, searchCtls);
                 found = res != null && res.hasMoreElements();
 
             } catch (NamingException ex) {
+                LOG.warn(ex, "Error searching for {0}", filter);
                 found = false;
             }
         }

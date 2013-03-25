@@ -22,17 +22,13 @@
  */
 package org.connid.bundles.ad;
 
-import org.connid.bundles.ad.ADConnector;
-import org.connid.bundles.ad.ADConfiguration;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Collections;
-
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
-
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
@@ -56,19 +52,18 @@ public abstract class AbstractTest {
 
     protected static ADConfiguration conf;
 
-    private static String USERCONTEXT;
-
     protected static final Properties prop = new Properties();
 
-    public static void init(String prefix) {
+    protected static String BASE_CONTEXT;
 
+    public static void init() {
         try {
             prop.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
         } catch (IOException e) {
             LOG.error(e, "Error loading properties file");
         }
 
-        USERCONTEXT = prop.getProperty("usersBaseContext");
+        BASE_CONTEXT = prop.getProperty("baseContext");
 
         conf = getSimpleConf(prop);
 
@@ -76,84 +71,21 @@ public abstract class AbstractTest {
         conf.validate();
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+
         connector = factory.newInstance(impl);
-        
+
         assertNotNull(connector);
         connector.test();
-
-        // Create a set of test users ...
-
-        String cn;
-
-        // check users existence
-        for (int i = 1; i <= 10; i++) {
-            cn = prefix + i;
-
-            assertNull("Please remove user 'sAMAccountName: SAAN_" + cn + "'",
-                    connector.getObject(ObjectClass.ACCOUNT, new Uid("SAAN_" + cn), null));
-        }
-
-        Set<Attribute> attributes;
-
-        // add new users
-        for (int i = 1; i <= 10; i++) {
-            cn = prefix + i;
-
-            attributes = getSimpleProfile(cn);
-
-            final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
-
-            assertNotNull(uid);
-            assertEquals("SAAN_" + cn, uid.getUidValue());
-        }
-
-    }
-
-    protected String getEntryDN(final String cn) {
-        return "cn=" + cn + ",CN=Users," + USERCONTEXT;
-    }
-
-    protected static Set<Attribute> getSimpleProfile(final String cn, final boolean withDN) {
-        return getSimpleProfile(cn, conf, withDN);
-    }
-
-    protected static Set<Attribute> getSimpleProfile(final String cn) {
-        return getSimpleProfile(cn, conf, true);
-    }
-
-    protected static Set<Attribute> getSimpleProfile(
-            final String cn, final ADConfiguration conf, final boolean withDN) {
-
-        final Set<Attribute> attributes = new HashSet<Attribute>();
-
-        if (withDN) {
-            attributes.add(new Name("cn=" + cn + ",CN=Users," + USERCONTEXT));
-        } else {
-            attributes.add(new Name("SAAN_" + cn));
-            attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
-        }
-
-        attributes.add(AttributeBuilder.build(Uid.NAME, Collections.singletonList("SAAN_" + cn)));
-
-        attributes.add(AttributeBuilder.buildEnabled(true));
-
-        attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
-
-        attributes.add(AttributeBuilder.build("sn", Collections.singletonList("sntest")));
-
-        attributes.add(AttributeBuilder.build("givenName", Collections.singletonList("gntest")));
-
-        attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
-
-        return attributes;
     }
 
     protected static ADConfiguration getSimpleConf(final Properties prop) {
 
         final ADConfiguration configuration = new ADConfiguration();
 
-        configuration.setDefaultPeopleContainer("CN=Users," + USERCONTEXT);
+        configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
+        configuration.setDefaultGroupContainer("CN=Users," + BASE_CONTEXT);
 
         configuration.setObjectClassesToSynchronize("user");
 
@@ -164,7 +96,10 @@ public abstract class AbstractTest {
 
         configuration.setBaseContextsToSynchronize(prop.getProperty("baseContextToSynchronize"));
 
-        configuration.setBaseContexts(USERCONTEXT);
+        configuration.setBaseContexts(BASE_CONTEXT);
+
+        // set default group container as Fgroup search context
+        configuration.setGroupBaseContexts(configuration.getDefaultGroupContainer());
 
         configuration.setPrincipal(prop.getProperty("principal"));
 
@@ -178,24 +113,14 @@ public abstract class AbstractTest {
 
         configuration.setMembershipsInOr(true);
 
+        configuration.setUserSearchScope("subtree");
+        configuration.setGroupSearchScope("subtree");
+
+        configuration.setGroupSearchFilter(
+                "(&(cn=GroupTest*)(memberOf=CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT + "))");
+
         assertFalse(configuration.getMemberships() == null || configuration.getMemberships().length == 0);
 
         return configuration;
-    }
-
-    public static void cleanup(final String prefix) {
-        Uid uid = null;
-        for (int i = 1; i <= 10; i++) {
-            uid = new Uid("SAAN_" + prefix + i);
-
-            try {
-                connector.delete(ObjectClass.ACCOUNT, uid, null);
-            } catch (Exception ignore) {
-                // ignore exception
-                LOG.error(ignore, "Error removing user {0}", uid.getUidValue());
-            }
-
-            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
-        }
     }
 }

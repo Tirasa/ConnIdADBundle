@@ -76,9 +76,7 @@ public class ADUpdate extends LdapModifyOperation {
     @SuppressWarnings("FieldNameHidesFieldInSuperclass")
     private ADConnection conn;
 
-    public ADUpdate(
-            final ADConnection conn, final ObjectClass oclass, final Uid uid) {
-
+    public ADUpdate(final ADConnection conn, final ObjectClass oclass, final Uid uid) {
         super(conn);
         this.oclass = oclass;
         this.uid = uid;
@@ -202,8 +200,6 @@ public class ADUpdate extends LdapModifyOperation {
 
         final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
 
-        Attributes ldapAttrs = attrsToModify.first;
-
         modifyAttributes(entryDN, attrsToModify, DirContext.REMOVE_ATTRIBUTE);
 
         List<String> ldapGroups = getStringListValue(attrs, LdapConstants.LDAP_GROUPS_NAME);
@@ -249,7 +245,7 @@ public class ADUpdate extends LdapModifyOperation {
 
                 pwdAttr = ADGuardedPasswordAttribute.create(conn.getConfiguration().getPasswordAttribute(), attr);
 
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME)) {
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass == ObjectClass.ACCOUNT) {
                 final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
 
                 int uacValue = uac != null && uac.getValue() != null && !uac.getValue().isEmpty()
@@ -294,8 +290,7 @@ public class ADUpdate extends LdapModifyOperation {
             }
         }
 
-        return new Pair<Attributes, ADGuardedPasswordAttribute>(
-                ldapAttrs, pwdAttr);
+        return new Pair<Attributes, ADGuardedPasswordAttribute>(ldapAttrs, pwdAttr);
     }
 
     private void modifyAttributes(
@@ -331,8 +326,7 @@ public class ADUpdate extends LdapModifyOperation {
         modifyAttributes(entryDN, modItems);
     }
 
-    private void modifyAttributes(
-            final String entryDN, final List<ModificationItem> modItems) {
+    private void modifyAttributes(final String entryDN, final List<ModificationItem> modItems) {
         try {
             conn.getInitialContext().modifyAttributes(entryDN, modItems.toArray(new ModificationItem[modItems.size()]));
         } catch (NamingException e) {
@@ -340,11 +334,10 @@ public class ADUpdate extends LdapModifyOperation {
         }
     }
 
-    private List<String> getStringListValue(
-            final Set<Attribute> attrs, final String attrName) {
+    private List<String> getStringListValue(final Set<Attribute> attrs, final String attrName) {
         final Attribute attr = AttributeUtil.find(attrName, attrs);
 
-        if (attr != null) {
+        if (attr != null && attr.getValue() != null) {
             return checkedListByFilter(nullAsEmpty(attr.getValue()), String.class);
         }
 

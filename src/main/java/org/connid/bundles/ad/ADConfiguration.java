@@ -23,13 +23,22 @@
 package org.connid.bundles.ad;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.connid.bundles.ldap.LdapConfiguration;
+import org.connid.bundles.ldap.commons.LdapConstants;
+import org.connid.bundles.ldap.commons.ObjectClassMappingConfig;
+import org.identityconnectors.common.CollectionUtil;
+import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 public class ADConfiguration extends LdapConfiguration {
 
     private boolean retrieveDeletedUser = true;
+
+    private boolean retrieveDeletedGroup = true;
 
     public static final String PROMPT_USER_FLAG = "pwdLastSet";
 
@@ -47,21 +56,45 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean membershipsInOr = false;
 
+    private boolean startSyncFromToday = true;
+
     private String defaultPeopleContainer;
 
-    private boolean startSyncFromToday = true;
+    private String defaultGroupContainer;
+
+    private SearchScope userSearchScope;
+
+    private SearchScope groupSearchScope;
+
+    private String groupSearchFilter;
+
+    private String[] groupBaseContexts = {};
+
+    private String groupMemberReferenceAttribute = "member";
+
+    private String groupOwnerReferenceAttribute = "managedBy";
+
+    private final ObjectClassMappingConfig accountConfig = new ObjectClassMappingConfig(
+            ObjectClass.ACCOUNT,
+            CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
+            false,
+            CollectionUtil.newList("sAMAccountName", "cn", "member"),
+            LdapConstants.PASSWORD);
+
+    private final ObjectClassMappingConfig groupConfig = new ObjectClassMappingConfig(
+            ObjectClass.GROUP,
+            CollectionUtil.newList("top", "group"),
+            false,
+            Collections.<String>emptyList());
 
     public ADConfiguration() {
         super();
 
         setUidAttribute("sAMAccountName");
-        setSynchronizePasswords(true);
-
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
         setObjectClassesToSynchronize(new String[]{"user"});
         setGroupMemberAttribute("member");
-        setAccountObjectClasses(new String[]{"top", "person", "organizationalPerson", "user"});
 
         setUsePagedResultControl(true);
         setBlockSize(100);
@@ -72,6 +105,17 @@ public class ADConfiguration extends LdapConfiguration {
         setPort(636);
 
         memberships = new ArrayList<String>();
+
+        userSearchScope = SearchScope.onelevel;
+        groupSearchScope = SearchScope.onelevel;
+    }
+
+    @Override
+    public Map<ObjectClass, ObjectClassMappingConfig> getObjectClassMappingConfigs() {
+        HashMap<ObjectClass, ObjectClassMappingConfig> result = new HashMap<ObjectClass, ObjectClassMappingConfig>();
+        result.put(accountConfig.getObjectClass(), accountConfig);
+        result.put(groupConfig.getObjectClass(), groupConfig);
+        return result;
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
@@ -100,8 +144,18 @@ public class ADConfiguration extends LdapConfiguration {
         this.retrieveDeletedUser = retrieveDeletedUser;
     }
 
+    @ConfigurationProperty(displayMessageKey = "retrieveDeletedGroup.display",
+    helpMessageKey = "retrieveDeletedGroup.help", order = 3)
+    public boolean isRetrieveDeletedGroup() {
+        return this.retrieveDeletedGroup;
+    }
+
+    public void setRetrieveDeletedGroup(boolean retrieveDeletedGroup) {
+        this.retrieveDeletedGroup = retrieveDeletedGroup;
+    }
+
     @ConfigurationProperty(displayMessageKey = "trustAllCerts.display",
-    helpMessageKey = "trustAllCerts.help", order = 3)
+    helpMessageKey = "trustAllCerts.help", order = 4)
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
@@ -111,7 +165,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "loading.display",
-    helpMessageKey = "loading.help", order = 4)
+    helpMessageKey = "loading.help", order = 5)
     public boolean isLoading() {
         return loading;
     }
@@ -125,19 +179,95 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
-    helpMessageKey = "membershipsInOr.help", order = 5)
+    helpMessageKey = "membershipsInOr.help", order = 6)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-    helpMessageKey = "defaultPeopleContainer.help", order = 6)
+    helpMessageKey = "defaultPeopleContainer.help", order = 7)
     public String getDefaultPeopleContainer() {
         return defaultPeopleContainer;
     }
 
     public void setDefaultPeopleContainer(String defaultPeopleContainer) {
         this.defaultPeopleContainer = defaultPeopleContainer;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "defaultGroupContainer.display",
+    helpMessageKey = "defaultGroupContainer.help", required = true, order = 8)
+    public String getDefaultGroupContainer() {
+        return defaultGroupContainer;
+    }
+
+    public void setDefaultGroupContainer(String defaultGroupContainer) {
+        this.defaultGroupContainer = defaultGroupContainer;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "userSearchScope.display",
+    helpMessageKey = "userSearchScope.help", required = true, order = 9)
+    public String getUserSearchScope() {
+        return userSearchScope.toString();
+    }
+
+    public void setUserSearchScope(final String userSearchScope) {
+        this.userSearchScope = SearchScope.valueOf(userSearchScope.toLowerCase());
+    }
+
+    @ConfigurationProperty(displayMessageKey = "groupSearchScope.display",
+    helpMessageKey = "groupSearchScope.help", required = true, order = 10)
+    public String getGroupSearchScope() {
+        return groupSearchScope.toString();
+    }
+
+    public void setGroupSearchScope(final String groupSearchScope) {
+        this.groupSearchScope = SearchScope.valueOf(groupSearchScope.toLowerCase());
+    }
+
+    @ConfigurationProperty(displayMessageKey = "groupSearchFilter.display",
+    helpMessageKey = "groupSearchFilter.help", required = false, order = 11)
+    public String getGroupSearchFilter() {
+        return groupSearchFilter;
+    }
+
+    public void setGroupSearchFilter(String groupSearchFilter) {
+        this.groupSearchFilter = groupSearchFilter;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "groupBaseContexts.display",
+    helpMessageKey = "groupBaseContexts.help", required = false, order = 12)
+    public String[] getGroupBaseContexts() {
+        if (groupBaseContexts != null && groupBaseContexts.length > 0) {
+            // return specified configuration
+            return groupBaseContexts.clone();
+        } else {
+            // return root suffixes
+            return getBaseContextsToSynchronize();
+        }
+    }
+
+    public void setGroupBaseContexts(String... baseContexts) {
+        this.groupBaseContexts = baseContexts.clone();
+    }
+
+    @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
+    helpMessageKey = "groupMemberReferenceAttribute.help", required = true, order = 13)
+    public String getGroupMemberReferenceAttribute() {
+        return groupMemberReferenceAttribute;
+    }
+
+    public void setGroupMemberReferenceAttribute(String groupMemberReferenceAttribute) {
+        this.groupMemberReferenceAttribute = groupMemberReferenceAttribute;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
+    helpMessageKey = "groupOwnerReferenceAttribute.help", required = true, order = 14)
+    public String getGroupOwnerReferenceAttribute() {
+        return groupOwnerReferenceAttribute;
+    }
+
+    public void setGroupOwnerReferenceAttribute(String groupOwnerReferenceAttribute) {
+        this.groupOwnerReferenceAttribute = groupOwnerReferenceAttribute;
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
@@ -148,5 +278,13 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setStartSyncFromToday(boolean startSyncFromToday) {
         this.startSyncFromToday = startSyncFromToday;
+    }
+
+    public enum SearchScope {
+
+        object,
+        onelevel,
+        subtree
+
     }
 }

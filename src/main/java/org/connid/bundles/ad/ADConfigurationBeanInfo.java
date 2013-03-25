@@ -70,8 +70,14 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // baseContexts
             props.add(new PropertyDescriptor("baseContexts", LdapConfiguration.class));
 
+            // groupBaseContexts
+            props.add(new PropertyDescriptor("groupBaseContexts", ADConfiguration.class));
+
             // baseContexts
             props.add(new PropertyDescriptor("defaultPeopleContainer", ADConfiguration.class));
+
+            // defaultGroupContainer
+            props.add(new PropertyDescriptor("defaultGroupContainer", ADConfiguration.class));
 
             // memberships
             props.add(new PropertyDescriptor("memberships", ADConfiguration.class));
@@ -79,8 +85,14 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // accountSearchFilter
             props.add(new PropertyDescriptor("accountSearchFilter", LdapConfiguration.class));
 
+            // groupSearchFilter
+            props.add(new PropertyDescriptor("groupSearchFilter", ADConfiguration.class));
+
             // retrieveDeletedUser
             props.add(new PropertyDescriptor("retrieveDeletedUser", ADConfiguration.class));
+
+            // retrieveDeletedGroup
+            props.add(new PropertyDescriptor("retrieveDeletedGroup", ADConfiguration.class));
 
             // accountObjectClasses
             props.add(new PropertyDescriptor("accountObjectClasses", LdapConfiguration.class));
@@ -91,6 +103,17 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // _connectorMessages
             props.add(new PropertyDescriptor("connectorMessages", AbstractConfiguration.class));
 
+            // userSearchScope
+            props.add(new PropertyDescriptor("userSearchScope", ADConfiguration.class));
+
+            // groupSearchScope
+            props.add(new PropertyDescriptor("groupSearchScope", ADConfiguration.class));
+
+            // groupOwnerReferenceAttribute
+            props.add(new PropertyDescriptor("groupOwnerReferenceAttribute", ADConfiguration.class));
+
+            // groupMemberReferenceAttribute
+            props.add(new PropertyDescriptor("groupMemberReferenceAttribute", ADConfiguration.class));
             // startSyncFromToday
             props.add(new PropertyDescriptor("startSyncFromToday", ADConfiguration.class));
         } catch (IntrospectionException e) {

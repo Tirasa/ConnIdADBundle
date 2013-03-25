@@ -90,8 +90,10 @@ public class ADUtilities {
         // Uid is required to build a ConnectorObject.
         result.add(Uid.NAME);
 
-        // AD specific, for checking wether a user is enabled or not
-        result.add(UACCONTROL_ATTR);
+        if (oclass == ObjectClass.ACCOUNT) {
+            // AD specific, for checking wether a user is enabled or not
+            result.add(UACCONTROL_ATTR);
+        }
 
         // Our password is marked as readable because of sync().
         // We really can't return it from search.
@@ -194,10 +196,10 @@ public class ADUtilities {
                         LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.getPosixRefAttribute());
                 final List<String> posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
                 attribute = AttributeBuilder.build(LdapConstants.POSIX_GROUPS_NAME, posixGroups);
-            } else if (LdapConstants.PASSWORD.is(attributeName)) {
+            } else if (LdapConstants.PASSWORD.is(attributeName) && oclass == ObjectClass.ACCOUNT) {
                 // IMPORTANT!!! Return empty guarded string
                 attribute = AttributeBuilder.build(attributeName, new GuardedString());
-            } else if (UACCONTROL_ATTR.equals(attributeName)) {
+            } else if (UACCONTROL_ATTR.equals(attributeName) && oclass == ObjectClass.ACCOUNT) {
                 try {
 
                     final String status =
@@ -262,7 +264,7 @@ public class ADUtilities {
      * @param defaulContainer default people container.
      * @return distinguished name string.
      */
-    public final String getDN(final Set<Attribute> attrs) {
+    public final String getDN(final ObjectClass oclass, final Set<Attribute> attrs) {
 
         String cn;
 
@@ -280,7 +282,9 @@ public class ADUtilities {
         }
 
         return "cn=" + cn + ","
-                + ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer();
+                + (oclass == ObjectClass.ACCOUNT
+                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
+                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
 
     /**

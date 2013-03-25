@@ -143,22 +143,24 @@ public class ADConnector extends LdapConnector {
 
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
 
-        final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
+        if (oclass == ObjectClass.ACCOUNT) {
+            final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
-        final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
+            final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
 
-        if (ldapGroups != null) {
-            attributes.remove(ldapGroups);
-            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null
-                    ? Collections.<String>emptyList()
-                    : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
+            if (ldapGroups != null) {
+                attributes.remove(ldapGroups);
+                ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null
+                        ? Collections.<String>emptyList()
+                        : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
+            }
+
+            ldapGroupsToBeAdded.addAll(config.getMemberships() == null
+                    ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
+
+            // add groups
+            attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
         }
-
-        ldapGroupsToBeAdded.addAll(config.getMemberships() == null
-                ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
-
-        // add groups
-        attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
 
         return new ADCreate(conn, oclass, attributes, options).create();
     }
@@ -174,20 +176,21 @@ public class ADConnector extends LdapConnector {
 
         final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
-        final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
-
-        if (ldapGroups != null) {
+        if (ldapGroups != null && oclass == ObjectClass.ACCOUNT) {
             attributes.remove(ldapGroups);
-            ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null
+
+            final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
+                    ldapGroups.getValue() == null
                     ? Collections.<String>emptyList()
                     : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
+
+
+            ldapGroupsToBeAdded.addAll(config.getMemberships() == null
+                    ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
+
+            // add groups
+            attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
         }
-
-        ldapGroupsToBeAdded.addAll(config.getMemberships() == null
-                ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
-
-        // add groups
-        attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
 
         return new ADUpdate(conn, oclass, uid).update(attributes);
     }
