@@ -110,7 +110,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("sAMAccountName"));
+        oob.setAttributesToGet("sAMAccountName");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), oob.build());
 
@@ -142,7 +142,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for memberOf
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         // retrieve created object
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
@@ -200,7 +200,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for memberOf
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         // retrieve created object
         final ConnectorObject object =
@@ -235,6 +235,91 @@ public class CrudTest extends AbstractTest {
                 null);
 
         assertNotNull(authUid);
+
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+    }
+
+    @Test
+    public void checkLdapGroups() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        String baseContext = prop.getProperty("usersBaseContext");
+
+        final String CN = CrudTest.class.getSimpleName() + "20";
+        final String SAAN = "SAAN_" + CN;
+
+        assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
+
+        final Set<Attribute> attributes = getSimpleProfile(CN);
+
+        attributes.add(AttributeBuilder.build("ldapGroups",
+                "CN=Cert Publishers,CN=Users," + baseContext,
+                "CN=Schema Admins,CN=Users," + baseContext));
+
+        Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        // Ask just for memberOf
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf", "ldapGroups");
+
+        // retrieve created object
+        ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // check for memberOf attribute
+        assertNotNull(object);
+        assertNotNull(object.getAttributes());
+
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(4, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Cert Publishers,CN=Users," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Schema Admins,CN=Users," + baseContext));
+
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
+                    AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
+
+        uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Cert Publishers,CN=Users," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Schema Admins,CN=Users," + baseContext));
+
+        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("ldapGroups",
+                    "CN=Schema Admins,CN=Users," + baseContext,
+                    "CN=Cert Publishers,CN=Users," + baseContext)});
+
+        uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
+
+        object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Cert Publishers,CN=Users," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=Schema Admins,CN=Users," + baseContext));
 
         connector.delete(ObjectClass.ACCOUNT, uid, null);
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
@@ -284,7 +369,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("givenName"));
+        oob.setAttributesToGet("givenName");
 
         final ConnectorObject object =
                 connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
@@ -372,7 +457,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
@@ -414,7 +499,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
@@ -457,7 +542,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
@@ -500,7 +585,7 @@ public class CrudTest extends AbstractTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("memberOf"));
+        oob.setAttributesToGet("memberOf");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
@@ -537,8 +622,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(authUid);
 
-        List<Attribute> attrToReplace = Arrays.asList(
-                new Attribute[]{AttributeBuilder.buildEnabled(false)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(false)});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -562,8 +646,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(t);
 
-        attrToReplace = Arrays.asList(
-                new Attribute[]{AttributeBuilder.buildEnabled(true)});
+        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(true)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
