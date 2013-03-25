@@ -82,7 +82,7 @@
 
   <properties>
     <connid.version>1.3.3</connid.version>
-    <connid.ldap.version>1.3.5-SNAPSHOT</connid.ldap.version>
+    <connid.ldap.version>1.3.5</connid.ldap.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
