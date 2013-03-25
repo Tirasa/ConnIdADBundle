@@ -22,11 +22,7 @@
  */
 package org.connid.ad.search;
 
-import static org.connid.ad.ADConnector.*;
-
 import static java.util.Collections.singletonList;
-import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
-import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.StringUtil.isBlank;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
@@ -39,22 +35,13 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.PagedResultsControl;
 import org.connid.ad.ADConnection;
 import org.connid.ad.util.ADUtilities;
-import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.QualifiedUid;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
-import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.ldap.GroupHelper;
 import org.identityconnectors.ldap.LdapConnection;
 import org.identityconnectors.ldap.LdapConstants;
-import org.identityconnectors.ldap.LdapEntry;
-import org.identityconnectors.ldap.schema.LdapSchemaMapping;
 import org.identityconnectors.ldap.search.LdapFilter;
 import org.identityconnectors.ldap.search.LdapInternalSearch;
 import org.identityconnectors.ldap.search.LdapSearchStrategy;
@@ -73,6 +60,8 @@ public class ADSearch {
 
     private final String[] baseDNs;
 
+    private final ADUtilities utils;
+
     private static final Log LOG = Log.getLog(ADSearch.class);
 
     public ADSearch(
@@ -87,6 +76,8 @@ public class ADSearch {
         this.filter = filter;
         this.options = options;
         this.baseDNs = baseDNs;
+
+        this.utils = new ADUtilities((ADConnection) this.conn);
     }
 
     public ADSearch(
@@ -95,17 +86,14 @@ public class ADSearch {
             final LdapFilter filter,
             final OperationOptions options) {
 
-        this(conn, oclass, filter, options,
-                conn.getConfiguration().getBaseContexts());
+        this(conn, oclass, filter, options, conn.getConfiguration().getBaseContexts());
     }
 
     public final void executeADQuery(final ResultsHandler handler) {
         final String[] attrsToGetOption = options.getAttributesToGet();
-        final Set<String> attrsToGet = getAttributesToGet(attrsToGetOption);
+        final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
 
-        LdapInternalSearch search = getInternalSearch(attrsToGet);
-
-        final ADUtilities utils = new ADUtilities((ADConnection) conn);
+        final LdapInternalSearch search = getInternalSearch(attrsToGet);
 
         search.execute(new SearchResultsHandler() {
 
@@ -114,38 +102,11 @@ public class ADSearch {
                     throws NamingException {
                 return handler.handle(utils.createConnectorObject(
                         result.getNameInNamespace(),
-                        result.getAttributes(),
+                        result,
+                        attrsToGet,
                         oclass));
             }
         });
-    }
-
-    private Set<String> getAttributesToGet(String[] attributesToGet) {
-        Set<String> result;
-
-        if (attributesToGet != null) {
-            result = CollectionUtil.newCaseInsensitiveSet();
-            result.addAll(Arrays.asList(attributesToGet));
-            removeNonReadableAttributes(result);
-            result.add(Name.NAME);
-        } else {
-            // This should include Name.NAME.
-            result = getAttributesReturnedByDefault(conn, oclass);
-        }
-
-        // Uid is required to build a ConnectorObject.
-        result.add(Uid.NAME);
-
-        // AD specific, for checking wether a user is enabled or not
-        result.add(UACCONTROL_ATTR);
-
-        // Our password is marked as readable because of sync().
-        // We really can't return it from search.
-        if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
-            LOG.warn("Reading passwords not supported");
-        }
-
-        return result;
     }
 
     private LdapInternalSearch getInternalSearch(Set<String> attrsToGet) {
@@ -164,7 +125,7 @@ public class ADSearch {
         List<String> dns;
         int searchScope;
 
-        String filterEntryDN = filter != null ? filter.getEntryDN() : null;
+        final String filterEntryDN = filter != null ? filter.getEntryDN() : null;
         if (filterEntryDN != null) {
             // Would be good to check that filterEntryDN is under the configured 
             // base contexts. However, the adapter is likely to pass entries
@@ -179,19 +140,18 @@ public class ADSearch {
             searchScope = getLdapSearchScope();
         }
 
-        SearchControls controls =
-                LdapInternalSearch.createDefaultSearchControls();
-        Set<String> ldapAttrsToGet = getLdapAttributesToGet(attrsToGet);
-        controls.setReturningAttributes(
-                ldapAttrsToGet.toArray(new String[ldapAttrsToGet.size()]));
+        final SearchControls controls = LdapInternalSearch.createDefaultSearchControls();
+        final Set<String> ldapAttrsToGet = utils.getLdapAttributesToGet(attrsToGet, oclass);
+
+        controls.setReturningAttributes(ldapAttrsToGet.toArray(new String[ldapAttrsToGet.size()]));
         controls.setSearchScope(searchScope);
 
-        String optionsFilter = LdapConstants.getSearchFilter(options);
+        final String optionsFilter = LdapConstants.getSearchFilter(options);
         String userFilter = null;
         if (oclass.equals(ObjectClass.ACCOUNT)) {
             userFilter = conn.getConfiguration().getAccountSearchFilter();
         }
-        String nativeFilter = filter != null ? filter.getNativeFilter() : null;
+        final String nativeFilter = filter != null ? filter.getNativeFilter() : null;
         return new LdapInternalSearch(
                 conn,
                 getSearchFilter(optionsFilter, nativeFilter, userFilter),
@@ -201,8 +161,8 @@ public class ADSearch {
     }
 
     private String getSearchFilter(String... optionalFilters) {
-        StringBuilder builder = new StringBuilder();
-        String ocFilter = getObjectClassFilter();
+        final StringBuilder builder = new StringBuilder();
+        final String ocFilter = getObjectClassFilter();
         int nonBlank = isBlank(ocFilter) ? 0 : 1;
         for (String optionalFilter : optionalFilters) {
             nonBlank += (isBlank(optionalFilter) ? 0 : 1);
@@ -262,24 +222,6 @@ public class ADSearch {
         }
     }
 
-    private void removeNonReadableAttributes(Set<String> attributes) {
-        // Since the groups attributes are fake attributes, we don't want to
-        // send them to LdapSchemaMapping. This, for example, avoid an 
-        // (unlikely) conflict with a custom attribute defined in the server
-        // schema.
-        boolean ldapGroups =
-                attributes.remove(LdapConstants.LDAP_GROUPS_NAME);
-        boolean posixGroups =
-                attributes.remove(LdapConstants.POSIX_GROUPS_NAME);
-        conn.getSchemaMapping().removeNonReadableAttributes(oclass, attributes);
-        if (ldapGroups) {
-            attributes.add(LdapConstants.LDAP_GROUPS_NAME);
-        }
-        if (posixGroups) {
-            attributes.add(LdapConstants.POSIX_GROUPS_NAME);
-        }
-    }
-
     private List<String> getBaseDNs() {
         List<String> result;
         QualifiedUid container = options.getContainer();
@@ -324,41 +266,5 @@ public class ADSearch {
         } else {
             throw new IllegalArgumentException("Invalid search scope " + scope);
         }
-    }
-
-    private Set<String> getLdapAttributesToGet(Set<String> attrsToGet) {
-        Set<String> cleanAttrsToGet = newCaseInsensitiveSet();
-        cleanAttrsToGet.addAll(attrsToGet);
-        cleanAttrsToGet.remove(LdapConstants.LDAP_GROUPS_NAME);
-        boolean posixGroups =
-                cleanAttrsToGet.remove(LdapConstants.POSIX_GROUPS_NAME);
-        Set<String> result = conn.getSchemaMapping().getLdapAttributes(
-                oclass, cleanAttrsToGet, true);
-        if (posixGroups) {
-            result.add(GroupHelper.getPosixRefAttribute());
-        }
-        // For compatibility with the adapter, we do not ask the server for DN
-        // attributes, such as entryDN; we compute them ourselves. Some servers
-        // might not support such attributes anyway.
-        result.removeAll(LdapEntry.ENTRY_DN_ATTRS);
-        return result;
-    }
-
-    public static Set<String> getAttributesReturnedByDefault(
-            final LdapConnection conn, final ObjectClass oclass) {
-        if (oclass.equals(LdapSchemaMapping.ANY_OBJECT_CLASS)) {
-            return newSet(Name.NAME);
-        }
-        Set<String> result = newCaseInsensitiveSet();
-        ObjectClassInfo oci = conn.getSchemaMapping().schema().
-                findObjectClassInfo(oclass.getObjectClassValue());
-        if (oci != null) {
-            for (AttributeInfo info : oci.getAttributeInfo()) {
-                if (info.isReturnedByDefault()) {
-                    result.add(info.getName());
-                }
-            }
-        }
-        return result;
     }
 }

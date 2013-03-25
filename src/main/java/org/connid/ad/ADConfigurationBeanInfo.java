@@ -41,7 +41,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // membershipsInOr
             props.add(new PropertyDescriptor(
                     "membershipsInOr", ADConfiguration.class));
-            
+
             // loading
             props.add(new PropertyDescriptor(
                     "loading", ADConfiguration.class));
@@ -57,7 +57,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // baseContexts
             props.add(new PropertyDescriptor(
                     "baseContexts", LdapConfiguration.class));
-            
+
             // baseContexts
             props.add(new PropertyDescriptor(
                     "defaultPeopleContainer", ADConfiguration.class));

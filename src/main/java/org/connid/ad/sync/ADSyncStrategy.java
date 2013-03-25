@@ -23,6 +23,7 @@
 package org.connid.ad.sync;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -66,9 +67,12 @@ public class ADSyncStrategy {
 
     private transient SyncToken latestSyncToken;
 
-    public ADSyncStrategy(final ADConnection conn) {
+    private final ADUtilities utils;
 
+    public ADSyncStrategy(final ADConnection conn) {
         this.conn = conn;
+        this.utils = new ADUtilities(conn);
+
     }
 
     private Map<String, Set<SearchResult>> search(
@@ -191,6 +195,9 @@ public class ADSyncStrategy {
         }
         // -----------------------------------
 
+        final String[] attrsToGetOption = options.getAttributesToGet();
+        final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
+
         final Map<String, Set<SearchResult>> changes = search(ctx, filter, searchCtls, true);
 
         for (String baseDN : conn.getConfiguration().getBaseContextsToSynchronize()) {
@@ -203,6 +210,7 @@ public class ADSyncStrategy {
                                 oclass,
                                 ctx,
                                 sr,
+                                attrsToGet,
                                 handler);
 
                     } catch (NamingException e) {
@@ -221,6 +229,7 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final LdapContext ctx,
             final SearchResult sr,
+            final Collection<String> attrsToGet,
             final SyncResultsHandler handler)
             throws NamingException {
 
@@ -309,13 +318,12 @@ public class ADSyncStrategy {
 
                         profile = ctx.getAttributes(userDN);
 
-                        guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
-
                         handler.handle(getSyncDelta(
                                 oclass,
                                 userDN,
                                 SyncDeltaType.CREATE_OR_UPDATE,
-                                profile));
+                                profile,
+                                attrsToGet));
                     }
                 }
             }
@@ -334,8 +342,6 @@ public class ADSyncStrategy {
                     userDN = userDNs.next();
 
                     profile = ctx.getAttributes(userDN);
-
-                    guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
                     SyncDeltaType deltaType;
 
@@ -361,7 +367,8 @@ public class ADSyncStrategy {
                             oclass,
                             userDN,
                             deltaType,
-                            profile));
+                            profile,
+                            attrsToGet));
                 }
             }
         } else if (classes.contains("user")) {
@@ -380,7 +387,8 @@ public class ADSyncStrategy {
                         oclass,
                         sr.getNameInNamespace(),
                         SyncDeltaType.DELETE,
-                        profile));
+                        profile,
+                        attrsToGet));
 
             } else {
                 // user to be created/updated
@@ -399,7 +407,8 @@ public class ADSyncStrategy {
                             oclass,
                             sr.getNameInNamespace(),
                             SyncDeltaType.CREATE_OR_UPDATE,
-                            profile));
+                            profile,
+                            attrsToGet));
 
                 } else {
                     if (LOG.isOk()) {
@@ -419,7 +428,8 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final String entryDN,
             final SyncDeltaType syncDeltaType,
-            final Attributes profile)
+            final Attributes profile,
+            final Collection<String> attrsToGet)
             throws NamingException {
 
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
@@ -451,9 +461,9 @@ public class ADSyncStrategy {
 
         // Set Connector Object
         if (SyncDeltaType.DELETE == syncDeltaType) {
-            sdb.setObject(new ADUtilities((ADConnection) conn).createDeletedObject(entryDN, uid, profile, oclass));
+            sdb.setObject(utils.createDeletedObject(entryDN, uid, profile, oclass));
         } else {
-            sdb.setObject(new ADUtilities((ADConnection) conn).createConnectorObject(entryDN, profile, oclass));
+            sdb.setObject(utils.createConnectorObject(entryDN, profile, attrsToGet, oclass));
         }
 
         return sdb.build();
