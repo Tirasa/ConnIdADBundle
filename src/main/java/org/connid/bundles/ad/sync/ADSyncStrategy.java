@@ -283,8 +283,6 @@ public class ADSyncStrategy {
 
             ctx.setRequestControls(null);
 
-            String userDN;
-
             if (member11 != null && !conf.isLoading()) {
                 if (LOG.isOk()) {
                     LOG.ok("Found users 'IN' ...");
