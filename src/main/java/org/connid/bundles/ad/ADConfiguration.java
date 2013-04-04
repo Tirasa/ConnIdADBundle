@@ -31,6 +31,7 @@ import org.connid.bundles.ldap.LdapConfiguration;
 import org.connid.bundles.ldap.commons.LdapConstants;
 import org.connid.bundles.ldap.commons.ObjectClassMappingConfig;
 import org.identityconnectors.common.CollectionUtil;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
@@ -119,7 +120,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
-    helpMessageKey = "memberships.help", required = true, order = 1)
+    helpMessageKey = "memberships.help", order = 1)
     public String[] getMemberships() {
         return memberships.toArray(new String[memberships.size()]);
     }
@@ -184,10 +185,27 @@ public class ADConfiguration extends LdapConfiguration {
         this.membershipsInOr = membershipsInOr;
     }
 
+    @ConfigurationProperty(order = 7, required = true,
+    displayMessageKey = "baseContextsToSynchronize.display",
+    helpMessageKey = "baseContextsToSynchronize.help")
+    public String[] getBaseContextsToSynchronize() {
+        return super.getBaseContextsToSynchronize();
+    }
+
+    @Override
+    public void setBaseContextsToSynchronize(String... baseContextsToSynchronize) {
+        super.setBaseContextsToSynchronize(baseContextsToSynchronize);
+    }
+
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-    helpMessageKey = "defaultPeopleContainer.help", order = 7)
+    helpMessageKey = "defaultPeopleContainer.help", order = 8)
     public String getDefaultPeopleContainer() {
-        return defaultPeopleContainer;
+        if (StringUtil.isBlank(defaultPeopleContainer)) {
+            return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
+                    ? null : getBaseContextsToSynchronize()[0];
+        } else {
+            return defaultPeopleContainer;
+        }
     }
 
     public void setDefaultPeopleContainer(String defaultPeopleContainer) {
@@ -195,9 +213,14 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultGroupContainer.display",
-    helpMessageKey = "defaultGroupContainer.help", required = true, order = 8)
+    helpMessageKey = "defaultGroupContainer.help", order = 9)
     public String getDefaultGroupContainer() {
-        return defaultGroupContainer;
+        if (StringUtil.isBlank(defaultGroupContainer)) {
+            return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
+                    ? null : getBaseContextsToSynchronize()[0];
+        } else {
+            return defaultGroupContainer;
+        }
     }
 
     public void setDefaultGroupContainer(String defaultGroupContainer) {
@@ -205,9 +228,9 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "userSearchScope.display",
-    helpMessageKey = "userSearchScope.help", required = true, order = 9)
+    helpMessageKey = "userSearchScope.help", order = 10)
     public String getUserSearchScope() {
-        return userSearchScope.toString();
+        return userSearchScope == null ? userSearchScope.subtree.toString() : userSearchScope.toString();
     }
 
     public void setUserSearchScope(final String userSearchScope) {
@@ -215,9 +238,9 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchScope.display",
-    helpMessageKey = "groupSearchScope.help", required = true, order = 10)
+    helpMessageKey = "groupSearchScope.help", order = 11)
     public String getGroupSearchScope() {
-        return groupSearchScope.toString();
+        return groupSearchFilter == null ? groupSearchScope.subtree.toString() : groupSearchScope.toString();
     }
 
     public void setGroupSearchScope(final String groupSearchScope) {
@@ -225,7 +248,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchFilter.display",
-    helpMessageKey = "groupSearchFilter.help", required = false, order = 11)
+    helpMessageKey = "groupSearchFilter.help", order = 12)
     public String getGroupSearchFilter() {
         return groupSearchFilter;
     }
@@ -235,7 +258,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupBaseContexts.display",
-    helpMessageKey = "groupBaseContexts.help", required = false, order = 12)
+    helpMessageKey = "groupBaseContexts.help", order = 13)
     public String[] getGroupBaseContexts() {
         if (groupBaseContexts != null && groupBaseContexts.length > 0) {
             // return specified configuration
@@ -251,9 +274,9 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
-    helpMessageKey = "groupMemberReferenceAttribute.help", required = true, order = 13)
+    helpMessageKey = "groupMemberReferenceAttribute.help", order = 14)
     public String getGroupMemberReferenceAttribute() {
-        return groupMemberReferenceAttribute;
+        return StringUtil.isBlank(groupMemberReferenceAttribute) ? "member" : groupMemberReferenceAttribute;
     }
 
     public void setGroupMemberReferenceAttribute(String groupMemberReferenceAttribute) {
@@ -261,9 +284,9 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
-    helpMessageKey = "groupOwnerReferenceAttribute.help", required = true, order = 14)
+    helpMessageKey = "groupOwnerReferenceAttribute.help", order = 15)
     public String getGroupOwnerReferenceAttribute() {
-        return groupOwnerReferenceAttribute;
+        return StringUtil.isBlank(groupOwnerReferenceAttribute) ? "managedBy" : groupOwnerReferenceAttribute;
     }
 
     public void setGroupOwnerReferenceAttribute(String groupOwnerReferenceAttribute) {
@@ -271,7 +294,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-    helpMessageKey = "startSyncFromToday.help", order = 7)
+    helpMessageKey = "startSyncFromToday.help", order = 16)
     public boolean isStartSyncFromToday() {
         return startSyncFromToday;
     }
