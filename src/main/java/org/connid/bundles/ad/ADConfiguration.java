@@ -37,6 +37,8 @@ import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 public class ADConfiguration extends LdapConfiguration {
 
+    private boolean ssl = true;
+
     private boolean retrieveDeletedUser = true;
 
     private boolean retrieveDeletedGroup = true;
@@ -102,13 +104,25 @@ public class ADConfiguration extends LdapConfiguration {
         setUseBlocks(true);
 
         setPasswordAttribute("unicodePwd");
-        setSsl(true);
         setPort(636);
 
         memberships = new ArrayList<String>();
 
-        userSearchScope = SearchScope.onelevel;
-        groupSearchScope = SearchScope.onelevel;
+        userSearchScope = SearchScope.subtree;
+        groupSearchScope = SearchScope.subtree;
+    }
+
+    @Override
+    @ConfigurationProperty(displayMessageKey = "ssl.display",
+    helpMessageKey = "ssl.help", order = 1)
+    public boolean isSsl() {
+        return ssl;
+    }
+
+    @Override
+    public void setSsl(final boolean ssl) {
+        super.setSsl(ssl);
+        this.ssl = ssl;
     }
 
     @Override

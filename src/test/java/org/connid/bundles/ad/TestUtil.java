@@ -38,7 +38,7 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
 
 public class TestUtil {
-    
+
     /**
      * Setup logging for the {@link ADConnector}.
      */
@@ -131,7 +131,9 @@ public class TestUtil {
 
         attributes.add(AttributeBuilder.buildEnabled(true));
 
-        attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
+        if (conf.isSsl()) {
+            attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
+        }
 
         attributes.add(AttributeBuilder.build("sn", Collections.singletonList("sntest")));
 
@@ -158,7 +160,7 @@ public class TestUtil {
 
         attributes.add(AttributeBuilder.build(
                 "member", Collections.singletonList(getEntryDN(getEntryIDs("OfAll").getKey()))));
-        
+
         attributes.add(AttributeBuilder.build(
                 "ldapGroups", Collections.singletonList(getEntryDN(getEntryIDs("InFilter").getKey()))));
 

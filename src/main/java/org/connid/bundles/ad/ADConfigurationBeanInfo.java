@@ -40,6 +40,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
         final List<PropertyDescriptor> props =
                 new ArrayList<PropertyDescriptor>();
         try {
+            // ssl
+            props.add(new PropertyDescriptor("ssl", ADConfiguration.class));
+
             // host
             props.add(new PropertyDescriptor("host", LdapConfiguration.class));
 
