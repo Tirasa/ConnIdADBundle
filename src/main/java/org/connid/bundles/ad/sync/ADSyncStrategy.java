@@ -191,7 +191,7 @@ public class ADSyncStrategy {
 
         final Set<SearchResult> changes = search(ctx, filter, searchCtls, true);
 
-        if (oclass == ObjectClass.ACCOUNT) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             for (SearchResult sr : changes) {
                 try {
 
@@ -553,8 +553,8 @@ public class ADSyncStrategy {
 
         final Attribute objectClasses = profile.get("objectClass");
 
-        if (ObjectClass.ACCOUNT == oclass && !objectClasses.contains("user")
-                || ObjectClass.GROUP == oclass && !objectClasses.contains("group")) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME) && !objectClasses.contains("user")
+                || oclass.is(ObjectClass.GROUP_NAME) && !objectClasses.contains("group")) {
             LOG.info("Invalid type: skip object {0}", dn);
             return;
         }
@@ -578,8 +578,8 @@ public class ADSyncStrategy {
         }
 
         if (deltaType != SyncDeltaType.DELETE
-                || (ObjectClass.GROUP == oclass && conf.isRetrieveDeletedGroup())
-                || (ObjectClass.ACCOUNT == oclass && conf.isRetrieveDeletedUser())) {
+                || (oclass.is(ObjectClass.GROUP_NAME) && conf.isRetrieveDeletedGroup())
+                || (oclass.is(ObjectClass.ACCOUNT_NAME) && conf.isRetrieveDeletedUser())) {
 
             handler.handle(getSyncDelta(
                     oclass,

@@ -187,7 +187,7 @@ public class ADSearch {
 
     private LdapSearchStrategy getSearchStrategy() {
         LdapSearchStrategy strategy;
-        if (ObjectClass.ACCOUNT.equals(oclass)) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             // Only consider paged strategies for accounts,
             // just as the adapter does.
 
@@ -263,7 +263,7 @@ public class ADSearch {
         String scope = options.getScope();
 
         if (scope == null) {
-            if (oclass == ObjectClass.ACCOUNT) {
+            if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 scope = ((ADConfiguration) conn.getConfiguration()).getUserSearchScope();
             } else {
                 scope = ((ADConfiguration) conn.getConfiguration()).getGroupSearchScope();

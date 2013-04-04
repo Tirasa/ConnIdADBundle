@@ -245,7 +245,7 @@ public class ADUpdate extends LdapModifyOperation {
 
                 pwdAttr = ADGuardedPasswordAttribute.create(conn.getConfiguration().getPasswordAttribute(), attr);
 
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass == ObjectClass.ACCOUNT) {
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
 
                 int uacValue = uac != null && uac.getValue() != null && !uac.getValue().isEmpty()

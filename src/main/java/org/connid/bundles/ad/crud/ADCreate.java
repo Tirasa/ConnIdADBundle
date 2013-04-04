@@ -164,7 +164,7 @@ public class ADCreate extends LdapModifyOperation {
 
         final String pwdAttrName = conn.getConfiguration().getPasswordAttribute();
 
-        if (oclass == ObjectClass.ACCOUNT) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             if (pwdAttr != null) {
                 pwdAttr.access(new Accessor() {
 

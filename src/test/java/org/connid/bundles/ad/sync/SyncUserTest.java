@@ -192,8 +192,7 @@ public class SyncUserTest extends UserTest {
             assertTrue(updated.isEmpty());
 
             ModificationItem[] mod =
-                    new ModificationItem[]{
-                new ModificationItem(
+                    new ModificationItem[]{new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
             };
@@ -215,8 +214,7 @@ public class SyncUserTest extends UserTest {
             assertEquals(1, updated.size());
 
             mod =
-                    new ModificationItem[]{
-                new ModificationItem(
+                    new ModificationItem[]{new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
             };
@@ -261,12 +259,9 @@ public class SyncUserTest extends UserTest {
             // sync user delete (member out is like a user delete)
             conf.setRetrieveDeletedUser(true);
 
-            final ConnectorFacadeFactory factory =
-                    ConnectorFacadeFactory.getInstance();
+            final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
-            final APIConfiguration impl =
-                    TestHelpers.createTestConfiguration(
-                    ADConnector.class, conf);
+            final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
 

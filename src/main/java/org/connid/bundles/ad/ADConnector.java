@@ -143,7 +143,7 @@ public class ADConnector extends LdapConnector {
 
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
 
-        if (oclass == ObjectClass.ACCOUNT) {
+            if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
             final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
@@ -176,7 +176,7 @@ public class ADConnector extends LdapConnector {
 
         final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
-        if (ldapGroups != null && oclass == ObjectClass.ACCOUNT) {
+        if (ldapGroups != null && oclass.is(ObjectClass.ACCOUNT_NAME)) {
             attributes.remove(ldapGroups);
 
             final Set<String> ldapGroupsToBeAdded = new HashSet<String>(

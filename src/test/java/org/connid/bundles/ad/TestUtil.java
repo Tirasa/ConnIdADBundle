@@ -100,7 +100,7 @@ public class TestUtil {
     }
 
     public Set<Attribute> getSimpleProfile(final Map.Entry<String, String> ids, final boolean withDN) {
-        if (ObjectClass.ACCOUNT == oclass) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, withDN);
         } else {
             return getSimpleGroupProfile(ids, conf, withDN);
@@ -108,7 +108,7 @@ public class TestUtil {
     }
 
     public Set<Attribute> getSimpleProfile(final Map.Entry<String, String> ids) {
-        if (ObjectClass.ACCOUNT == oclass) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, true);
         } else {
             return getSimpleGroupProfile(ids, conf, true);

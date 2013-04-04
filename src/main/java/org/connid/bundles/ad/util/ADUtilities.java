@@ -90,7 +90,7 @@ public class ADUtilities {
         // Uid is required to build a ConnectorObject.
         result.add(Uid.NAME);
 
-        if (oclass == ObjectClass.ACCOUNT) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             // AD specific, for checking wether a user is enabled or not
             result.add(UACCONTROL_ATTR);
         }
@@ -196,10 +196,10 @@ public class ADUtilities {
                         LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.getPosixRefAttribute());
                 final List<String> posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
                 attribute = AttributeBuilder.build(LdapConstants.POSIX_GROUPS_NAME, posixGroups);
-            } else if (LdapConstants.PASSWORD.is(attributeName) && oclass == ObjectClass.ACCOUNT) {
+            } else if (LdapConstants.PASSWORD.is(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 // IMPORTANT!!! Return empty guarded string
                 attribute = AttributeBuilder.build(attributeName, new GuardedString());
-            } else if (UACCONTROL_ATTR.equals(attributeName) && oclass == ObjectClass.ACCOUNT) {
+            } else if (UACCONTROL_ATTR.equals(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 try {
 
                     final String status =
@@ -282,7 +282,7 @@ public class ADUtilities {
         }
 
         return "cn=" + cn + ","
-                + (oclass == ObjectClass.ACCOUNT
+                + (oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
                 : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
