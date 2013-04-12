@@ -25,20 +25,12 @@ package org.connid.bundles.ad;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
 import org.identityconnectors.framework.api.ConnectorFacade;
 import org.identityconnectors.framework.api.ConnectorFacadeFactory;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.Name;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.test.common.TestHelpers;
 
 public abstract class AbstractTest {
@@ -96,7 +88,7 @@ public abstract class AbstractTest {
 
         configuration.setBaseContextsToSynchronize(prop.getProperty("baseContextToSynchronize"));
 
-        configuration.setBaseContexts(BASE_CONTEXT);
+        configuration.setUserBaseContexts(BASE_CONTEXT);
 
         // set default group container as Fgroup search context
         configuration.setGroupBaseContexts(configuration.getDefaultGroupContainer());

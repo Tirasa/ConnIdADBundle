@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ldap.LdapConnection.AuthenticationResult;
 import org.connid.bundles.ldap.LdapConnection.AuthenticationResultType;
@@ -106,7 +107,7 @@ public class ADAuthenticate {
         List<String> userNameAttrs = getUserNameAttributes();
         Map<String, ConnectorObject> entryDN2Object = new HashMap<String, ConnectorObject>();
 
-        for (String baseContext : conn.getConfiguration().getBaseContexts()) {
+        for (String baseContext : ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()) {
             for (String userNameAttr : userNameAttrs) {
                 Attribute attr = AttributeBuilder.build(userNameAttr, username);
 

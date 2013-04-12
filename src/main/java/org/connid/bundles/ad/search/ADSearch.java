@@ -88,7 +88,7 @@ public class ADSearch {
             final OperationOptions options) {
 
         this(conn, oclass, filter, options, oclass == ObjectClass.ACCOUNT
-                ? conn.getConfiguration().getBaseContexts()
+                ? ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()
                 : ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts());
     }
 
@@ -150,13 +150,13 @@ public class ADSearch {
         controls.setSearchScope(searchScope);
 
         final String optionsFilter = LdapConstants.getSearchFilter(options);
-        
+
         final String searchFilter = oclass.equals(ObjectClass.ACCOUNT)
                 ? conn.getConfiguration().getAccountSearchFilter()
                 : ((ADConfiguration) conn.getConfiguration()).getGroupSearchFilter();
 
         final String nativeFilter = filter != null ? filter.getNativeFilter() : null;
-        
+
         return new LdapInternalSearch(
                 conn,
                 getSearchFilter(optionsFilter, nativeFilter, searchFilter),

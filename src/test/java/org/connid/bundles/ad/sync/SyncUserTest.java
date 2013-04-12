@@ -174,7 +174,8 @@ public class SyncUserTest extends UserTest {
 
             try {
 
-                ctx.createSubcontext("CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0], attrs);
+                ctx.createSubcontext(
+                        "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0], attrs);
                 uid12 = new Uid(ids12.getValue());
 
             } catch (NamingException e) {
@@ -194,7 +195,8 @@ public class SyncUserTest extends UserTest {
             ModificationItem[] mod =
                     new ModificationItem[]{new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", 
+                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -216,7 +218,8 @@ public class SyncUserTest extends UserTest {
             mod =
                     new ModificationItem[]{new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", 
+                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -243,7 +246,8 @@ public class SyncUserTest extends UserTest {
                     new ModificationItem[]{
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
-                new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", 
+                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -283,11 +287,11 @@ public class SyncUserTest extends UserTest {
                     getValue().size());
 
             // add user to a group not involved into the filter
-            mod =
-                    new ModificationItem[]{
+            mod = new ModificationItem[]{
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", 
+                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -309,11 +313,11 @@ public class SyncUserTest extends UserTest {
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
             assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
-            mod =
-                    new ModificationItem[]{
+            mod = new ModificationItem[]{
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
-                new BasicAttribute("member", "CN=" + ids12.getKey() + ",CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", 
+                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -495,7 +499,8 @@ public class SyncUserTest extends UserTest {
         // instatiate a new configuration to avoid collisions with sync test
         final ADConfiguration configuration = getSimpleConf(prop);
 
-        final String DN = "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getBaseContexts()[0];
+        final String DN = 
+                "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0];
 
         final ADConnection connection = new ADConnection(configuration);
         final LdapContext ctx = connection.getInitialContext();

@@ -23,6 +23,7 @@
 package org.connid.bundles.ad;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +73,8 @@ public class ADConfiguration extends LdapConfiguration {
     private String groupSearchFilter;
 
     private String[] groupBaseContexts = {};
+
+    private String[] userBaseContexts = {};
 
     private String groupMemberReferenceAttribute = "member";
 
@@ -285,10 +288,38 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setGroupBaseContexts(String... baseContexts) {
         this.groupBaseContexts = baseContexts.clone();
+        // update base context everytime ...
+        super.setBaseContexts(this.getBaseContexts());
+    }
+
+    @ConfigurationProperty(displayMessageKey = "userBaseContexts.display",
+    helpMessageKey = "userBaseContexts.help", order = 14)
+    public String[] getUserBaseContexts() {
+        if (userBaseContexts != null && userBaseContexts.length > 0) {
+            // return specified configuration
+            return userBaseContexts.clone();
+        } else {
+            // return root suffixes
+            return getBaseContextsToSynchronize();
+        }
+    }
+
+    public void setUserBaseContexts(final String... baseContexts) {
+        this.userBaseContexts = baseContexts.clone();
+        // update base context everytime ...
+        super.setBaseContexts(this.getBaseContexts());
+    }
+
+    @Override
+    public String[] getBaseContexts() {
+        final List<String> res = new ArrayList<String>();
+        res.addAll(Arrays.asList(getUserBaseContexts()));
+        res.addAll(Arrays.asList(getGroupBaseContexts()));
+        return res.toArray(new String[res.size()]);
     }
 
     @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
-    helpMessageKey = "groupMemberReferenceAttribute.help", order = 14)
+    helpMessageKey = "groupMemberReferenceAttribute.help", order = 15)
     public String getGroupMemberReferenceAttribute() {
         return StringUtil.isBlank(groupMemberReferenceAttribute) ? "member" : groupMemberReferenceAttribute;
     }
@@ -298,7 +329,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
-    helpMessageKey = "groupOwnerReferenceAttribute.help", order = 15)
+    helpMessageKey = "groupOwnerReferenceAttribute.help", order = 16)
     public String getGroupOwnerReferenceAttribute() {
         return StringUtil.isBlank(groupOwnerReferenceAttribute) ? "managedBy" : groupOwnerReferenceAttribute;
     }
@@ -308,7 +339,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-    helpMessageKey = "startSyncFromToday.help", order = 16)
+    helpMessageKey = "startSyncFromToday.help", order = 17)
     public boolean isStartSyncFromToday() {
         return startSyncFromToday;
     }

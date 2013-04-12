@@ -30,6 +30,7 @@ import static org.identityconnectors.common.CollectionUtil.newSet;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
@@ -189,7 +190,7 @@ public class ADUtilities {
             Attribute attribute = null;
 
             if (LdapConstants.isLdapGroups(attributeName)) {
-                final List<String> ldapGroups = groupHelper.getLdapGroups(entry.getDN().toString());
+                final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entry.getDN().toString()));
                 attribute = AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
                 final Set<String> posixRefAttrs =

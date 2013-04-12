@@ -157,7 +157,7 @@ public class SyncGroupTest extends GroupTest {
 
             try {
 
-                ctx.createSubcontext("CN=GroupTestFor11,CN=Users," + configuration.getBaseContexts()[0], attrs);
+                ctx.createSubcontext("CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0], attrs);
                 groupTestFor11 = new Uid("GroupTestFor11");
 
             } catch (NamingException e) {
@@ -177,7 +177,7 @@ public class SyncGroupTest extends GroupTest {
             ModificationItem[] mod = new ModificationItem[]{
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -206,7 +206,7 @@ public class SyncGroupTest extends GroupTest {
             mod = new ModificationItem[]{
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
-                new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getBaseContexts()[0]))
+                new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {

@@ -57,7 +57,7 @@ public class BasicFeaturesTest {
         conf.setChangeNumberAttribute("fake");
         conf.setPrincipal("cn=Administrator,cn=Users,o=isp");
         conf.setCredentials(new GuardedString("password".toCharArray()));
-        conf.setBaseContexts("cn=users,o=isp");
+        conf.setUserBaseContexts("cn=users,o=isp");
         conf.setReadSchema(false);
 
         conf.setMemberships(

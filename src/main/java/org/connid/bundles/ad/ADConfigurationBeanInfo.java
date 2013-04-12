@@ -70,8 +70,8 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // baseContextsToSynchronize
             props.add(new PropertyDescriptor("baseContextsToSynchronize", ADConfiguration.class));
 
-            // baseContexts
-            props.add(new PropertyDescriptor("baseContexts", LdapConfiguration.class));
+            // userBaseContexts
+            props.add(new PropertyDescriptor("userBaseContexts", ADConfiguration.class));
 
             // groupBaseContexts
             props.add(new PropertyDescriptor("groupBaseContexts", ADConfiguration.class));
