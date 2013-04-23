@@ -75,18 +75,21 @@ class ADSchemaBuilder {
     }
 
     private void buildSchema() {
-        final ADConfiguration conf =
-                (ADConfiguration) connection.getConfiguration();
-
         final SchemaBuilder schemaBld = new SchemaBuilder(ADConnector.class);
+        build(ObjectClass.ACCOUNT_NAME, schemaBld);
+        build(ObjectClass.GROUP_NAME, schemaBld);
+        schema = schemaBld.build();
+    }
+
+    private void build(final String oname, final SchemaBuilder schemaBld) {
+        final ADConfiguration conf = (ADConfiguration) connection.getConfiguration();
 
         final StringBuilder filter = new StringBuilder();
 
         // -----------------------------------
         // Create search control
         // -----------------------------------
-        final SearchControls searchCtls =
-                LdapInternalSearch.createDefaultSearchControls();
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
 
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
@@ -96,7 +99,8 @@ class ADSchemaBuilder {
         // -----------------------------------
         // Specify filter
         // -----------------------------------
-        for (String oclass : conf.getAccountObjectClasses()) {
+        for (String oclass : oname.equalsIgnoreCase(ObjectClass.ACCOUNT_NAME)
+                ? conf.getAccountObjectClasses() : conf.getGroupObjectClasses()) {
             filter.append("(lDAPDisplayName=").append(oclass).append(")");
         }
 
@@ -131,16 +135,12 @@ class ADSchemaBuilder {
         final ObjectClassInfoBuilder objClassBld = new ObjectClassInfoBuilder();
 
         // ObjectClass.ACCOUNT/ObjectClass.GROUP
-        objClassBld.setType(ObjectClass.ACCOUNT_NAME);
-
+        objClassBld.setType(oname);
         objClassBld.setContainer(false);
-
         objClassBld.addAllAttributeInfo(createAttrInfos(schemaNames));
 
         final ObjectClassInfo oci = objClassBld.build();
         schemaBld.defineObjectClass(oci);
-
-        schema = schemaBld.build();
     }
 
     private Set<String> getObjectSchemaNames(final SearchResult oclass)
@@ -187,24 +187,18 @@ class ADSchemaBuilder {
 
         boolean binary = connection.isBinarySyntax(displayName);
 
-        boolean objectClass = displayName == null
-                || "objectClass".equalsIgnoreCase(displayName);
+        boolean objectClass = displayName == null || "objectClass".equalsIgnoreCase(displayName);
 
         final LdapContext ctx = connection.getInitialContext();
 
-        final String[] baseContexts =
-                connection.getConfiguration().getBaseContextsToSynchronize();
+        final String[] baseContexts = connection.getConfiguration().getBaseContextsToSynchronize();
 
         // ------------------------------
         // Search control
         // ------------------------------
-        final SearchControls searchCtls =
-                LdapInternalSearch.createDefaultSearchControls();
-
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
-        searchCtls.setReturningAttributes(
-                new String[]{IS_SINGLE_VALUE, SYSTEM_ONLY});
+        searchCtls.setReturningAttributes(new String[]{IS_SINGLE_VALUE, SYSTEM_ONLY});
         // ------------------------------
 
         int i = 0;
@@ -238,9 +232,7 @@ class ADSchemaBuilder {
             final Attribute isSingle = attributes.get(IS_SINGLE_VALUE);
 
             try {
-                if (isSingle == null
-                        || isSingle.get() == null
-                        || "false".equalsIgnoreCase(isSingle.get().toString())) {
+                if (isSingle == null || isSingle.get() == null || "false".equalsIgnoreCase(isSingle.get().toString())) {
                     flags.add(Flags.MULTIVALUED);
                 }
             } catch (NamingException e) {
