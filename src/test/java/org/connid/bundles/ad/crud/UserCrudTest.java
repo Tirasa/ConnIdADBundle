@@ -55,9 +55,12 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("1");
 
-        // create filter
+        // create filter 
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
+        // create filter (check for case-insensivity)
+        final Filter filterToLowerCase = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
+        
         // create results handler
         final List<Attribute> results = new ArrayList<Attribute>();
         final ResultsHandler handler = new ResultsHandler() {
@@ -74,11 +77,15 @@ public class UserCrudTest extends UserTest {
 
         connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
 
-        assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         assertEquals(Collections.singletonList(ids.getValue()), results.get(0).getValue());
 
-        connector.schema();
+        results.clear();
+        
+        connector.search(ObjectClass.ACCOUNT, filterToLowerCase, handler, oob.build());
+        
+        assertEquals(1, results.size());
+        assertEquals(Collections.singletonList(ids.getValue()), results.get(0).getValue());
     }
 
     @Test
