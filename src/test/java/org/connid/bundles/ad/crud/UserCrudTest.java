@@ -58,9 +58,6 @@ public class UserCrudTest extends UserTest {
         // create filter 
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
-        // create filter (check for case-insensivity)
-        final Filter filterToLowerCase = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
-        
         // create results handler
         final List<Attribute> results = new ArrayList<Attribute>();
         final ResultsHandler handler = new ResultsHandler() {
@@ -77,13 +74,6 @@ public class UserCrudTest extends UserTest {
 
         connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
 
-        assertEquals(1, results.size());
-        assertEquals(Collections.singletonList(ids.getValue()), results.get(0).getValue());
-
-        results.clear();
-        
-        connector.search(ObjectClass.ACCOUNT, filterToLowerCase, handler, oob.build());
-        
         assertEquals(1, results.size());
         assertEquals(Collections.singletonList(ids.getValue()), results.get(0).getValue());
     }
@@ -234,9 +224,9 @@ public class UserCrudTest extends UserTest {
 
         final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
-        
+
         final List<String> groupsToBeAdded = new ArrayList<String>();
-        
+
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             for (Object obj : ldapGroups.getValue()) {
                 groupsToBeAdded.add(obj.toString());
@@ -271,8 +261,8 @@ public class UserCrudTest extends UserTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -290,9 +280,9 @@ public class UserCrudTest extends UserTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("ldapGroups",
-                    "CN=Schema Admins,CN=Users," + baseContext,
-                    "CN=Cert Publishers,CN=Users," + baseContext)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+            "CN=Schema Admins,CN=Users," + baseContext,
+            "CN=Cert Publishers,CN=Users," + baseContext)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -342,10 +332,10 @@ public class UserCrudTest extends UserTest {
 
         assertNotNull(t);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build("givenName", "gnupdate"),
-                    AttributeBuilder.buildPassword(
-                    new GuardedString("Password321".toCharArray()))});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "gnupdate"),
+            AttributeBuilder.buildPassword(
+            new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -397,7 +387,7 @@ public class UserCrudTest extends UserTest {
         // --------------------------
         // force change password
         // --------------------------
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("pwdLastSet", true)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("pwdLastSet", true)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -428,12 +418,12 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-        
+
         final String DN = "cn=" + ids.getKey() + ",cn=Computers," + BASE_CONTEXT;
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, DN),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, DN),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -474,9 +464,9 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, ids.getKey()),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, ids.getKey()),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -518,9 +508,9 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey())),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey())),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -562,9 +552,9 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("7");
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, ids.getKey() + "a"),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, ids.getKey() + "a"),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -615,7 +605,7 @@ public class UserCrudTest extends UserTest {
 
         assertNotNull(authUid);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(false)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(false)});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -639,7 +629,7 @@ public class UserCrudTest extends UserTest {
 
         assertNotNull(t);
 
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(true)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(true)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
