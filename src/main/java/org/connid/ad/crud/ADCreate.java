@@ -94,6 +94,11 @@ public class ADCreate extends LdapModifyOperation {
             throw new IllegalArgumentException("No Name attribute provided in the attributes");
         }
 
+        final Attribute cnAttr = AttributeUtil.find("cn", attrs);
+        if (cnAttr != null) {
+            attrs.remove(cnAttr);
+        }
+
         final ADUtilities utils = new ADUtilities((ADConnection) conn);
 
         Name name;
@@ -101,7 +106,6 @@ public class ADCreate extends LdapModifyOperation {
         if (utils.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
-
             Uid uidAttr = AttributeUtil.getUidAttribute(attrs);
 
             if (uidAttr == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
@@ -109,8 +113,7 @@ public class ADCreate extends LdapModifyOperation {
                 attrs.add(uidAttr);
             }
 
-            name = new Name(utils.getDN(attrs));
-
+            name = new Name(utils.getDN(nameAttr, cnAttr));
         }
         // -------------------------------------------------
 

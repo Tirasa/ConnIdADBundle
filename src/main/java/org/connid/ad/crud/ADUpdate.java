@@ -85,6 +85,58 @@ public class ADUpdate extends LdapModifyOperation {
         this.conn = conn;
     }
 
+    /**
+     * Retrieve new name if specified.
+     *
+     * @return new Name if provider; null otherwise.
+     */
+    public Name getNewName(final String entryDN, final Set<Attribute> attrs) {
+        // purge CN
+        final Attribute cnAttr = AttributeUtil.find("cn", attrs);
+
+        if (cnAttr != null) {
+            attrs.remove(cnAttr);
+        }
+
+        // retrieve new name...
+
+        final Name name = AttributeUtil.getNameFromAttributes(attrs);
+
+        Name newName = null;
+
+        if (name != null) {
+            attrs.remove(name);
+
+            final ADUtilities utils = new ADUtilities((ADConnection) conn);
+
+            if (utils.isDN(name.getNameValue())) {
+                newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
+            }
+        }
+
+        if (newName == null && !conn.getConfiguration().getUidAttribute().equalsIgnoreCase("cn") && cnAttr != null) {
+            final String cnValue =
+                    cnAttr.getValue() == null || cnAttr.getValue().isEmpty() || cnAttr.getValue().get(0) == null
+                    ? null
+                    : cnAttr.getValue().get(0).toString();
+
+            try {
+                // rename if and only if Name is a DN or CN has been provided (consider that the CN can be the Name)
+                final List<Rdn> rdns = new ArrayList<Rdn>(new LdapName(entryDN).getRdns());
+
+                Rdn naming = new Rdn(rdns.get(rdns.size() - 1).getType(), cnValue);
+                rdns.remove(rdns.size() - 1);
+                rdns.add(naming);
+
+                newName = new Name(new LdapName(rdns).toString());
+            } catch (InvalidNameException e) {
+                LOG.error("Error retrieving new DN. Ignore rename request.", e);
+            }
+        }
+
+        return newName;
+    }
+
     public Uid update(final Set<Attribute> attrs) {
         final ConnectorObject obj = getEntryToBeUpdated();
         String entryDN = obj.getName().getNameValue();
@@ -92,44 +144,14 @@ public class ADUpdate extends LdapModifyOperation {
         // ---------------------------------
         // Check if entry should be renamed.
         // ---------------------------------
-        final Name name = (Name) AttributeUtil.find(Name.NAME, attrs);
-
-        Set<Attribute> attrToBeUpdated = attrs;
-
-        Name newName = null;
-
-        if (name != null) {
-            attrToBeUpdated = newSet(attrs);
-            attrToBeUpdated.remove(name);
-
-            final ADUtilities utils = new ADUtilities((ADConnection) conn);
-
-            if (utils.isDN(name.getNameValue())) {
-                newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
-            } else {
-                try {
-
-                    final List<Rdn> rdns = new ArrayList<Rdn>(new LdapName(entryDN).getRdns());
-
-                    if (!rdns.get(rdns.size() - 1).getValue().toString().equalsIgnoreCase(name.getNameValue())) {
-                        Rdn naming = new Rdn(rdns.get(rdns.size() - 1).getType(), name.getNameValue());
-                        rdns.remove(rdns.size() - 1);
-                        rdns.add(naming);
-
-                        newName = new Name(new LdapName(rdns).toString());
-                    }
-
-                } catch (InvalidNameException e) {
-                    LOG.error("Error retrieving new DN. Ignore rename request.", e);
-                }
-            }
-        }
+        Set<Attribute> attrsToBeUpdated = newSet(attrs);
+        final Name newName = getNewName(entryDN, attrsToBeUpdated);
         // ---------------------------------
 
         // ---------------------------------
         // Perform modify/rename
         // ---------------------------------
-        final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrToBeUpdated);
+        final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrsToBeUpdated);
 
         // Update the attributes.
         modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
@@ -143,7 +165,7 @@ public class ADUpdate extends LdapModifyOperation {
         // ---------------------------------
         // Perform group memberships
         // ---------------------------------
-        final List<String> ldapGroups = getStringListValue(attrToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
+        final List<String> ldapGroups = getStringListValue(attrsToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
 
         if (ldapGroups != null) {
             final Set<String> oldMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);

@@ -46,7 +46,6 @@ import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
@@ -255,32 +254,29 @@ public class ADUtilities {
     }
 
     /**
-     * Create a DN string starting from a set attributes and a default people container. This method has to be used if
-     * __NAME__ attribute is not provided or it it is not a DN.
+     * Create a DN string. This method has to be used if __NAME__ attribute is not provided or it is not a DN.
      *
-     * @param attrs set of user attributes.
-     * @param defaulContainer default people container.
+     * @param nameAttr __NAME__
+     * @param cnAttr Common Name
      * @return distinguished name string.
      */
-    public final String getDN(final Set<Attribute> attrs) {
+    public final String getDN(final Name nameAttr, final Attribute cnAttr) {
 
         String cn;
 
-        final Attribute cnAttr = AttributeUtil.find("cn", attrs);
-
         if (cnAttr == null || cnAttr.getValue() == null
                 || cnAttr.getValue().isEmpty()
+                || cnAttr.getValue().get(0) == null
                 || StringUtil.isBlank(cnAttr.getValue().get(0).toString())) {
             // Get the name attribute and consider this as the principal name.
             // Use the principal name as the CN to generate DN.
-            cn = AttributeUtil.getNameFromAttributes(attrs).getNameValue();
+            cn = nameAttr.getNameValue();
         } else {
             // Get the common name and use this to generate the DN.
             cn = cnAttr.getValue().get(0).toString();
         }
 
-        return "cn=" + cn + ","
-                + ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer();
+        return "cn=" + cn + "," + ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer();
     }
 
     /**
