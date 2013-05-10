@@ -550,11 +550,10 @@ public class UserCrudTest extends UserTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final Map.Entry<String, String> ids = util.getEntryIDs("7");
+        final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(Name.NAME, ids.getKey() + "a"),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace =
+                Arrays.asList(new Attribute[] {AttributeBuilder.build("cn", ids.getKey() + "_new")});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -562,31 +561,16 @@ public class UserCrudTest extends UserTest {
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
 
-        uid = connector.authenticate(
-                ObjectClass.ACCOUNT, ids.getValue(), new GuardedString("Password321".toCharArray()), null);
-        assertNotNull(uid);
-
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("memberOf");
+        oob.setAttributesToGet("cn");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-        // Returned attributes: memberOf, NAME and UID
+        // Returned attributes: cn, NAME and UID
         assertEquals(3, object.getAttributes().size());
-        assertNotNull(object.getAttributeByName("memberOf"));
-
-        assertTrue(util.getEntryDN(ids.getKey() + "a").equalsIgnoreCase(object.getName().getNameValue()));
-
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-        expected.addAll(Arrays.asList(conf.getMemberships()));
-
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
-            actual.add(dn.toString());
-        }
-
-        assertEquals(expected, actual);
+        assertNotNull(object.getAttributeByName("cn"));
+        assertEquals(ids.getKey() + "_new", object.getAttributeByName("cn").getValue().get(0));
     }
 
     @Test

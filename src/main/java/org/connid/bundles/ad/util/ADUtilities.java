@@ -53,7 +53,6 @@ import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
@@ -265,18 +264,17 @@ public class ADUtilities {
      * @param defaulContainer default people container.
      * @return distinguished name string.
      */
-    public final String getDN(final ObjectClass oclass, final Set<Attribute> attrs) {
+    public final String getDN(final ObjectClass oclass, final Name nameAttr, final Attribute cnAttr) {
 
         String cn;
 
-        final Attribute cnAttr = AttributeUtil.find("cn", attrs);
-
         if (cnAttr == null || cnAttr.getValue() == null
                 || cnAttr.getValue().isEmpty()
+                || cnAttr.getValue().get(0) == null
                 || StringUtil.isBlank(cnAttr.getValue().get(0).toString())) {
             // Get the name attribute and consider this as the principal name.
             // Use the principal name as the CN to generate DN.
-            cn = AttributeUtil.getNameFromAttributes(attrs).getNameValue();
+            cn = nameAttr.getNameValue();
         } else {
             // Get the common name and use this to generate the DN.
             cn = cnAttr.getValue().get(0).toString();

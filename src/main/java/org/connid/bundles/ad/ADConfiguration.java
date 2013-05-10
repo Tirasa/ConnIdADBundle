@@ -52,6 +52,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     public static final String LOCK_OUT_DEFAULT_VALUE = "0";
 
+    public static final String CN_NAME = "CN";
+
     private List<String> memberships;
 
     private boolean trustAllCerts;
@@ -99,7 +101,7 @@ public class ADConfiguration extends LdapConfiguration {
         setUidAttribute("sAMAccountName");
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
-        setObjectClassesToSynchronize(new String[]{"user"});
+        setObjectClassesToSynchronize(new String[] {"user"});
         setGroupMemberAttribute("member");
 
         setUsePagedResultControl(true);
@@ -117,7 +119,7 @@ public class ADConfiguration extends LdapConfiguration {
 
     @Override
     @ConfigurationProperty(displayMessageKey = "ssl.display",
-    helpMessageKey = "ssl.help", order = 1)
+            helpMessageKey = "ssl.help", order = 1)
     public boolean isSsl() {
         return ssl;
     }
@@ -137,7 +139,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
-    helpMessageKey = "memberships.help", order = 1)
+            helpMessageKey = "memberships.help", order = 1)
     public String[] getMemberships() {
         return memberships.toArray(new String[memberships.size()]);
     }
@@ -153,7 +155,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "retrieveDeletedUser.display",
-    helpMessageKey = "retrieveDeletedUser.help", order = 2)
+            helpMessageKey = "retrieveDeletedUser.help", order = 2)
     public boolean isRetrieveDeletedUser() {
         return retrieveDeletedUser;
     }
@@ -163,7 +165,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "retrieveDeletedGroup.display",
-    helpMessageKey = "retrieveDeletedGroup.help", order = 3)
+            helpMessageKey = "retrieveDeletedGroup.help", order = 3)
     public boolean isRetrieveDeletedGroup() {
         return this.retrieveDeletedGroup;
     }
@@ -173,7 +175,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "trustAllCerts.display",
-    helpMessageKey = "trustAllCerts.help", order = 4)
+            helpMessageKey = "trustAllCerts.help", order = 4)
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
@@ -183,7 +185,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "loading.display",
-    helpMessageKey = "loading.help", order = 5)
+            helpMessageKey = "loading.help", order = 5)
     public boolean isLoading() {
         return loading;
     }
@@ -197,14 +199,14 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
-    helpMessageKey = "membershipsInOr.help", order = 6)
+            helpMessageKey = "membershipsInOr.help", order = 6)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
     }
 
     @ConfigurationProperty(order = 7, required = true,
-    displayMessageKey = "baseContextsToSynchronize.display",
-    helpMessageKey = "baseContextsToSynchronize.help")
+            displayMessageKey = "baseContextsToSynchronize.display",
+            helpMessageKey = "baseContextsToSynchronize.help")
     public String[] getBaseContextsToSynchronize() {
         return super.getBaseContextsToSynchronize();
     }
@@ -215,7 +217,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-    helpMessageKey = "defaultPeopleContainer.help", order = 8)
+            helpMessageKey = "defaultPeopleContainer.help", order = 8)
     public String getDefaultPeopleContainer() {
         if (StringUtil.isBlank(defaultPeopleContainer)) {
             return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
@@ -230,7 +232,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultGroupContainer.display",
-    helpMessageKey = "defaultGroupContainer.help", order = 9)
+            helpMessageKey = "defaultGroupContainer.help", order = 9)
     public String getDefaultGroupContainer() {
         if (StringUtil.isBlank(defaultGroupContainer)) {
             return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
@@ -245,7 +247,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "userSearchScope.display",
-    helpMessageKey = "userSearchScope.help", order = 10)
+            helpMessageKey = "userSearchScope.help", order = 10)
     public String getUserSearchScope() {
         return userSearchScope == null ? userSearchScope.subtree.toString() : userSearchScope.toString();
     }
@@ -255,7 +257,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchScope.display",
-    helpMessageKey = "groupSearchScope.help", order = 11)
+            helpMessageKey = "groupSearchScope.help", order = 11)
     public String getGroupSearchScope() {
         return groupSearchFilter == null ? groupSearchScope.subtree.toString() : groupSearchScope.toString();
     }
@@ -265,7 +267,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchFilter.display",
-    helpMessageKey = "groupSearchFilter.help", order = 12)
+            helpMessageKey = "groupSearchFilter.help", order = 12)
     public String getGroupSearchFilter() {
         return groupSearchFilter;
     }
@@ -275,7 +277,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupBaseContexts.display",
-    helpMessageKey = "groupBaseContexts.help", order = 13)
+            helpMessageKey = "groupBaseContexts.help", order = 13)
     public String[] getGroupBaseContexts() {
         if (groupBaseContexts != null && groupBaseContexts.length > 0) {
             // return specified configuration
@@ -293,7 +295,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "userBaseContexts.display",
-    helpMessageKey = "userBaseContexts.help", order = 14)
+            helpMessageKey = "userBaseContexts.help", order = 14)
     public String[] getUserBaseContexts() {
         if (userBaseContexts != null && userBaseContexts.length > 0) {
             // return specified configuration
@@ -319,7 +321,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
-    helpMessageKey = "groupMemberReferenceAttribute.help", order = 15)
+            helpMessageKey = "groupMemberReferenceAttribute.help", order = 15)
     public String getGroupMemberReferenceAttribute() {
         return StringUtil.isBlank(groupMemberReferenceAttribute) ? "member" : groupMemberReferenceAttribute;
     }
@@ -329,7 +331,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
-    helpMessageKey = "groupOwnerReferenceAttribute.help", order = 16)
+            helpMessageKey = "groupOwnerReferenceAttribute.help", order = 16)
     public String getGroupOwnerReferenceAttribute() {
         return StringUtil.isBlank(groupOwnerReferenceAttribute) ? "managedBy" : groupOwnerReferenceAttribute;
     }
@@ -339,7 +341,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-    helpMessageKey = "startSyncFromToday.help", order = 17)
+            helpMessageKey = "startSyncFromToday.help", order = 17)
     public boolean isStartSyncFromToday() {
         return startSyncFromToday;
     }
