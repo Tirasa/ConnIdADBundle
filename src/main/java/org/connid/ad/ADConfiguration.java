@@ -52,14 +52,14 @@ public class ADConfiguration extends LdapConfiguration {
     public ADConfiguration() {
         super();
 
-        setUidAttribute("sAMAccountName");
+        super.setUidAttribute("sAMAccountName");
         setSynchronizePasswords(true);
 
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
-        setObjectClassesToSynchronize(new String[]{"user"});
+        setObjectClassesToSynchronize(new String[] {"user"});
         setGroupMemberAttribute("member");
-        setAccountObjectClasses(new String[]{"top", "person", "organizationalPerson", "user"});
+        setAccountObjectClasses(new String[] {"top", "person", "organizationalPerson", "user"});
 
         setUsePagedResultControl(true);
         setBlockSize(100);
@@ -73,7 +73,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "memberships.display",
-    helpMessageKey = "memberships.help", required = true, order = 1)
+            helpMessageKey = "memberships.help", required = true, order = 1)
     public String[] getMemberships() {
         return memberships.toArray(new String[memberships.size()]);
     }
@@ -89,7 +89,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "retrieveDeletedUser.display",
-    helpMessageKey = "retrieveDeletedUser.help", required = true, order = 2)
+            helpMessageKey = "retrieveDeletedUser.help", required = true, order = 2)
     public boolean isRetrieveDeletedUser() {
         return retrieveDeletedUser;
     }
@@ -99,7 +99,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "trustAllCerts.display",
-    helpMessageKey = "trustAllCerts.help", required = true, order = 3)
+            helpMessageKey = "trustAllCerts.help", required = true, order = 3)
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
@@ -109,7 +109,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "loading.display",
-    helpMessageKey = "loading.help", required = true, order = 4)
+            helpMessageKey = "loading.help", required = true, order = 4)
     public boolean isLoading() {
         return loading;
     }
@@ -123,18 +123,24 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
-    helpMessageKey = "membershipsInOr.help", required = true, order = 5)
+            helpMessageKey = "membershipsInOr.help", required = true, order = 5)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-    helpMessageKey = "defaultPeopleContainer.help", required = true, order = 6)
+            helpMessageKey = "defaultPeopleContainer.help", required = true, order = 6)
     public String getDefaultPeopleContainer() {
         return defaultPeopleContainer;
     }
 
     public void setDefaultPeopleContainer(String defaultPeopleContainer) {
         this.defaultPeopleContainer = defaultPeopleContainer;
+    }
+
+    @Override
+    public void setUidAttribute(final String uidAttribute) {
+        setAccountUserNameAttributes("sAMAccountName", uidAttribute);
+        super.setUidAttribute(uidAttribute);
     }
 }

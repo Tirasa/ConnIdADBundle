@@ -49,6 +49,10 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // failover
             props.add(new PropertyDescriptor(
                     "failover", LdapConfiguration.class));
+            
+            // uidAttribute
+            props.add(new PropertyDescriptor(
+                    "uidAttribute", LdapConfiguration.class));
 
             // baseContextsToSynchronize
             props.add(new PropertyDescriptor(
