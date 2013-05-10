@@ -100,7 +100,7 @@ public abstract class AbstractTest {
         for (int i = 1; i <= 10; i++) {
             cn = prefix + i;
 
-            attributes = getSimpleProfile(cn);
+            attributes = getSimpleProfile(cn, false);
 
             final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
 

@@ -197,21 +197,22 @@ public class CrudTest extends AbstractTest {
         assertNotNull(uid);
         assertEquals(SAAN, uid.getUidValue());
 
-        // Ask just for memberOf
+        // Ask just for memberOf and cn
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("memberOf");
+        oob.setAttributesToGet("memberOf", "cn");
 
         // retrieve created object
-        final ConnectorObject object =
-                connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         // check for memberOf attribute
         assertNotNull(object);
         assertNotNull(object.getAttributes());
 
-        // Returned attributes: memberOf, NAME and UID
-        assertEquals(3, object.getAttributes().size());
+        // Returned attributes: memberOf, CN, NAME and UID
+        assertEquals(4, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
+        assertNotNull(object.getAttributeByName("cn"));
+        assertEquals(CN, object.getAttributeByName("cn").getValue().get(0));
 
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
@@ -281,8 +282,8 @@ public class CrudTest extends AbstractTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -300,9 +301,9 @@ public class CrudTest extends AbstractTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("ldapGroups",
-                    "CN=Schema Admins,CN=Users," + baseContext,
-                    "CN=Cert Publishers,CN=Users," + baseContext)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+            "CN=Schema Admins,CN=Users," + baseContext,
+            "CN=Cert Publishers,CN=Users," + baseContext)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -352,10 +353,10 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(t);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build("givenName", "gnupdate"),
-                    AttributeBuilder.buildPassword(
-                    new GuardedString("Password321".toCharArray()))});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "gnupdate"),
+            AttributeBuilder.buildPassword(
+            new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -407,7 +408,7 @@ public class CrudTest extends AbstractTest {
         // --------------------------
         // force change password
         // --------------------------
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("pwdLastSet", true)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("pwdLastSet", true)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -442,9 +443,9 @@ public class CrudTest extends AbstractTest {
         String baseContext = prop.getProperty("usersBaseContext");
         final String DN = "cn=" + CN + ",cn=Computers," + baseContext;
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, DN),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, DN),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -484,9 +485,9 @@ public class CrudTest extends AbstractTest {
         final String CN = CrudTest.class.getSimpleName() + "6";
         final String SAAN = "SAAN_" + CN;
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, CN),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, CN),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -527,9 +528,9 @@ public class CrudTest extends AbstractTest {
         final String CN = CrudTest.class.getSimpleName() + "6";
         final String SAAN = "SAAN_" + CN;
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, getEntryDN(CN)),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(Name.NAME, getEntryDN(CN)),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -567,42 +568,27 @@ public class CrudTest extends AbstractTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final String CN = CrudTest.class.getSimpleName() + "7";
+        final String CN = CrudTest.class.getSimpleName() + "5";
         final String SAAN = "SAAN_" + CN;
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{
-                    AttributeBuilder.build(Name.NAME, CN + "a"),
-                    AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+        final List<Attribute> attrToReplace =
+                Arrays.asList(new Attribute[] {AttributeBuilder.build("cn", CN + "_new")});
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(SAAN, uid.getUidValue());
 
-        uid = connector.authenticate(ObjectClass.ACCOUNT, SAAN, new GuardedString("Password321".toCharArray()), null);
-        assertNotNull(uid);
-
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("memberOf");
+        oob.setAttributesToGet("cn");
 
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         // Returned attributes: memberOf, NAME and UID
         assertEquals(3, object.getAttributes().size());
-        assertNotNull(object.getAttributeByName("memberOf"));
-
-        assertTrue(getEntryDN(CN + "a").equalsIgnoreCase(object.getName().getNameValue()));
-
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-        expected.addAll(Arrays.asList(conf.getMemberships()));
-
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-        for (Object dn : object.getAttributeByName("memberOf").getValue()) {
-            actual.add(dn.toString());
-        }
-
-        assertEquals(expected, actual);
+        assertNotNull(object.getAttributeByName("cn"));
+        assertEquals(CN + "_new", object.getAttributeByName("cn").getValue().get(0));
     }
 
     @Test
@@ -621,7 +607,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(authUid);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(false)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(false)});
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -645,7 +631,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(t);
 
-        attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.buildEnabled(true)});
+        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(true)});
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
