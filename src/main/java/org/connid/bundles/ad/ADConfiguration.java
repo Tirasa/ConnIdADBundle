@@ -348,6 +348,12 @@ public class ADConfiguration extends LdapConfiguration {
         this.startSyncFromToday = startSyncFromToday;
     }
 
+    @Override
+    public void setUidAttribute(final String uidAttribute) {
+        setAccountUserNameAttributes("sAMAccountName", uidAttribute);
+        super.setUidAttribute(uidAttribute);
+    }
+
     public enum SearchScope {
 
         object,
