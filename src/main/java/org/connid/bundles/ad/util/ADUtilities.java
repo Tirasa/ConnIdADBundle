@@ -244,8 +244,6 @@ public class ADUtilities {
             final ObjectClass oclass)
             throws NamingException {
 
-        final LdapEntry entry = LdapEntry.create(baseDN, profile);
-
         final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
         builder.setObjectClass(oclass);
 
