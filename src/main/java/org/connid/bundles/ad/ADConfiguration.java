@@ -207,6 +207,7 @@ public class ADConfiguration extends LdapConfiguration {
     @ConfigurationProperty(order = 7, required = true,
             displayMessageKey = "baseContextsToSynchronize.display",
             helpMessageKey = "baseContextsToSynchronize.help")
+    @Override
     public String[] getBaseContextsToSynchronize() {
         return super.getBaseContextsToSynchronize();
     }
@@ -249,7 +250,7 @@ public class ADConfiguration extends LdapConfiguration {
     @ConfigurationProperty(displayMessageKey = "userSearchScope.display",
             helpMessageKey = "userSearchScope.help", order = 10)
     public String getUserSearchScope() {
-        return userSearchScope == null ? userSearchScope.subtree.toString() : userSearchScope.toString();
+        return userSearchScope == null ? SearchScope.subtree.toString() : userSearchScope.toString();
     }
 
     public void setUserSearchScope(final String userSearchScope) {
@@ -259,7 +260,7 @@ public class ADConfiguration extends LdapConfiguration {
     @ConfigurationProperty(displayMessageKey = "groupSearchScope.display",
             helpMessageKey = "groupSearchScope.help", order = 11)
     public String getGroupSearchScope() {
-        return groupSearchFilter == null ? groupSearchScope.subtree.toString() : groupSearchScope.toString();
+        return groupSearchFilter == null ? SearchScope.subtree.toString() : groupSearchScope.toString();
     }
 
     public void setGroupSearchScope(final String groupSearchScope) {
@@ -351,7 +352,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @Override
-    public void setUidAttribute(final String uidAttribute) {
+    public final void setUidAttribute(final String uidAttribute) {
         setAccountUserNameAttributes("sAMAccountName", uidAttribute);
         super.setUidAttribute(uidAttribute);
     }

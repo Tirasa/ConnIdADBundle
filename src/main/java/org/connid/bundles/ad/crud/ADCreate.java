@@ -99,7 +99,7 @@ public class ADCreate extends LdapModifyOperation {
             attrs.remove(cnAttr);
         }
 
-        final ADUtilities utils = new ADUtilities((ADConnection) conn);
+        final ADUtilities utils = new ADUtilities(conn);
 
         Name name;
 
