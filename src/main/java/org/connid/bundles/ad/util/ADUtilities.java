@@ -211,14 +211,14 @@ public class ADUtilities {
                     }
 
                     // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
-                    if (status == null || Integer.parseInt(
+                    builder.addAttribute(
+                            status == null || Integer.parseInt(
                             profile.get(UACCONTROL_ATTR).get().toString())
-                            % 16 != UF_ACCOUNTDISABLE) {
-                        attribute = AttributeBuilder.buildEnabled(true);
-                    } else {
-                        attribute = AttributeBuilder.buildEnabled(false);
-                    }
+                            % 16 != UF_ACCOUNTDISABLE
+                            ? AttributeBuilder.buildEnabled(true)
+                            : AttributeBuilder.buildEnabled(false));
 
+                    attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
@@ -227,7 +227,7 @@ public class ADUtilities {
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 }
             }
-
+            
             // Avoid attribute adding in case of attribute name not found
             if (attribute != null) {
                 builder.addAttribute(attribute);
