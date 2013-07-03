@@ -154,7 +154,7 @@ public class ADUpdate extends LdapModifyOperation {
         final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrsToBeUpdated);
 
         // Update the attributes.
-        modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
+            modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
 
         // Rename the entry if needed.
         if (newName != null) {

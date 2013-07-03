@@ -49,7 +49,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.junit.Test;
 
 public class UserCrudTest extends UserTest {
-
+    
     @Test
     public void search() {
 
@@ -115,19 +115,20 @@ public class UserCrudTest extends UserTest {
 
         // Ask just for memberOf
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("memberOf");
+        oob.setAttributesToGet(Arrays.asList("memberOf","userAccountControl"));
 
         // retrieve created object
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-        // check for memberOf attribute
+        // check for memberOf attribute     
         assertNotNull(object);
         assertNotNull(object.getAttributes());
 
         // Returned attributes: memberOf, NAME and UID
-        assertEquals(3, object.getAttributes().size());
+        assertEquals(4, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
-
+        assertNotNull(object.getAttributeByName("userAccountControl"));
+        
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
