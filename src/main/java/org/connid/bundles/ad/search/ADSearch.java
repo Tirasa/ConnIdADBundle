@@ -192,17 +192,13 @@ public class ADSearch {
             // just as the adapter does.
 
             boolean useBlocks = conn.getConfiguration().isUseBlocks();
-            boolean usePagedResultsControl =
-                    conn.getConfiguration().isUsePagedResultControl();
+            boolean usePagedResultsControl = conn.getConfiguration().isUsePagedResultControl();
             int pageSize = conn.getConfiguration().getBlockSize();
 
-            if (useBlocks && !usePagedResultsControl
-                    && conn.supportsControl(VirtualListViewControl.OID)) {
-                String vlvSortAttr =
-                        conn.getConfiguration().getVlvSortAttribute();
+            if (useBlocks && !usePagedResultsControl && conn.supportsControl(VirtualListViewControl.OID)) {
+                String vlvSortAttr = conn.getConfiguration().getVlvSortAttribute();
                 strategy = new ADVlvIndexSearchStrategy(vlvSortAttr, pageSize);
-            } else if (useBlocks
-                    && conn.supportsControl(PagedResultsControl.OID)) {
+            } else if (useBlocks && conn.supportsControl(PagedResultsControl.OID)) {
                 strategy = new ADSimplePagedSearchStrategy(pageSize);
             } else {
                 strategy = new ADDefaultSearchStrategy(false);
