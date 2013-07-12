@@ -140,7 +140,9 @@ public class ADConnection extends LdapConnection {
         final Pair<AuthenticationResult, LdapContext> pair =
                 createContext(principal, credentials);
 
-        LOG.error("Authentication result {0}", pair.first.getType());
+        if (LOG.isOk()) {
+            LOG.ok("Authentication result {0}", pair.first.getType());
+        }
 
         if (pair.first.getType().equals(AuthenticationResultType.SUCCESS)) {
             return pair.second;
@@ -281,7 +283,7 @@ public class ADConnection extends LdapConnection {
     public void checkAlive() {
         try {
             final Attributes attrs = getInitialContext().
-                    getAttributes("", new String[]{"subschemaSubentry"});
+                    getAttributes("", new String[] {"subschemaSubentry"});
 
             attrs.get("subschemaSubentry");
         } catch (NamingException e) {
