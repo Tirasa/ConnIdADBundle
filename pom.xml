@@ -202,7 +202,7 @@
 
   <profiles>
     <profile>
-      <id>ad-it</id>
+      <id>it</id>
       <properties>
       </properties>
       <dependencies>

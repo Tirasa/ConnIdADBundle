@@ -81,15 +81,14 @@ public class SyncGroupTest extends GroupTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "member"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "member"}));
 
-        SyncToken token = null;
+        SyncToken token = connector.getLatestSyncToken(ObjectClass.GROUP);
 
         // ----------------------------------
         // check sync without modification and deleted groups (token: null)
         // ----------------------------------
         connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-        token = connector.getLatestSyncToken(ObjectClass.GROUP);
 
         assertTrue(deleted.isEmpty());
         assertTrue(updated.isEmpty());
@@ -104,13 +103,16 @@ public class SyncGroupTest extends GroupTest {
             // check sync with new group (token updated)
             // ----------------------------------
             // group added sync
+            SyncToken nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             uid11 = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids11), null);
+            token = nextToken;
 
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
             assertEquals(1, deleted.size());
@@ -132,8 +134,9 @@ public class SyncGroupTest extends GroupTest {
             deleted.clear();
 
             // check with updated token and without any modification
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
@@ -168,13 +171,14 @@ public class SyncGroupTest extends GroupTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             assertFalse(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
-            ModificationItem[] mod = new ModificationItem[]{
+            ModificationItem[] mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0]))
@@ -190,8 +194,9 @@ public class SyncGroupTest extends GroupTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
             assertEquals(1, deleted.size());
@@ -203,7 +208,7 @@ public class SyncGroupTest extends GroupTest {
             // ----------------------------------
             // check sync with user 'OUT' group (token updated)
             // ----------------------------------
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
                 new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0]))
@@ -219,8 +224,9 @@ public class SyncGroupTest extends GroupTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             assertEquals(2, deleted.size());
             assertTrue(updated.isEmpty());
@@ -236,16 +242,18 @@ public class SyncGroupTest extends GroupTest {
             final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
             assertNotNull(uid);
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             assertFalse(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
             connector.delete(ObjectClass.GROUP, uid, null);
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.GROUP);
+            token = nextToken;
 
             // always returned
             assertFalse(deleted.isEmpty());
@@ -300,9 +308,7 @@ public class SyncGroupTest extends GroupTest {
 
         // Ask just for sAMAccountName and members
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "member"}));
-
-        SyncToken token = null;
+        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "member"}));
 
         conf.setRetrieveDeletedGroup(false);
         conf.setLoading(true);
@@ -311,8 +317,8 @@ public class SyncGroupTest extends GroupTest {
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
+        SyncToken token = newConnector.getLatestSyncToken(ObjectClass.GROUP);
         newConnector.sync(ObjectClass.GROUP, token, handler, oob.build());
-        token = newConnector.getLatestSyncToken(ObjectClass.GROUP);
 
         assertTrue(deleted.isEmpty());
         assertTrue(updated.isEmpty());
@@ -327,12 +333,9 @@ public class SyncGroupTest extends GroupTest {
         try {
             // user added sync
             uid13 = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids13), null);
-
             newConnector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.GROUP);
 
             assertEquals(0, deleted.size());
-
             // group and memberships creation
             assertEquals(2, updated.size());
         } finally {

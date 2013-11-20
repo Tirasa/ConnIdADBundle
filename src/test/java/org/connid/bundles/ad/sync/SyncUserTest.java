@@ -86,13 +86,10 @@ public class SyncUserTest extends UserTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(
-                new String[]{"sAMAccountName", "givenName", "memberOf"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "givenName", "memberOf"}));
 
-        SyncToken token = null;
-
+        SyncToken token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
         connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-        token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         assertTrue(deleted.isEmpty());
         assertTrue(updated.isEmpty());
@@ -113,8 +110,9 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            SyncToken nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
 
@@ -136,8 +134,9 @@ public class SyncUserTest extends UserTest {
             deleted.clear();
 
             // check with updated token and without any modification
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
@@ -186,17 +185,18 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
             ModificationItem[] mod =
-                    new ModificationItem[]{new ModificationItem(
+                    new ModificationItem[] {new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", 
-                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -209,17 +209,17 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
 
-            mod =
-                    new ModificationItem[]{new ModificationItem(
+            mod = new ModificationItem[] {new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", 
-                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -232,8 +232,9 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
@@ -242,12 +243,11 @@ public class SyncUserTest extends UserTest {
             // ----------------------------------
             // check sync with user 'OUT' group (token updated)
             // ----------------------------------
-            mod =
-                    new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
-                new BasicAttribute("member", 
-                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -269,29 +269,22 @@ public class SyncUserTest extends UserTest {
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
 
+            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
-
-            assertNotNull(
-                    updated.get(0).getObject().getAttributeByName("memberOf"));
-
-            assertNotNull(
-                    updated.get(0).getObject().getAttributeByName("memberOf").
-                    getValue());
-
-            assertEquals(1,
-                    updated.get(0).getObject().getAttributeByName("memberOf").
-                    getValue().size());
+            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
+            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
+            assertEquals(1, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             // add user to a group not involved into the filter
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member", 
-                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -304,8 +297,9 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
@@ -313,11 +307,11 @@ public class SyncUserTest extends UserTest {
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
             assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
-                new BasicAttribute("member", 
-                    "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
             };
 
             try {
@@ -330,8 +324,9 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(updated.isEmpty());
             assertEquals(1, deleted.size());
@@ -350,8 +345,9 @@ public class SyncUserTest extends UserTest {
             updated.clear();
             deleted.clear();
 
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
@@ -360,8 +356,9 @@ public class SyncUserTest extends UserTest {
             deleted.clear();
 
             // check with updated token and without any modification
+            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
@@ -375,14 +372,11 @@ public class SyncUserTest extends UserTest {
                 // user delete sync
                 conf.setRetrieveDeletedUser(true);
 
-                final ConnectorFacadeFactory factory =
-                        ConnectorFacadeFactory.getInstance();
-
-                final APIConfiguration impl =
-                        TestHelpers.createTestConfiguration(
-                        ADConnector.class, conf);
-
+                final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+                final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
                 final ConnectorFacade newConnector = factory.newInstance(impl);
+
+                token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
                 newConnector.delete(ObjectClass.ACCOUNT, uid11, null);
 
@@ -425,9 +419,7 @@ public class SyncUserTest extends UserTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
-
-        SyncToken token = null;
+        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "givenName"}));
 
         conf.setRetrieveDeletedUser(false);
         conf.setLoading(true);
@@ -436,8 +428,8 @@ public class SyncUserTest extends UserTest {
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
+        final SyncToken token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
         newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-        token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
         assertTrue(deleted.isEmpty());
         assertTrue(updated.isEmpty());
@@ -451,16 +443,14 @@ public class SyncUserTest extends UserTest {
 
         try {
             // user added sync
-            uid13 = connector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(ids13), null);
+            uid13 = newConnector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(ids13), null);
 
             updated.clear();
             deleted.clear();
 
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
 
             assertTrue(deleted.isEmpty());
-
             assertEquals(1, updated.size());
         } finally {
             if (uid13 != null) {
@@ -499,7 +489,7 @@ public class SyncUserTest extends UserTest {
         // instatiate a new configuration to avoid collisions with sync test
         final ADConfiguration configuration = getSimpleConf(prop);
 
-        final String DN = 
+        final String DN =
                 "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0];
 
         final ADConnection connection = new ADConnection(configuration);

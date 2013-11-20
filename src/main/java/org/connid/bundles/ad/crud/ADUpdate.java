@@ -98,7 +98,7 @@ public class ADUpdate extends LdapModifyOperation {
         if (name != null) {
             attrs.remove(name);
 
-            final ADUtilities utils = new ADUtilities((ADConnection) conn);
+            final ADUtilities utils = new ADUtilities(conn);
 
             if (utils.isDN(name.getNameValue())) {
                 newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
@@ -154,7 +154,7 @@ public class ADUpdate extends LdapModifyOperation {
         final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrsToBeUpdated);
 
         // Update the attributes.
-            modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
+        modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
 
         // Rename the entry if needed.
         if (newName != null) {

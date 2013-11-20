@@ -153,7 +153,7 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with empty token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
+                ctx = conn.getSyncContext(new Control[] {new DirSyncControl()});
 
                 if (((ADConfiguration) conn.getConfiguration()).isStartSyncFromToday()) {
                     search(ctx, "(cn=__CONNID-NORES__)", searchCtls, true);
@@ -165,7 +165,7 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[]{new DirSyncControl((byte[]) token.getValue())});
+                ctx = conn.getSyncContext(new Control[] {new DirSyncControl((byte[]) token.getValue())});
             }
         } catch (Exception e) {
             throw new ConnectorException("Could not set DirSync request controls", e);
@@ -215,6 +215,42 @@ public class ADSyncStrategy {
     }
 
     public SyncToken getLatestSyncToken() {
+        // -----------------------------------
+        // Create search control
+        // -----------------------------------
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
+        searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        searchCtls.setReturningAttributes(null);
+        // -----------------------------------
+
+        SyncToken latestSyncToken = null;
+
+        final String baseContextDn = conn.getConfiguration().getBaseContextsToSynchronize()[0];
+        final String filter = "(CN=__CONNID-NORES__)";
+
+        try {
+            final LdapContext ctx = conn.getSyncContext(new Control[] {new DirSyncControl()});
+            ctx.search(baseContextDn, filter, searchCtls);
+
+            final Control[] rspCtls = ctx.getResponseControls();
+
+            if (rspCtls != null) {
+
+                for (int i = 0; i < rspCtls.length; i++) {
+                    if (rspCtls[i] instanceof DirSyncResponseControl) {
+                        DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtls[i];
+                        latestSyncToken = new SyncToken(dirSyncRspCtl.getCookie());
+                    }
+                }
+
+                if (LOG.isOk()) {
+                    LOG.ok("Latest sync token set to {0}", latestSyncToken);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(e, "While searching for {0} with filter {1} and controls {2}", baseContextDn, filter, searchCtls);
+        }
+
         return latestSyncToken;
     }
 
@@ -230,7 +266,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        ctx.setRequestControls(new Control[]{new DeletedControl()});
+        ctx.setRequestControls(new Control[] {new DeletedControl()});
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = result.getAttributes();
@@ -367,7 +403,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        ctx.setRequestControls(new Control[]{new DeletedControl()});
+        ctx.setRequestControls(new Control[] {new DeletedControl()});
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = sr.getAttributes();
