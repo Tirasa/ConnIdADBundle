@@ -49,7 +49,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.junit.Test;
 
 public class UserCrudTest extends UserTest {
-    
+
     @Test
     public void search() {
 
@@ -115,7 +115,7 @@ public class UserCrudTest extends UserTest {
 
         // Ask just for memberOf
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList("memberOf","userAccountControl"));
+        oob.setAttributesToGet(Arrays.asList("memberOf", "userAccountControl"));
 
         // retrieve created object
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
@@ -128,7 +128,7 @@ public class UserCrudTest extends UserTest {
         assertEquals(4, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
         assertNotNull(object.getAttributeByName("userAccountControl"));
-        
+
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
@@ -320,18 +320,16 @@ public class UserCrudTest extends UserTest {
 
         assertNotNull(authUid);
 
-        Throwable t = null;
         try {
-            authUid = connector.authenticate(
+            connector.authenticate(
                     ObjectClass.ACCOUNT, // object class
                     ids.getValue(), // uid
                     new GuardedString("Password321".toCharArray()), // password
                     null);
-        } catch (ConnectorException e) {
-            t = e;
+            fail();
+        } catch (ConnectorException ignore) {
+            // ignore
         }
-
-        assertNotNull(t);
 
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build("givenName", "gnupdate"),
@@ -363,19 +361,16 @@ public class UserCrudTest extends UserTest {
                 Collections.singletonList("gnupdate"),
                 object.getAttributeByName("givenName").getValue());
 
-        t = null;
-
         try {
-            authUid = connector.authenticate(
+            connector.authenticate(
                     ObjectClass.ACCOUNT, // object class
                     ids.getValue(), // uid
                     new GuardedString("Password123".toCharArray()), // password
                     null);
-        } catch (ConnectorException e) {
-            t = e;
+            fail();
+        } catch (ConnectorException ignore) {
+            // ignore
         }
-
-        assertNotNull(t);
 
         authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -390,25 +385,22 @@ public class UserCrudTest extends UserTest {
         // --------------------------
         attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("pwdLastSet", true)});
 
-        uid = connector.update(
+        connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
                 new HashSet<Attribute>(attrToReplace),
                 null);
 
-        t = null;
-
         try {
-            authUid = connector.authenticate(
+            connector.authenticate(
                     ObjectClass.ACCOUNT, // object class
                     ids.getValue(), // uid
                     new GuardedString("Password123".toCharArray()), // password
                     null);
-        } catch (ConnectorException e) {
-            t = e;
+            fail();
+        } catch (ConnectorException ignore) {
+            // ignore
         }
-
-        assertNotNull(t);
         // --------------------------
     }
 
@@ -601,18 +593,16 @@ public class UserCrudTest extends UserTest {
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
 
-        Throwable t = null;
         try {
-            authUid = connector.authenticate(
+            connector.authenticate(
                     ObjectClass.ACCOUNT, // object class
                     ids.getValue(), // uid
                     new GuardedString("Password123".toCharArray()), // password
                     null);
-        } catch (ConnectorException e) {
-            t = e;
+            fail();
+        } catch (ConnectorException ignore) {
+            // ignore
         }
-
-        assertNotNull(t);
 
         attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(true)});
 
@@ -632,5 +622,47 @@ public class UserCrudTest extends UserTest {
                 null);
 
         assertNotNull(authUid);
+    }
+
+    @Test
+    public void issueAD25() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("cn");
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("6");
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), oob.build());
+        assertEquals(3, object.getAttributes().size());
+        assertEquals(ids.getValue(), object.getUid().getUidValue());
+
+        List<Attribute> attrToReplace =
+                Arrays.asList(new Attribute[] {AttributeBuilder.build(Uid.NAME, ids.getValue() + "_new")});
+
+        try {
+            connector.update(
+                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+            fail();
+        } catch (IllegalArgumentException ignore) {
+            // ignore
+        }
+
+        attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue() + "_new")});
+
+        Uid uid = connector.update(
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+
+        assertEquals(ids.getValue() + "_new", uid.getUidValue());
+
+        // restore ....
+        attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue())});
+
+        uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
+
+        assertEquals(ids.getValue(), uid.getUidValue());
     }
 }
