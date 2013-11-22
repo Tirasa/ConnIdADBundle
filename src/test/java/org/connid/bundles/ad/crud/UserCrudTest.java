@@ -32,8 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.connid.bundles.ad.ADConnector;
 import org.connid.bundles.ad.UserTest;
 import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.api.APIConfiguration;
+import org.identityconnectors.framework.api.ConnectorFacade;
+import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -46,6 +50,7 @@ import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
 public class UserCrudTest extends UserTest {
@@ -349,8 +354,7 @@ public class UserCrudTest extends UserTest {
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet("givenName");
 
-        final ConnectorObject object =
-                connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         assertNotNull(object);
         assertNotNull(object.getAttributes());
@@ -664,5 +668,33 @@ public class UserCrudTest extends UserTest {
         uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
 
         assertEquals(ids.getValue(), uid.getUidValue());
+    }
+
+    @Test
+    public void issueAD24() {
+        // user delete sync
+        conf.setUidAttribute("uid");
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD24");
+
+        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
+                newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf");
+
+        final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, oob.build());
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        assertNotNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build()));
+
+        newConnector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
 }
