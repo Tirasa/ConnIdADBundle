@@ -22,6 +22,7 @@
  */
 package org.connid.bundles.ad.crud;
 
+import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static org.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
 import static org.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
@@ -123,7 +124,7 @@ public class ADCreate extends LdapModifyOperation {
 
         final BasicAttributes adAttrs = new BasicAttributes(true);
 
-        boolean enabled = true;
+        int uacValue = -1;
 
         for (Attribute attr : attrs) {
             javax.naming.directory.Attribute ldapAttr = null;
@@ -150,9 +151,21 @@ public class ADCreate extends LdapModifyOperation {
 
                 pwdAttr = ADGuardedPasswordAttribute.create(conn.getConfiguration().getPasswordAttribute(), attr);
 
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME)) {
-                enabled = attr.getValue() == null || attr.getValue().isEmpty()
-                        || Boolean.parseBoolean(attr.getValue().get(0).toString());
+            } else if (attr.is(UACCONTROL_ATTR) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                uacValue = attr.getValue() == null || attr.getValue().isEmpty()
+                        ? -1
+                        : Integer.parseInt(attr.getValue().get(0).toString());
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME)
+                    && oclass.is(ObjectClass.ACCOUNT_NAME)
+                    && uacValue == -1) {
+
+                if (attr.getValue() == null
+                        || attr.getValue().isEmpty()
+                        || Boolean.parseBoolean(attr.getValue().get(0).toString())) {
+                    uacValue = UF_NORMAL_ACCOUNT;
+                } else {
+                    uacValue = UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE;
+                }
             } else {
                 ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
 
@@ -184,8 +197,8 @@ public class ADCreate extends LdapModifyOperation {
                 });
             }
 
-            if (enabled && adAttrs.get(pwdAttrName) != null) {
-                adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT));
+            if (adAttrs.get(pwdAttrName) != null) {
+                adAttrs.put("userAccountControl", Integer.toString(uacValue));
             } else {
                 adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE));
             }

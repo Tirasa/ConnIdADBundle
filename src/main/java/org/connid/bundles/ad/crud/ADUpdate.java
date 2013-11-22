@@ -240,6 +240,8 @@ public class ADUpdate extends LdapModifyOperation {
         final BasicAttributes ldapAttrs = new BasicAttributes();
         ADGuardedPasswordAttribute pwdAttr = null;
 
+        int uacValue = -1;
+
         for (Attribute attr : attrs) {
             javax.naming.directory.Attribute ldapAttr = null;
             if (attr.is(Uid.NAME)) {
@@ -269,10 +271,16 @@ public class ADUpdate extends LdapModifyOperation {
 
                 pwdAttr = ADGuardedPasswordAttribute.create(conn.getConfiguration().getPasswordAttribute(), attr);
 
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+            } else if (attr.is(UACCONTROL_ATTR) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                uacValue = attr.getValue() == null || attr.getValue().isEmpty()
+                        ? -1
+                        : Integer.parseInt(attr.getValue().get(0).toString());
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME)
+                    && oclass.is(ObjectClass.ACCOUNT_NAME)
+                    && uacValue == -1) {
                 final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
 
-                int uacValue = uac != null && uac.getValue() != null && !uac.getValue().isEmpty()
+                uacValue = uac != null && uac.getValue() != null && !uac.getValue().isEmpty()
                         ? Integer.parseInt(uac.getValue().get(0).toString()) : 0;
 
                 boolean enabled = attr.getValue() == null
@@ -289,32 +297,39 @@ public class ADUpdate extends LdapModifyOperation {
                         uacValue += UF_ACCOUNTDISABLE;
                     }
                 }
-
-                ldapAttr = conn.getSchemaMapping().encodeAttribute(
-                        oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(uacValue)));
             } else {
                 ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
             }
 
-            if (ldapAttr != null) {
-                final javax.naming.directory.Attribute existingAttr = ldapAttrs.get(ldapAttr.getID());
+            addAttribute(ldapAttr, ldapAttrs);
+        }
 
-                if (existingAttr != null) {
-                    try {
-                        NamingEnumeration<?> all = ldapAttr.getAll();
-                        while (all.hasMoreElements()) {
-                            existingAttr.add(all.nextElement());
-                        }
-                    } catch (NamingException e) {
-                        throw new ConnectorException(e);
-                    }
-                } else {
-                    ldapAttrs.put(ldapAttr);
-                }
-            }
+        if (uacValue != -1) {
+            addAttribute(conn.getSchemaMapping().encodeAttribute(
+                    oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(uacValue))),
+                    ldapAttrs);
         }
 
         return new Pair<Attributes, ADGuardedPasswordAttribute>(ldapAttrs, pwdAttr);
+    }
+
+    private void addAttribute(final javax.naming.directory.Attribute ldapAttr, final BasicAttributes ldapAttrs) {
+        if (ldapAttr != null) {
+            final javax.naming.directory.Attribute existingAttr = ldapAttrs.get(ldapAttr.getID());
+
+            if (existingAttr != null) {
+                try {
+                    NamingEnumeration<?> all = ldapAttr.getAll();
+                    while (all.hasMoreElements()) {
+                        existingAttr.add(all.nextElement());
+                    }
+                } catch (NamingException e) {
+                    throw new ConnectorException(e);
+                }
+            } else {
+                ldapAttrs.put(ldapAttr);
+            }
+        }
     }
 
     private void modifyAttributes(

@@ -56,7 +56,7 @@ import org.identityconnectors.framework.spi.ConnectorClass;
  * @see org.identityconnectors.ldap.LdapConnector
  */
 @ConnectorClass(configurationClass = ADConfiguration.class,
-displayNameKey = "ADConnector")
+        displayNameKey = "ADConnector")
 public class ADConnector extends LdapConnector {
 
     private static final Log LOG = Log.getLog(ADConnector.class);
@@ -143,7 +143,7 @@ public class ADConnector extends LdapConnector {
 
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
 
-            if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
             final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
