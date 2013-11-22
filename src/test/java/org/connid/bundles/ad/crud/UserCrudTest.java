@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnector;
 import org.connid.bundles.ad.UserTest;
 import org.identityconnectors.common.security.GuardedString;
@@ -45,6 +46,7 @@ import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
@@ -629,17 +631,88 @@ public class UserCrudTest extends UserTest {
     }
 
     @Test
+    public void issueAD22() {
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD22");
+
+        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        int uacValue = 0x0200;
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build(
+                "userAccountControl", Collections.singletonList(String.valueOf(uacValue))));
+
+        final OperationOptions options = new OperationOptionsBuilder().setAttributesToGet("userAccountControl").build();
+
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, options);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        try {
+            ConnectorObject connectorObject = connector.getObject(ObjectClass.ACCOUNT, uid, options);
+            assertEquals(String.valueOf(uacValue),
+                    connectorObject.getAttributeByName("userAccountControl").getValue().get(0));
+
+            uacValue = uacValue + 0x0002;
+            final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build("userAccountControl", String.valueOf(uacValue))});
+
+            connector.update(
+                    ObjectClass.ACCOUNT,
+                    new Uid(ids.getValue()),
+                    new HashSet<Attribute>(attrToReplace),
+                    options);
+
+            connectorObject = connector.getObject(ObjectClass.ACCOUNT, uid, options);
+            assertEquals(String.valueOf(uacValue),
+                    connectorObject.getAttributeByName("userAccountControl").getValue().get(0));
+        } finally {
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+        }
+    }
+
+    @Test
+    public void issueAD24() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setUidAttribute("uid");
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD24");
+
+        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
+                newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf");
+
+        final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, oob.build());
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        try {
+            assertNotNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build()));
+        } finally {
+            newConnector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, null));
+        }
+    }
+
+    @Test
     public void issueAD25() {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        // Ask just for sAMAccountName
+        // Ask just for cn, uid and sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("cn");
+        oob.setAttributesToGet("cn", "uid", "sAMAccountName");
 
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
-        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), oob.build());
-        assertEquals(3, object.getAttributes().size());
+        ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), oob.build());
         assertEquals(ids.getValue(), object.getUid().getUidValue());
 
         List<Attribute> attrToReplace =
@@ -668,33 +741,5 @@ public class UserCrudTest extends UserTest {
         uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
 
         assertEquals(ids.getValue(), uid.getUidValue());
-    }
-
-    @Test
-    public void issueAD24() {
-        // user delete sync
-        conf.setUidAttribute("uid");
-
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        final ConnectorFacade newConnector = factory.newInstance(impl);
-
-        final Map.Entry<String, String> ids = util.getEntryIDs("AD24");
-
-        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
-                newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
-
-        final Set<Attribute> attributes = util.getSimpleProfile(ids);
-
-        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("memberOf");
-
-        final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, oob.build());
-        assertEquals(ids.getValue(), uid.getUidValue());
-
-        assertNotNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build()));
-
-        newConnector.delete(ObjectClass.ACCOUNT, uid, null);
-        assertNull(newConnector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
 }
