@@ -44,10 +44,6 @@ public class TestUtil {
      */
     protected static final Log LOG = Log.getLog(TestUtil.class);
 
-    private final String baseContext;
-
-    private final String prefix;
-
     private final ObjectClass oclass;
 
     private final ConnectorFacade connector;
@@ -58,13 +54,10 @@ public class TestUtil {
             final ConnectorFacade connector,
             final ADConfiguration conf,
             final ObjectClass oclass,
-            final String prefix,
             final String basecontext) {
-        this.prefix = prefix;
         this.oclass = oclass;
         this.connector = connector;
         this.conf = conf;
-        this.baseContext = basecontext;
     }
 
     /**
@@ -95,15 +88,16 @@ public class TestUtil {
 
     }
 
-    public String getEntryDN(final String cn) {
-        return "cn=" + cn + ",CN=Users," + baseContext;
+    public String getEntryDN(final String cn, final ObjectClass oclass) {
+        return String.format("cn=%s,%s", cn, oclass.equals(ObjectClass.ACCOUNT)
+                ? conf.getDefaultPeopleContainer() : conf.getDefaultGroupContainer());
     }
 
     public Set<Attribute> getSimpleProfile(final Map.Entry<String, String> ids, final boolean withDN) {
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, withDN);
         } else {
-            return getSimpleGroupProfile(ids, conf, withDN);
+            return getSimpleGroupProfile(ids, withDN);
         }
     }
 
@@ -111,7 +105,7 @@ public class TestUtil {
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, true);
         } else {
-            return getSimpleGroupProfile(ids, conf, true);
+            return getSimpleGroupProfile(ids, true);
         }
     }
 
@@ -121,7 +115,7 @@ public class TestUtil {
         final Set<Attribute> attributes = new HashSet<Attribute>();
 
         if (withDN) {
-            attributes.add(new Name(getEntryDN(ids.getKey())));
+            attributes.add(new Name(getEntryDN(ids.getKey(), ObjectClass.ACCOUNT)));
         } else {
             attributes.add(new Name(ids.getValue()));
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
@@ -144,13 +138,12 @@ public class TestUtil {
         return attributes;
     }
 
-    public Set<Attribute> getSimpleGroupProfile(
-            final Map.Entry<String, String> ids, final ADConfiguration conf, final boolean withDN) {
+    public Set<Attribute> getSimpleGroupProfile(final Map.Entry<String, String> ids, final boolean withDN) {
 
         final Set<Attribute> attributes = new HashSet<Attribute>();
 
         if (withDN) {
-            attributes.add(new Name(getEntryDN(ids.getKey())));
+            attributes.add(new Name(getEntryDN(ids.getKey(), ObjectClass.GROUP)));
         } else {
             attributes.add(new Name(ids.getValue()));
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
@@ -158,11 +151,11 @@ public class TestUtil {
 
         attributes.add(AttributeBuilder.build(Uid.NAME, Collections.singletonList(ids.getValue())));
 
-        attributes.add(AttributeBuilder.build(
-                "member", Collections.singletonList(getEntryDN(getEntryIDs("OfAll").getKey()))));
+        attributes.add(AttributeBuilder.build("member", Collections.singletonList(
+                getEntryDN(getEntryIDs("OfAll", ObjectClass.ACCOUNT).getKey(), ObjectClass.ACCOUNT))));
 
-        attributes.add(AttributeBuilder.build(
-                "ldapGroups", Collections.singletonList(getEntryDN(getEntryIDs("InFilter").getKey()))));
+        attributes.add(AttributeBuilder.build("ldapGroups", Collections.singletonList(
+                getEntryDN(getEntryIDs("InFilter", ObjectClass.GROUP).getKey(), ObjectClass.GROUP))));
 
         return attributes;
     }
@@ -183,7 +176,12 @@ public class TestUtil {
         }
     }
 
-    public Map.Entry<String, String> getEntryIDs(final String suffix) {
+    public Map.Entry<String, String> getEntryIDs(final String suffix, final ObjectClass oclass) {
+        final String prefix = oclass.equals(ObjectClass.ACCOUNT) ? "UserTest" : "GroupTest";
         return new AbstractMap.SimpleEntry<String, String>(prefix + suffix, "SAAN_" + prefix + suffix);
+    }
+
+    public Map.Entry<String, String> getEntryIDs(final String suffix) {
+        return getEntryIDs(suffix, oclass);
     }
 }

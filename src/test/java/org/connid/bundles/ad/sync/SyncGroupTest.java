@@ -81,7 +81,7 @@ public class SyncGroupTest extends GroupTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "member"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "member" }));
 
         SyncToken token = connector.getLatestSyncToken(ObjectClass.GROUP);
 
@@ -185,7 +185,7 @@ public class SyncGroupTest extends GroupTest {
             };
 
             try {
-                ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey()), mod);
+                ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey(), ObjectClass.GROUP), mod);
             } catch (NamingException e) {
                 LOG.error(e, "Error adding membership for newMemberFor11");
                 assert (false);
@@ -215,7 +215,7 @@ public class SyncGroupTest extends GroupTest {
             };
 
             try {
-                ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey()), mod);
+                ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey(), ObjectClass.GROUP), mod);
             } catch (NamingException e) {
                 LOG.error(e, "Error adding membership for GroupTestFor11");
                 assert (false);
@@ -308,7 +308,7 @@ public class SyncGroupTest extends GroupTest {
 
         // Ask just for sAMAccountName and members
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "member"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "member" }));
 
         conf.setRetrieveDeletedGroup(false);
         conf.setLoading(true);

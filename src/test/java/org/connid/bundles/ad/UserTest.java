@@ -27,18 +27,18 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 public class UserTest extends AbstractTest {
-        protected static TestUtil util;
+
+    protected static TestUtil util;
 
     @BeforeClass
     public static void init() {
         AbstractTest.init();
-
-        util = new TestUtil(connector, conf, ObjectClass.ACCOUNT, UserTest.class.getSimpleName(), BASE_CONTEXT);
-        util.createEntry(10);
+        util = new TestUtil(connector, conf, ObjectClass.ACCOUNT, BASE_CONTEXT);
+        AbstractTest.baseSetup(util);
     }
 
     @AfterClass
     public static void cleanup() {
-        util.cleanup(10);
+        AbstractTest.cleanup(util);
     }
 }

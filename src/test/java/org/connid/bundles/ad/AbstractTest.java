@@ -26,11 +26,16 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Set;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
 import org.identityconnectors.framework.api.ConnectorFacade;
 import org.identityconnectors.framework.api.ConnectorFacadeFactory;
+import org.identityconnectors.framework.common.objects.Attribute;
+import org.identityconnectors.framework.common.objects.AttributeUtil;
+import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.test.common.TestHelpers;
 
 public abstract class AbstractTest {
@@ -48,7 +53,7 @@ public abstract class AbstractTest {
 
     protected static String BASE_CONTEXT;
 
-    public static void init() {
+    protected static void init() {
         try {
             prop.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
         } catch (IOException e) {
@@ -114,5 +119,43 @@ public abstract class AbstractTest {
         assertFalse(configuration.getMemberships() == null || configuration.getMemberships().length == 0);
 
         return configuration;
+    }
+
+    protected static void baseSetup(final TestUtil util) {
+        final Set<Attribute> uMemberOfAll = util.getSimpleUserProfile(util.getEntryIDs("OfAll"), conf, true);
+        final Uid user = connector.create(ObjectClass.ACCOUNT, uMemberOfAll, null);
+        assertNotNull(user);
+
+        final Set<Attribute> gMemberInFilter =
+                util.getSimpleGroupProfile(util.getEntryIDs("InFilter", ObjectClass.GROUP), true);
+
+        // remove members
+        Attribute attr = AttributeUtil.find("member", gMemberInFilter);
+        if (attr != null) {
+            gMemberInFilter.remove(attr);
+        }
+
+        // remove memberOf
+        attr = AttributeUtil.find("ldapGroups", gMemberInFilter);
+        if (attr != null) {
+            gMemberInFilter.remove(attr);
+        }
+
+        final Uid group = connector.create(ObjectClass.GROUP, gMemberInFilter, null);
+        assertNotNull(group);
+
+        util.createEntry(10);
+    }
+
+    public static void cleanup(final TestUtil util) {
+        util.cleanup(10);
+
+        Uid uid = new Uid(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT).getValue());
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+        uid = new Uid(util.getEntryIDs("InFilter", ObjectClass.GROUP).getValue());
+        connector.delete(ObjectClass.GROUP, uid, null);
+        assertNull(connector.getObject(ObjectClass.GROUP, uid, null));
     }
 }

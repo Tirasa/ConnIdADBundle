@@ -22,13 +22,7 @@
  */
 package org.connid.bundles.ad;
 
-import static org.junit.Assert.*;
-
-import java.util.Set;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.Uid;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -39,43 +33,12 @@ public class GroupTest extends AbstractTest {
     @BeforeClass
     public static void init() {
         AbstractTest.init();
-
-        util = new TestUtil(connector, conf, ObjectClass.GROUP, GroupTest.class.getSimpleName(), BASE_CONTEXT);
-
-        final Set<Attribute> uMemberOfAll = util.getSimpleUserProfile(util.getEntryIDs("OfAll"), conf, true);
-        final Uid user = connector.create(ObjectClass.ACCOUNT, uMemberOfAll, null);
-        assertNotNull(user);
-
-        final Set<Attribute> gMemberInFilter = util.getSimpleGroupProfile(util.getEntryIDs("InFilter"), conf, true);
-
-        // remove members
-        Attribute attr = AttributeUtil.find("member", gMemberInFilter);
-        if (attr != null) {
-            gMemberInFilter.remove(attr);
-        }
-
-        // remove memberOf
-        attr = AttributeUtil.find("ldapGroups", gMemberInFilter);
-        if (attr != null) {
-            gMemberInFilter.remove(attr);
-        }
-
-        final Uid group = connector.create(ObjectClass.GROUP, gMemberInFilter, null);
-        assertNotNull(group);
-
-        util.createEntry(10);
+        util = new TestUtil(connector, conf, ObjectClass.GROUP, BASE_CONTEXT);
+        AbstractTest.baseSetup(util);
     }
 
     @AfterClass
     public static void cleanup() {
-        util.cleanup(10);
-
-        Uid uid = new Uid(util.getEntryIDs("OfAll").getValue());
-        connector.delete(ObjectClass.ACCOUNT, uid, null);
-        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
-
-        uid = new Uid(util.getEntryIDs("InFilter").getValue());
-        connector.delete(ObjectClass.GROUP, uid, null);
-        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+        AbstractTest.cleanup(util);
     }
 }

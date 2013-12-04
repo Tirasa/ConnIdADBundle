@@ -24,6 +24,7 @@ package org.connid.bundles.ad.crud;
 
 import static org.junit.Assert.*;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnector;
+import org.connid.bundles.ad.TestUtil;
 import org.connid.bundles.ad.UserTest;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
@@ -146,7 +148,9 @@ public class UserCrudTest extends UserTest {
 
         assertEquals(expected, actual);
         assertEquals(ids.getValue(), object.getUid().getUidValue());
-        assertEquals(util.getEntryDN(ids.getKey()).toLowerCase(), object.getName().getNameValue().toLowerCase());
+        assertEquals(
+                util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).toLowerCase(),
+                object.getName().getNameValue().toLowerCase());
 
         final Uid authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -202,7 +206,9 @@ public class UserCrudTest extends UserTest {
 
         assertEquals(expected, actual);
         assertEquals(ids.getValue(), object.getUid().getUidValue());
-        assertEquals(util.getEntryDN(ids.getKey()).toLowerCase(), object.getName().getNameValue().toLowerCase());
+        assertEquals(
+                util.getEntryDN(ids.getKey(),
+                ObjectClass.ACCOUNT).toLowerCase(), object.getName().getNameValue().toLowerCase());
 
         final Uid authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -270,7 +276,7 @@ public class UserCrudTest extends UserTest {
                 "CN=Schema Admins,CN=Users," + baseContext));
 
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
+            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -288,9 +294,9 @@ public class UserCrudTest extends UserTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("ldapGroups",
             "CN=Schema Admins,CN=Users," + baseContext,
-            "CN=Cert Publishers,CN=Users," + baseContext)});
+            "CN=Cert Publishers,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -341,7 +347,7 @@ public class UserCrudTest extends UserTest {
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build("givenName", "gnupdate"),
             AttributeBuilder.buildPassword(
-            new GuardedString("Password321".toCharArray()))});
+            new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -389,7 +395,7 @@ public class UserCrudTest extends UserTest {
         // --------------------------
         // force change password
         // --------------------------
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("pwdLastSet", true)});
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("pwdLastSet", true) });
 
         connector.update(
                 ObjectClass.ACCOUNT,
@@ -422,7 +428,7 @@ public class UserCrudTest extends UserTest {
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(Name.NAME, DN),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -465,7 +471,7 @@ public class UserCrudTest extends UserTest {
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(Name.NAME, ids.getKey()),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -487,7 +493,8 @@ public class UserCrudTest extends UserTest {
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
 
-        assertTrue(util.getEntryDN(ids.getKey()).equalsIgnoreCase(object.getName().getNameValue()));
+        assertTrue(
+                util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).equalsIgnoreCase(object.getName().getNameValue()));
 
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
@@ -508,8 +515,8 @@ public class UserCrudTest extends UserTest {
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey())),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT)),
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -531,7 +538,8 @@ public class UserCrudTest extends UserTest {
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
 
-        assertTrue(util.getEntryDN(ids.getKey()).equalsIgnoreCase(object.getName().getNameValue()));
+        assertTrue(
+                util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).equalsIgnoreCase(object.getName().getNameValue()));
 
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
@@ -552,7 +560,7 @@ public class UserCrudTest extends UserTest {
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
         final List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] {AttributeBuilder.build("cn", ids.getKey() + "_new")});
+                Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -588,7 +596,7 @@ public class UserCrudTest extends UserTest {
 
         assertNotNull(authUid);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(false)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.buildEnabled(false) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -610,7 +618,7 @@ public class UserCrudTest extends UserTest {
             // ignore
         }
 
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(true)});
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.buildEnabled(true) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -655,7 +663,7 @@ public class UserCrudTest extends UserTest {
 
             uacValue = uacValue + 0x0002;
             final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-                AttributeBuilder.build("userAccountControl", String.valueOf(uacValue))});
+                AttributeBuilder.build("userAccountControl", String.valueOf(uacValue)) });
 
             connector.update(
                     ObjectClass.ACCOUNT,
@@ -716,7 +724,7 @@ public class UserCrudTest extends UserTest {
         assertEquals(ids.getValue(), object.getUid().getUidValue());
 
         List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] {AttributeBuilder.build(Uid.NAME, ids.getValue() + "_new")});
+                Arrays.asList(new Attribute[] { AttributeBuilder.build(Uid.NAME, ids.getValue() + "_new") });
 
         try {
             connector.update(
@@ -727,7 +735,7 @@ public class UserCrudTest extends UserTest {
         }
 
         attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue() + "_new")});
+            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue() + "_new") });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -736,10 +744,92 @@ public class UserCrudTest extends UserTest {
 
         // restore ....
         attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue())});
+            AttributeBuilder.build(conf.getUidAttribute(), ids.getValue()) });
 
         uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
 
         assertEquals(ids.getValue(), uid.getUidValue());
+    }
+
+    @Test
+    public void issueAD27() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setDefaultGroupContainer("CN=Builtin," + BASE_CONTEXT);
+        newconf.setGroupBaseContexts(newconf.getDefaultGroupContainer());
+        newconf.setUserBaseContexts(newconf.getDefaultPeopleContainer());
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT);
+
+        // 1. create a new group
+        Map.Entry<String, String> groupIDs =
+                new AbstractMap.SimpleEntry<String, String>("GroupTestAD27", "SAAN_GroupTestAD27");
+
+        assertNull("Please remove group 'sAMAccountName: " + groupIDs.getValue() + "' from AD",
+                newConnector.getObject(ObjectClass.GROUP, new Uid(groupIDs.getValue()), null));
+
+        Set<Attribute> attributes = newutil.getSimpleGroupProfile(groupIDs, true);
+
+        final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
+        attributes.remove(ldapGroups);
+
+        final List<String> groupsToBeAdded = new ArrayList<String>();
+
+        if (ldapGroups != null && ldapGroups.getValue() != null) {
+            groupsToBeAdded.add(
+                    util.getEntryDN(util.getEntryIDs("InFilter", ObjectClass.GROUP).getKey(), ObjectClass.GROUP));
+        }
+
+        attributes.add(AttributeBuilder.build("ldapGroups", groupsToBeAdded));
+
+        Uid groupUID = null;
+        Uid userUID = null;
+
+        try {
+            groupUID = newConnector.create(ObjectClass.GROUP, attributes, null);
+            assertNotNull(groupUID);
+
+            // 2. create a new user
+            Map.Entry<String, String> userIDs = newutil.getEntryIDs("AD27");
+
+            assertNull("Please remove user 'sAMAccountName: " + userIDs.getValue() + "' from AD",
+                    newConnector.getObject(ObjectClass.ACCOUNT, new Uid(userIDs.getValue()), null));
+
+            attributes = newutil.getSimpleProfile(userIDs, false);
+            userUID = newConnector.create(ObjectClass.ACCOUNT, attributes, null);
+            assertNotNull(userUID);
+
+            // 3. update user by adding membership
+            List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build(
+                "ldapGroups",
+                String.format("CN=%s,CN=Builtin,%s", groupIDs.getKey(), BASE_CONTEXT)) });
+
+            newConnector.update(
+                    ObjectClass.ACCOUNT,
+                    userUID,
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet("memberOf");
+
+            final ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, userUID, oob.build());
+
+            assertTrue(object.getAttributeByName("memberOf").getValue().contains(
+                    String.format("CN=%s,CN=Builtin,%s", groupIDs.getKey(), BASE_CONTEXT)));
+        } finally {
+            if (userUID != null) {
+                newConnector.delete(ObjectClass.ACCOUNT, userUID, null);
+                assertNull(newConnector.getObject(ObjectClass.ACCOUNT, userUID, null));
+            }
+            if (groupUID != null) {
+                newConnector.delete(ObjectClass.GROUP, groupUID, null);
+                assertNull(newConnector.getObject(ObjectClass.GROUP, groupUID, null));
+            }
+        }
     }
 }

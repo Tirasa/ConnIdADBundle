@@ -163,7 +163,9 @@ public class GroupCrudTest extends GroupTest {
 
         assertEquals(ids.getValue(), object.getUid().getUidValue());
 
-        assertEquals(util.getEntryDN(ids.getKey()).toLowerCase(), object.getName().getNameValue().toLowerCase());
+        assertEquals(
+                util.getEntryDN(ids.getKey(), ObjectClass.GROUP).toLowerCase(),
+                object.getName().getNameValue().toLowerCase());
 
         connector.delete(ObjectClass.GROUP, uid, null);
         assertNull(connector.getObject(ObjectClass.GROUP, uid, null));
@@ -202,7 +204,9 @@ public class GroupCrudTest extends GroupTest {
 
         assertEquals(ids.getValue(), object.getUid().getUidValue());
 
-        assertEquals(util.getEntryDN(ids.getKey()).toLowerCase(), object.getName().getNameValue().toLowerCase());
+        assertEquals(
+                util.getEntryDN(ids.getKey(), ObjectClass.GROUP).toLowerCase(),
+                object.getName().getNameValue().toLowerCase());
 
         connector.delete(ObjectClass.GROUP, uid, null);
         assertNull(connector.getObject(ObjectClass.GROUP, uid, null));
@@ -261,9 +265,9 @@ public class GroupCrudTest extends GroupTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("ldapGroups",
             "CN=Schema Admins,CN=Users," + baseContext,
-            "CN=GroupTestInFilter,CN=Users," + baseContext)});
+            "CN=GroupTestInFilter,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.GROUP,
@@ -281,10 +285,10 @@ public class GroupCrudTest extends GroupTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("ldapGroups",
             "CN=Schema Admins,CN=Users," + baseContext,
             "CN=Cert Publishers,CN=Users," + baseContext,
-            "CN=GroupTestInFilter,CN=Users," + baseContext)});
+            "CN=GroupTestInFilter,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.GROUP,
@@ -321,7 +325,7 @@ public class GroupCrudTest extends GroupTest {
         assertNotNull(object);
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build("description", "a new description")});
+            AttributeBuilder.build("description", "a new description") });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP,
@@ -350,9 +354,9 @@ public class GroupCrudTest extends GroupTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-        final String DN = util.getEntryDN(ids.getKey() + "-new");
+        final String DN = util.getEntryDN(ids.getKey() + "-new", ObjectClass.GROUP);
 
-        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build(Name.NAME, DN)});
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(Name.NAME, DN) });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -380,7 +384,7 @@ public class GroupCrudTest extends GroupTest {
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(Name.NAME, ids.getKey())});
+            AttributeBuilder.build(Name.NAME, ids.getKey()) });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -398,7 +402,7 @@ public class GroupCrudTest extends GroupTest {
         assertEquals(3, object.getAttributes().size());
         assertFalse(object.getAttributeByName("member").getValue().isEmpty());
 
-        assertTrue(util.getEntryDN(ids.getKey()).equalsIgnoreCase(object.getName().getNameValue()));
+        assertTrue(util.getEntryDN(ids.getKey(), ObjectClass.GROUP).equalsIgnoreCase(object.getName().getNameValue()));
     }
 
     @Test
@@ -409,7 +413,7 @@ public class GroupCrudTest extends GroupTest {
         final Map.Entry<String, String> ids = util.getEntryIDs("6");
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey()))});
+            AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey(), ObjectClass.GROUP)) });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -427,7 +431,7 @@ public class GroupCrudTest extends GroupTest {
         assertEquals(3, object.getAttributes().size());
         assertFalse(object.getAttributeByName("member").getValue().isEmpty());
 
-        assertTrue(util.getEntryDN(ids.getKey()).equalsIgnoreCase(object.getName().getNameValue()));
+        assertTrue(util.getEntryDN(ids.getKey(), ObjectClass.GROUP).equalsIgnoreCase(object.getName().getNameValue()));
     }
 
     @Test
@@ -438,7 +442,7 @@ public class GroupCrudTest extends GroupTest {
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
         final List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] {AttributeBuilder.build("cn", ids.getKey() + "_new")});
+                Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
