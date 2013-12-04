@@ -122,7 +122,8 @@ public abstract class AbstractTest {
     }
 
     protected static void baseSetup(final TestUtil util) {
-        final Set<Attribute> uMemberOfAll = util.getSimpleUserProfile(util.getEntryIDs("OfAll"), conf, true);
+        final Set<Attribute> uMemberOfAll =
+                util.getSimpleUserProfile(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT), conf, true);
         final Uid user = connector.create(ObjectClass.ACCOUNT, uMemberOfAll, null);
         assertNotNull(user);
 
