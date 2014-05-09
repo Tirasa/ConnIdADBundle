@@ -56,7 +56,7 @@ import org.identityconnectors.ldap.search.LdapFilter;
  * @see org.identityconnectors.ldap.LdapConnector
  */
 @ConnectorClass(configurationClass = ADConfiguration.class,
-displayNameKey = "ADConnector")
+        displayNameKey = "ADConnector")
 public class ADConnector extends LdapConnector {
 
     private static final Log LOG = Log.getLog(ADConnector.class);
@@ -174,16 +174,15 @@ public class ADConnector extends LdapConnector {
 
         final Set<String> ldapGroupsToBeAdded = new HashSet<String>();
 
-        if (ldapGroups != null) {
+        if (ldapGroups != null && oclass.is(ObjectClass.ACCOUNT_NAME)) {
             attributes.remove(ldapGroups);
             ldapGroupsToBeAdded.addAll(ldapGroups.getValue() == null ? Collections.EMPTY_LIST : ldapGroups.getValue());
+
+            ldapGroupsToBeAdded.addAll(
+                    config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
+
+            attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
         }
-
-        ldapGroupsToBeAdded.addAll(
-                config.getMemberships() == null ? Collections.EMPTY_LIST : Arrays.asList(config.getMemberships()));
-
-        // add groups
-        attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
 
         return new ADUpdate(conn, oclass, uid).update(attributes);
     }

@@ -71,10 +71,10 @@ public class ADUpdate extends LdapModifyOperation {
 
     private final ObjectClass oclass;
 
-    private Uid uid;
+    private final Uid uid;
 
     @SuppressWarnings("FieldNameHidesFieldInSuperclass")
-    private ADConnection conn;
+    private final ADConnection conn;
 
     public ADUpdate(
             final ADConnection conn, final ObjectClass oclass, final Uid uid) {
@@ -99,7 +99,6 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         // retrieve new name...
-
         final Name name = AttributeUtil.getNameFromAttributes(attrs);
 
         Name newName = null;
@@ -115,8 +114,8 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         if (newName == null && !conn.getConfiguration().getUidAttribute().equalsIgnoreCase("cn") && cnAttr != null) {
-            final String cnValue =
-                    cnAttr.getValue() == null || cnAttr.getValue().isEmpty() || cnAttr.getValue().get(0) == null
+            final String cnValue = cnAttr.getValue() == null || cnAttr.getValue().isEmpty() || cnAttr.getValue().get(0)
+                    == null
                     ? null
                     : cnAttr.getValue().get(0).toString();
 
@@ -166,7 +165,7 @@ public class ADUpdate extends LdapModifyOperation {
         // Perform group memberships
         // ---------------------------------
         final List<String> ldapGroups = getStringListValue(attrsToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
-
+        
         if (ldapGroups != null) {
             final Set<String> oldMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
             oldMemberships.addAll(groupHelper.getLdapGroups(entryDN));
@@ -194,7 +193,7 @@ public class ADUpdate extends LdapModifyOperation {
                     ldapGroupMod.add(new GroupMembership(entryDN, membership));
                 }
             }
-
+            
             groupHelper.modifyLdapGroupMemberships(ldapGroupMod);
         }
         // ---------------------------------

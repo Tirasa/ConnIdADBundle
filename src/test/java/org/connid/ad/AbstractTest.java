@@ -54,7 +54,7 @@ public abstract class AbstractTest {
 
     protected static ADConfiguration conf;
 
-    private static String USERCONTEXT;
+    protected static String USERCONTEXT;
 
     protected static final Properties prop = new Properties();
 
