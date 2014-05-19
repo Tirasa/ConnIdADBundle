@@ -106,7 +106,7 @@ public class ADUpdate extends LdapModifyOperation {
         if (name != null) {
             attrs.remove(name);
 
-            final ADUtilities utils = new ADUtilities((ADConnection) conn);
+            final ADUtilities utils = new ADUtilities(conn);
 
             if (utils.isDN(name.getNameValue())) {
                 newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));

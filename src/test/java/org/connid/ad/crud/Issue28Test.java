@@ -53,423 +53,299 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.test.common.TestHelpers;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class Issue28Test extends AbstractTest {
 
-    private final int ADS_GROUP_TYPE_UNIVERSAL_GROUP = 0x0008;
+    private final static int ADS_GROUP_TYPE_UNIVERSAL_GROUP = 0x0008;
 
-    private final int ADS_GROUP_TYPE_SECURITY_ENABLED = 0x80000000;
+    private final static int ADS_GROUP_TYPE_SECURITY_ENABLED = 0x80000000;
+
+    private static String baseContext;
+
+    private static ADConfiguration tempconf;
+
+    private static String tmpctx;
+
+    private static ConnectorFacade tempconnector;
+
+    private static DirContext basectx;
 
     @BeforeClass
-    public static void init() {
+    public static void init() throws Exception {
         try {
             prop.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
         } catch (IOException e) {
             LOG.error(e, "Error loading properties file");
         }
 
-        USERCONTEXT = prop.getProperty("usersBaseContext");
+        // Let's create the following structure
 
-        conf = getSimpleConf(prop);
+        // --- OU = __TEMP__
+        //    |--- CN = __GROUP__
+        //    |--- OU = __TEMP1__
+        //        | --- CN = __GROUP1__
+        //    |--- OU = __TEMP2__
+        //        | --- CN = __GROUP1__
+        // Then, working with __TEMP__ as a base context (for both users and groups), create a new user member of a 
+        // groups in a different tree (maybe at the same level of __TEMP__) and groups in __TEMP__ tree.
+        // Update the user without specifying ldapGroups attribute and check for mermberships.
+        baseContext = prop.getProperty("usersBaseContext");
+        tmpctx = "ou=__TEMP__, " + baseContext;
 
-        assertNotNull(conf);
-        conf.validate();
+        tempconf = getSimpleConf(prop);
+        tempconf.setSsl(true);
+        tempconf.setBaseContexts(tmpctx);
+        tempconf.setDefaultPeopleContainer(tmpctx);
+        tempconf.setMemberships();
+        assertNotNull(tempconf);
+        tempconf.validate();
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, tempconf);
+        tempconnector = factory.newInstance(impl);
+        assertNotNull(tempconnector);
+        tempconnector.test();
 
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        final ADConnection connection = new ADConnection(tempconf);
+        final LdapContext ctx = connection.getInitialContext();
 
-        connector = factory.newInstance(impl);
+        final Attributes attrs = new BasicAttributes(true);
+        BasicAttribute objclass = new BasicAttribute("objectclass");
+        objclass.add("top");
+        objclass.add("organizationalUnit");
+        attrs.put(objclass);
 
-        assertNotNull(connector);
-        connector.test();
+        final String outemp1 = "ou=__TEMP1__, " + tmpctx;
+        final String outemp2 = "ou=__TEMP2__, " + tmpctx;
+
+        basectx = ctx.createSubcontext(tmpctx, attrs); // returns if fail to be sure to work in a new OU
+
+        createSampleGroup("__GROUP__", basectx);
+
+        DirContext subctx = ctx.createSubcontext(outemp1, attrs);
+        createSampleGroup("__GROUP1__", subctx);
+
+        subctx = ctx.createSubcontext(outemp2, attrs);
+        createSampleGroup("__GROUP2__", subctx);
     }
 
     @Test
     public void updateUserWithoutLdapGroups() throws NamingException {
-        // Let's create the following structure
+        final String CN = Issue28Test.class.getSimpleName() + "20";
+        final String SAAN = "SAAN_" + CN;
 
-        // --- OU = __TEMP__
-        //    |--- CN = __GROUP__
-        //    |--- OU = __TEMP1__
-        //        | --- CN = __GROUP1__
-        //    |--- OU = __TEMP2__
-        //        | --- CN = __GROUP1__
-        // Then, working with __TEMP__ as a base context (for both users and groups), create a new user member of a 
-        // groups in a different tree (maybe at the same level of __TEMP__) and groups in __TEMP__ tree.
-        // Update the user without specifying ldapGroups attribute and check for mermberships.
-        final String baseContext = prop.getProperty("usersBaseContext");
-        final String tmpctx = "ou=__TEMP__, " + baseContext;
+        assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
+                tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
 
-        final ADConfiguration tempconf = getSimpleConf(prop);
-        tempconf.setSsl(true);
-        tempconf.setBaseContexts(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setMemberships();
-        assertNotNull(tempconf);
-        tempconf.validate();
+        final Set<Attribute> attributes = getSimpleProfile(CN, false);
 
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, tempconf);
-        final ConnectorFacade tempconnector = factory.newInstance(impl);
-        assertNotNull(tempconnector);
-        tempconnector.test();
+        attributes.add(AttributeBuilder.build("ldapGroups",
+                "CN=__GROUP__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
+                "CN=Cert Publishers,CN=Users," + baseContext,
+                "CN=Schema Admins,CN=Users," + baseContext));
 
-        final ADConnection connection = new ADConnection(tempconf);
-        final LdapContext ctx = connection.getInitialContext();
+        Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-        final Attributes attrs = new BasicAttributes(true);
-        BasicAttribute objclass = new BasicAttribute("objectclass");
-        objclass.add("top");
-        objclass.add("organizationalUnit");
-        attrs.put(objclass);
+        // Ask just for memberOf and ldapGroups
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf", "ldapGroups");
 
-        final String outemp1 = "ou=__TEMP1__, " + tmpctx;
-        final String outemp2 = "ou=__TEMP2__, " + tmpctx;
+        // retrieve created object
+        ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-        DirContext basectx = ctx.createSubcontext(tmpctx, attrs); // returns if fail to be sure to work in a new OUx
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(4, object.getAttributes().size());
 
-        try {
-            createSampleGroup("__GROUP__", basectx);
+        assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
 
-            DirContext subctx = ctx.createSubcontext(outemp1, attrs);
-            createSampleGroup("__GROUP1__", subctx);
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
 
-            subctx = ctx.createSubcontext(outemp2, attrs);
-            createSampleGroup("__GROUP2__", subctx);
+        final List<Attribute> attrToReplace =
+                Arrays.asList(new Attribute[] { AttributeBuilder.build("givenName", "newgn") });
 
-            final String CN = Issue28Test.class.getSimpleName() + "20";
-            final String SAAN = "SAAN_" + CN;
+        uid = tempconnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
 
-            assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
-                    tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-            final Set<Attribute> attributes = getSimpleProfile(CN, false);
+        object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-            attributes.add(AttributeBuilder.build("ldapGroups",
-                    "CN=__GROUP__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
-                    "CN=Cert Publishers,CN=Users," + baseContext,
-                    "CN=Schema Admins,CN=Users," + baseContext));
+        assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
 
-            Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
-
-            // Ask just for memberOf
-            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-            oob.setAttributesToGet("memberOf", "ldapGroups");
-
-            // retrieve created object
-            ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            // check for memberOf attribute
-            assertNotNull(object);
-            assertNotNull(object.getAttributes());
-
-            // Returned attributes: memberOf, NAME and UID
-            assertEquals(4, object.getAttributes().size());
-            assertNotNull(object.getAttributeByName("memberOf"));
-
-            assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-
-            final List<Attribute> attrToReplace = Arrays.asList(new Attribute[]{AttributeBuilder.build("givenName",
-                "newgn")});
-
-            uid = tempconnector.update(
-                    ObjectClass.ACCOUNT,
-                    new Uid(SAAN),
-                    new HashSet<Attribute>(attrToReplace),
-                    null);
-
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
-
-            object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-        } finally {
-            removeTreeQuitely(basectx);
-        }
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
     }
 
     @Test
     public void updateUserWithLdapGroups() throws NamingException {
-        // Let's create the following structure
+        final String CN = Issue28Test.class.getSimpleName() + "21";
+        final String SAAN = "SAAN_" + CN;
 
-        // --- OU = __TEMP__
-        //    |--- CN = __GROUP__
-        //    |--- OU = __TEMP1__
-        //        | --- CN = __GROUP1__
-        //    |--- OU = __TEMP2__
-        //        | --- CN = __GROUP1__
-        // Then, working with __TEMP__ as a base context (for both users and groups), create a new user member of a 
-        // groups in a different tree (maybe at the same level of __TEMP__) and groups in __TEMP__ tree.
-        // Update the user without specifying ldapGroups attribute and check for mermberships.
-        final String baseContext = prop.getProperty("usersBaseContext");
-        final String tmpctx = "ou=__TEMP__, " + baseContext;
+        assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
+                tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
 
-        final ADConfiguration tempconf = getSimpleConf(prop);
-        tempconf.setSsl(true);
-        tempconf.setBaseContexts(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setMemberships();
-        assertNotNull(tempconf);
-        tempconf.validate();
+        final Set<Attribute> attributes = getSimpleProfile(CN, false);
 
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, tempconf);
-        final ConnectorFacade tempconnector = factory.newInstance(impl);
-        assertNotNull(tempconnector);
-        tempconnector.test();
+        attributes.add(AttributeBuilder.build("ldapGroups",
+                "CN=__GROUP__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
+                "CN=Cert Publishers,CN=Users," + baseContext,
+                "CN=Schema Admins,CN=Users," + baseContext));
 
-        final ADConnection connection = new ADConnection(tempconf);
-        final LdapContext ctx = connection.getInitialContext();
+        Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-        final Attributes attrs = new BasicAttributes(true);
-        BasicAttribute objclass = new BasicAttribute("objectclass");
-        objclass.add("top");
-        objclass.add("organizationalUnit");
-        attrs.put(objclass);
+        // Ask just for memberOf
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf", "ldapGroups");
 
-        final String outemp1 = "ou=__TEMP1__, " + tmpctx;
-        final String outemp2 = "ou=__TEMP2__, " + tmpctx;
+        // retrieve created object
+        ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-        DirContext basectx = ctx.createSubcontext(tmpctx, attrs); // returns if fail to be sure to work in a new OUx
+        // check for memberOf attribute
+        assertNotNull(object);
+        assertNotNull(object.getAttributes());
 
-        try {
-            createSampleGroup("__GROUP__", basectx);
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(4, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
 
-            DirContext subctx = ctx.createSubcontext(outemp1, attrs);
-            createSampleGroup("__GROUP1__", subctx);
+        assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
 
-            subctx = ctx.createSubcontext(outemp2, attrs);
-            createSampleGroup("__GROUP2__", subctx);
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
 
-            final String CN = Issue28Test.class.getSimpleName() + "20";
-            final String SAAN = "SAAN_" + CN;
+        final List<Attribute> attrToReplace = new ArrayList<Attribute>();
+        attrToReplace.addAll(Arrays.asList(new Attribute[] { AttributeBuilder.build("givenName", "newgn") }));
+        attrToReplace.add(AttributeBuilder.build("ldapGroups",
+                "CN=__GROUP__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext));
 
-            assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
-                    tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
+        uid = tempconnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
 
-            final Set<Attribute> attributes = getSimpleProfile(CN, false);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-            attributes.add(AttributeBuilder.build("ldapGroups",
-                    "CN=__GROUP__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
-                    "CN=Cert Publishers,CN=Users," + baseContext,
-                    "CN=Schema Admins,CN=Users," + baseContext));
+        object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-            Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
+        assertEquals(4, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(2, object.getAttributeByName("ldapGroups").getValue().size());
 
-            // Ask just for memberOf
-            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-            oob.setAttributesToGet("memberOf", "ldapGroups");
-
-            // retrieve created object
-            ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            // check for memberOf attribute
-            assertNotNull(object);
-            assertNotNull(object.getAttributes());
-
-            // Returned attributes: memberOf, NAME and UID
-            assertEquals(4, object.getAttributes().size());
-            assertNotNull(object.getAttributeByName("memberOf"));
-
-            assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-
-            final List<Attribute> attrToReplace = new ArrayList<Attribute>();
-            attrToReplace.addAll(Arrays.asList(new Attribute[]{AttributeBuilder.build("givenName", "newgn")}));
-            attrToReplace.add(AttributeBuilder.build("ldapGroups",
-                    "CN=__GROUP__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext));
-
-            uid = tempconnector.update(
-                    ObjectClass.ACCOUNT,
-                    new Uid(SAAN),
-                    new HashSet<Attribute>(attrToReplace),
-                    null);
-
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
-
-            object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            assertEquals(4, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(2, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-        } finally {
-            removeTreeQuitely(basectx);
-        }
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
     }
-    
+
     @Test
     public void updateUserWithEmptyLdapGroups() throws NamingException {
-        // Let's create the following structure
 
-        // --- OU = __TEMP__
-        //    |--- CN = __GROUP__
-        //    |--- OU = __TEMP1__
-        //        | --- CN = __GROUP1__
-        //    |--- OU = __TEMP2__
-        //        | --- CN = __GROUP1__
-        // Then, working with __TEMP__ as a base context (for both users and groups), create a new user member of a 
-        // groups in a different tree (maybe at the same level of __TEMP__) and groups in __TEMP__ tree.
-        // Update the user without specifying ldapGroups attribute and check for mermberships.
-        final String baseContext = prop.getProperty("usersBaseContext");
-        final String tmpctx = "ou=__TEMP__, " + baseContext;
+        final String CN = Issue28Test.class.getSimpleName() + "22";
+        final String SAAN = "SAAN_" + CN;
 
-        final ADConfiguration tempconf = getSimpleConf(prop);
-        tempconf.setSsl(true);
-        tempconf.setBaseContexts(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setDefaultPeopleContainer(tmpctx);
-        tempconf.setMemberships();
-        assertNotNull(tempconf);
-        tempconf.validate();
+        assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
+                tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
 
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, tempconf);
-        final ConnectorFacade tempconnector = factory.newInstance(impl);
-        assertNotNull(tempconnector);
-        tempconnector.test();
+        final Set<Attribute> attributes = getSimpleProfile(CN, false);
 
-        final ADConnection connection = new ADConnection(tempconf);
-        final LdapContext ctx = connection.getInitialContext();
+        attributes.add(AttributeBuilder.build("ldapGroups",
+                "CN=__GROUP__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
+                "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
+                "CN=Cert Publishers,CN=Users," + baseContext,
+                "CN=Schema Admins,CN=Users," + baseContext));
 
-        final Attributes attrs = new BasicAttributes(true);
-        BasicAttribute objclass = new BasicAttribute("objectclass");
-        objclass.add("top");
-        objclass.add("organizationalUnit");
-        attrs.put(objclass);
+        Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-        final String outemp1 = "ou=__TEMP1__, " + tmpctx;
-        final String outemp2 = "ou=__TEMP2__, " + tmpctx;
+        // Ask just for memberOf
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("memberOf", "ldapGroups");
 
-        DirContext basectx = ctx.createSubcontext(tmpctx, attrs); // returns if fail to be sure to work in a new OUx
+        // retrieve created object
+        ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-        try {
-            createSampleGroup("__GROUP__", basectx);
+        // check for memberOf attribute
+        assertNotNull(object);
+        assertNotNull(object.getAttributes());
 
-            DirContext subctx = ctx.createSubcontext(outemp1, attrs);
-            createSampleGroup("__GROUP1__", subctx);
+        // Returned attributes: memberOf, NAME and UID
+        assertEquals(4, object.getAttributes().size());
+        assertNotNull(object.getAttributeByName("memberOf"));
 
-            subctx = ctx.createSubcontext(outemp2, attrs);
-            createSampleGroup("__GROUP2__", subctx);
+        assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
 
-            final String CN = Issue28Test.class.getSimpleName() + "20";
-            final String SAAN = "SAAN_" + CN;
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
 
-            assertNull("Please remove user 'sAMAccountName: " + SAAN + "' from AD",
-                    tempconnector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), null));
+        final List<Attribute> attrToReplace = new ArrayList<Attribute>();
+        attrToReplace.addAll(Arrays.asList(new Attribute[] { AttributeBuilder.build("givenName", "newgn") }));
+        attrToReplace.add(AttributeBuilder.build("ldapGroups", new ArrayList<Object>()));
 
-            final Set<Attribute> attributes = getSimpleProfile(CN, false);
+        uid = tempconnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
 
-            attributes.add(AttributeBuilder.build("ldapGroups",
-                    "CN=__GROUP__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP1__,OU=__TEMP1__,OU=__TEMP__," + baseContext,
-                    "CN=__GROUP2__,OU=__TEMP2__,OU=__TEMP__," + baseContext,
-                    "CN=Cert Publishers,CN=Users," + baseContext,
-                    "CN=Schema Admins,CN=Users," + baseContext));
+        assertNotNull(uid);
+        assertEquals(SAAN, uid.getUidValue());
 
-            Uid uid = tempconnector.create(ObjectClass.ACCOUNT, attributes, null);
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
+        object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
-            // Ask just for memberOf
-            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-            oob.setAttributesToGet("memberOf", "ldapGroups");
+        assertEquals(2, object.getAttributeByName("memberOf").getValue().size());
+        assertEquals(0, object.getAttributeByName("ldapGroups").getValue().size());
 
-            // retrieve created object
-            ConnectorObject object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            // check for memberOf attribute
-            assertNotNull(object);
-            assertNotNull(object.getAttributes());
-
-            // Returned attributes: memberOf, NAME and UID
-            assertEquals(4, object.getAttributes().size());
-            assertNotNull(object.getAttributeByName("memberOf"));
-
-            assertEquals(5, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(3, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-
-            final List<Attribute> attrToReplace = new ArrayList<Attribute>();
-            attrToReplace.addAll(Arrays.asList(new Attribute[]{AttributeBuilder.build("givenName", "newgn")}));
-            attrToReplace.add(AttributeBuilder.build("ldapGroups", new ArrayList<Object>()));
-
-            uid = tempconnector.update(
-                    ObjectClass.ACCOUNT,
-                    new Uid(SAAN),
-                    new HashSet<Attribute>(attrToReplace),
-                    null);
-
-            assertNotNull(uid);
-            assertEquals(SAAN, uid.getUidValue());
-
-            object = tempconnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-
-            assertEquals(2, object.getAttributeByName("memberOf").getValue().size());
-            assertEquals(0, object.getAttributeByName("ldapGroups").getValue().size());
-
-            assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP__,ou=__TEMP__," + baseContext));
-            assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
-            assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
-                    "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
-        } finally {
-            removeTreeQuitely(basectx);
-        }
+        assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP__,ou=__TEMP__," + baseContext));
+        assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP1__,OU=__TEMP1__,ou=__TEMP__," + baseContext));
+        assertFalse(object.getAttributeByName("ldapGroups").getValue().contains(
+                "CN=__GROUP2__,OU=__TEMP2__,ou=__TEMP__," + baseContext));
     }
 
-    private void createSampleGroup(final String name, final DirContext ctx) throws NamingException {
+    private static void createSampleGroup(final String name, final DirContext ctx) throws NamingException {
         final Attributes attrs = new BasicAttributes(true);
         attrs.put(new BasicAttribute("objectclass", "group"));
         attrs.put(new BasicAttribute("cn", name));
@@ -479,7 +355,7 @@ public class Issue28Test extends AbstractTest {
         ctx.createSubcontext("cn=" + name, attrs);
     }
 
-    private void removeTreeQuitely(final DirContext context) {
+    private static void removeTreeQuitely(final DirContext context) {
         // remove descendants ...
         removeQuitely("", context);
 
@@ -493,7 +369,7 @@ public class Issue28Test extends AbstractTest {
         }
     }
 
-    private void removeQuitely(final String subcontext, final DirContext context) {
+    private static void removeQuitely(final String subcontext, final DirContext context) {
         try {
             final NamingEnumeration<NameClassPair> list = context.list(subcontext);
 
@@ -510,5 +386,10 @@ public class Issue28Test extends AbstractTest {
                 LOG.ok(ignore, "Failure removing test tree");
             }
         }
+    }
+
+    @AfterClass
+    public static void clean() {
+        removeTreeQuitely(basectx);
     }
 }
