@@ -29,6 +29,7 @@ import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
 import static org.identityconnectors.ldap.LdapUtil.checkedListByFilter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -165,7 +166,7 @@ public class ADUpdate extends LdapModifyOperation {
         // Perform group memberships
         // ---------------------------------
         final List<String> ldapGroups = getStringListValue(attrsToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
-        
+
         if (ldapGroups != null) {
             final Set<String> oldMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
             oldMemberships.addAll(groupHelper.getLdapGroups(entryDN));
@@ -193,7 +194,7 @@ public class ADUpdate extends LdapModifyOperation {
                     ldapGroupMod.add(new GroupMembership(entryDN, membership));
                 }
             }
-            
+
             groupHelper.modifyLdapGroupMemberships(ldapGroupMod);
         }
         // ---------------------------------

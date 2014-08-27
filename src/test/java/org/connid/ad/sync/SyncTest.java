@@ -92,7 +92,7 @@ public class SyncTest extends AbstractTest {
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet(Arrays.asList(
-                new String[]{"sAMAccountName", "givenName", "memberOf"}));
+                new String[] { "sAMAccountName", "givenName", "memberOf" }));
 
         SyncToken token = null;
 
@@ -108,13 +108,19 @@ public class SyncTest extends AbstractTest {
 
         // Since DirSync search is paginated we must loop on sync until returned
         // handles will be empty
-        while (!updated.isEmpty() || !deleted.isEmpty()) {
-
+        int count = 0;
+        while (count < 5) {
             updated.clear();
             deleted.clear();
 
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            if (updated.isEmpty() && deleted.isEmpty()) {
+                count++;
+            } else {
+                count = 0;
+            }
         }
 
         updated.clear();
@@ -223,7 +229,7 @@ public class SyncTest extends AbstractTest {
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
-            ModificationItem[] mod = new ModificationItem[]{
+            ModificationItem[] mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE, new BasicAttribute(
                 "member",
@@ -246,7 +252,7 @@ public class SyncTest extends AbstractTest {
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
 
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE, new BasicAttribute(
                 "member",
@@ -273,7 +279,7 @@ public class SyncTest extends AbstractTest {
             // ----------------------------------
             // check sync with user 'OUT' group (token updated)
             // ----------------------------------
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(
                 "member",
@@ -320,7 +326,7 @@ public class SyncTest extends AbstractTest {
                     getValue().size());
 
             // add user to a group not involved into the filter
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member", "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
@@ -348,7 +354,7 @@ public class SyncTest extends AbstractTest {
 
             assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
-            mod = new ModificationItem[]{
+            mod = new ModificationItem[] {
                 new ModificationItem(
                 DirContext.REMOVE_ATTRIBUTE,
                 new BasicAttribute("member", "CN=" + CN12 + "," + configuration.getBaseContexts()[0]))
@@ -457,20 +463,18 @@ public class SyncTest extends AbstractTest {
             }
         };
         // ----------------------------------
-
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setRetrieveDeletedUser(false);
+        newconf.setLoading(true);
+        
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[]{"sAMAccountName", "givenName"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "givenName" }));
 
         SyncToken token = null;
 
-        conf.setRetrieveDeletedUser(false);
-        conf.setLoading(true);
-
         ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-
-        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-
+        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
         ConnectorFacade newConnector = factory.newInstance(impl);
 
         // ----------------------------------
@@ -482,26 +486,27 @@ public class SyncTest extends AbstractTest {
         assertFalse(updated.isEmpty());
         assertTrue(deleted.isEmpty());
 
+
         // Since DirSync search is paginated we must loop on sync until returned
         // handles will be empty
-        while (!updated.isEmpty() || !deleted.isEmpty()) {
+        int count = 0;
+        while (count < 5) {
             updated.clear();
             deleted.clear();
 
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
             token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            if (updated.isEmpty() && deleted.isEmpty()) {
+                count++;
+            } else {
+                count = 0;
+            }
         }
 
         // ----------------------------------
         // check sync with new user (token updated)
         // ----------------------------------
-        conf.setRetrieveDeletedUser(false);
-        conf.setLoading(false);
-
-        factory = ConnectorFacadeFactory.getInstance();
-        impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        factory.newInstance(impl);
-
         final String CN13 = SyncTest.class.getSimpleName() + "13";
 
         Uid uid13 = null;
@@ -514,8 +519,6 @@ public class SyncTest extends AbstractTest {
             deleted.clear();
 
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
-
             assertTrue(deleted.isEmpty());
 
             // user creation and group modification
@@ -536,8 +539,7 @@ public class SyncTest extends AbstractTest {
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet(Collections.singleton("objectGUID"));
 
-        final ConnectorObject object = connector.getObject(
-                ObjectClass.ACCOUNT, new Uid(SAAN), oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(SAAN), oob.build());
 
         assertNotNull(object);
 
@@ -546,8 +548,7 @@ public class SyncTest extends AbstractTest {
         assertNotNull(objectGUID.getValue());
         assertEquals(1, objectGUID.getValue().size());
 
-        final String guid = DirSyncUtils.getGuidAsString(
-                (byte[]) objectGUID.getValue().get(0));
+        final String guid = DirSyncUtils.getGuidAsString((byte[]) objectGUID.getValue().get(0));
         assertNotNull(guid);
 
         if (LOG.isOk()) {
@@ -567,13 +568,11 @@ public class SyncTest extends AbstractTest {
 
         assertTrue(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
 
-        configuration.setAccountSearchFilter("(&(Objectclass=user)"
-                + "(cn=" + SyncTest.class.getSimpleName() + "5))");
+        configuration.setAccountSearchFilter("(&(Objectclass=user)(cn=" + SyncTest.class.getSimpleName() + "5))");
 
         assertTrue(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
 
-        configuration.setAccountSearchFilter("(&(Objectclass=user)"
-                + "(cn=" + SyncTest.class.getSimpleName() + "6))");
+        configuration.setAccountSearchFilter("(&(Objectclass=user)(cn=" + SyncTest.class.getSimpleName() + "6))");
 
         assertFalse(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
     }

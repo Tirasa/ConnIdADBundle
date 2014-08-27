@@ -41,6 +41,10 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // membershipsInOr
             props.add(new PropertyDescriptor(
                     "membershipsInOr", ADConfiguration.class));
+            
+            // pwdUpdateOnly
+            props.add(new PropertyDescriptor(
+                    "pwdUpdateOnly", ADConfiguration.class));
 
             // loading
             props.add(new PropertyDescriptor(

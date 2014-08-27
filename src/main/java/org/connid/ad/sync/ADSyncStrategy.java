@@ -84,8 +84,7 @@ public class ADSyncStrategy {
         final Map<String, Set<SearchResult>> result =
                 new HashMap<String, Set<SearchResult>>();
 
-        for (String baseContextDn :
-                conn.getConfiguration().getBaseContextsToSynchronize()) {
+        for (String baseContextDn : conn.getConfiguration().getBaseContextsToSynchronize()) {
 
             if (LOG.isOk()) {
                 LOG.ok("Searching from " + baseContextDn);
@@ -181,14 +180,14 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with empty token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
+                ctx = conn.getSyncContext(new Control[] { new DirSyncControl() });
 
             } else {
                 if (LOG.isOk()) {
                     LOG.ok("Synchronization with token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[]{new DirSyncControl((byte[]) token.getValue())});
+                ctx = conn.getSyncContext(new Control[] { new DirSyncControl((byte[]) token.getValue()) });
             }
         } catch (Exception e) {
             throw new ConnectorException("Could not set DirSync request controls", e);
@@ -237,7 +236,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        ctx.setRequestControls(new Control[]{new DeletedControl()});
+        ctx.setRequestControls(new Control[] { new DeletedControl() });
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = sr.getAttributes();
@@ -273,6 +272,7 @@ public class ADSyncStrategy {
         // We need for this beacause DirSync can return an uncomplete profile.
         profile = ctx.getAttributes("<GUID=" + guid + ">");
 
+        @SuppressWarnings("unchecked")
         final NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) profile.get("objectClass").getAll();
 
         while (objectClasses.hasMoreElements()) {
@@ -304,6 +304,7 @@ public class ADSyncStrategy {
                 }
 
                 // users to be created/updated
+                @SuppressWarnings("unchecked")
                 final NamingEnumeration<String> userDNs = (NamingEnumeration<String>) member11.getAll();
 
                 while (userDNs.hasMoreElements()) {
@@ -334,8 +335,8 @@ public class ADSyncStrategy {
                     LOG.ok("Found users 'OUT' ...");
                 }
 
-                final NamingEnumeration<String> userDNs =
-                        (NamingEnumeration<String>) member00.getAll();
+                @SuppressWarnings("unchecked")
+                final NamingEnumeration<String> userDNs = (NamingEnumeration<String>) member00.getAll();
 
                 while (userDNs.hasMoreElements()) {
                     // for each user "out" we must verify custom ldap filter

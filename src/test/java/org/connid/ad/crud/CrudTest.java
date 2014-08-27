@@ -31,8 +31,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import org.connid.ad.ADConfiguration;
+import org.connid.ad.ADConnector;
 import org.connid.ad.AbstractTest;
 import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.api.APIConfiguration;
+import org.identityconnectors.framework.api.ConnectorFacade;
+import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -41,11 +46,13 @@ import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
+import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.test.common.TestHelpers;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -157,7 +164,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -217,7 +224,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -283,7 +290,7 @@ public class CrudTest extends AbstractTest {
                 "CN=Schema Admins,CN=Users," + baseContext));
 
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext)});
+            AttributeBuilder.build("ldapGroups", "CN=Schema Admins,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -301,9 +308,9 @@ public class CrudTest extends AbstractTest {
         assertTrue(object.getAttributeByName("ldapGroups").getValue().contains(
                 "CN=Schema Admins,CN=Users," + baseContext));
 
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("ldapGroups",
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("ldapGroups",
             "CN=Schema Admins,CN=Users," + baseContext,
-            "CN=Cert Publishers,CN=Users," + baseContext)});
+            "CN=Cert Publishers,CN=Users," + baseContext) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -356,7 +363,7 @@ public class CrudTest extends AbstractTest {
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build("givenName", "gnupdate"),
             AttributeBuilder.buildPassword(
-            new GuardedString("Password321".toCharArray()))});
+            new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -408,7 +415,7 @@ public class CrudTest extends AbstractTest {
         // --------------------------
         // force change password
         // --------------------------
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.build("pwdLastSet", true)});
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("pwdLastSet", true) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -445,7 +452,7 @@ public class CrudTest extends AbstractTest {
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(Name.NAME, DN),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -469,7 +476,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -487,7 +494,7 @@ public class CrudTest extends AbstractTest {
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(Name.NAME, CN),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -512,7 +519,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -530,7 +537,7 @@ public class CrudTest extends AbstractTest {
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(Name.NAME, getEntryDN(CN)),
-            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray()))});
+            AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -555,7 +562,7 @@ public class CrudTest extends AbstractTest {
         final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -572,7 +579,7 @@ public class CrudTest extends AbstractTest {
         final String SAAN = "SAAN_" + CN;
 
         final List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] {AttributeBuilder.build("cn", CN + "_new")});
+                Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", CN + "_new") });
 
         Uid uid = connector.update(ObjectClass.ACCOUNT, new Uid(SAAN), new HashSet<Attribute>(attrToReplace), null);
 
@@ -607,7 +614,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(authUid);
 
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(false)});
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.buildEnabled(false) });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -631,7 +638,7 @@ public class CrudTest extends AbstractTest {
 
         assertNotNull(t);
 
-        attrToReplace = Arrays.asList(new Attribute[] {AttributeBuilder.buildEnabled(true)});
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.buildEnabled(true) });
 
         uid = connector.update(
                 ObjectClass.ACCOUNT,
@@ -646,6 +653,111 @@ public class CrudTest extends AbstractTest {
                 ObjectClass.ACCOUNT, // object class
                 SAAN, // uid
                 new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+    }
+
+    @Test
+    public void pwdUpdateOnly() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setPwdUpdateOnly(true);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final String SAAN = "SAAN_" + CrudTest.class.getSimpleName() + "9";
+
+        Uid authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        // 0. delete should be denied
+
+        try {
+            newConnector.delete(ObjectClass.ACCOUNT, new Uid(SAAN), null);
+            fail();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // 1. create should be denied
+
+        try {
+            newConnector.create(ObjectClass.ACCOUNT, getSimpleProfile(CrudTest.class.getSimpleName() + "100"), null);
+            fail();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // 2. Update without pwd ....
+
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "pwdUpdateOnlyName"),
+            AttributeBuilder.buildEnabled(false),
+            AttributeBuilder.build("pwdLastSet", true) });
+
+        Uid uid = newConnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertEquals(SAAN, uid.getUidValue());
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("givenName", OperationalAttributes.PASSWORD_NAME, OperationalAttributes.ENABLE_NAME);
+
+        ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        List<Object> gn = object.getAttributeByName("givenName").getValue();
+        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+
+        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
+                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+
+        authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        // 3. Update including pwd ....
+
+        attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "pwdUpdateOnlyName"),
+            AttributeBuilder.buildEnabled(false),
+            AttributeBuilder.build("pwdLastSet", true),
+            AttributeBuilder.buildPassword(new GuardedString("Password3210".toCharArray())) });
+
+        uid = newConnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(SAAN),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertEquals(SAAN, uid.getUidValue());
+
+        object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        gn = object.getAttributeByName("givenName").getValue();
+        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+
+        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
+                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+
+        authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                SAAN, // uid
+                new GuardedString("Password3210".toCharArray()), // password
                 null);
 
         assertNotNull(authUid);

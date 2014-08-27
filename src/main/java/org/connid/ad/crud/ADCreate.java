@@ -82,8 +82,7 @@ public class ADCreate extends LdapModifyOperation {
         }
     }
 
-    private Uid executeImpl()
-            throws NamingException {
+    private Uid executeImpl() throws NamingException {
 
         // -------------------------------------------------
         // Retrieve DN
@@ -99,7 +98,7 @@ public class ADCreate extends LdapModifyOperation {
             attrs.remove(cnAttr);
         }
 
-        final ADUtilities utils = new ADUtilities((ADConnection) conn);
+        final ADUtilities utils = new ADUtilities(conn);
 
         Name name;
 
@@ -126,7 +125,6 @@ public class ADCreate extends LdapModifyOperation {
         boolean enabled = true;
 
         for (Attribute attr : attrs) {
-            javax.naming.directory.Attribute ldapAttr = null;
 
             if (attr.is(Name.NAME)) {
                 // Handled already.
@@ -154,7 +152,7 @@ public class ADCreate extends LdapModifyOperation {
                 enabled = attr.getValue() == null || attr.getValue().isEmpty()
                         || Boolean.parseBoolean(attr.getValue().get(0).toString());
             } else {
-                ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
+                javax.naming.directory.Attribute ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
 
                 // Do not send empty attributes. 
                 if (ldapAttr != null && ldapAttr.size() > 0) {

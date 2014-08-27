@@ -47,6 +47,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean membershipsInOr = false;
 
+    private boolean pwdUpdateOnly = false;
+
     private String defaultPeopleContainer;
 
     public ADConfiguration() {
@@ -57,9 +59,9 @@ public class ADConfiguration extends LdapConfiguration {
 
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
-        setObjectClassesToSynchronize(new String[] {"user"});
+        setObjectClassesToSynchronize(new String[] { "user" });
         setGroupMemberAttribute("member");
-        setAccountObjectClasses(new String[] {"top", "person", "organizationalPerson", "user"});
+        setAccountObjectClasses(new String[] { "top", "person", "organizationalPerson", "user" });
 
         setUsePagedResultControl(true);
         setBlockSize(100);
@@ -136,6 +138,16 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setDefaultPeopleContainer(String defaultPeopleContainer) {
         this.defaultPeopleContainer = defaultPeopleContainer;
+    }
+
+    public boolean isPwdUpdateOnly() {
+        return pwdUpdateOnly;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "pwdUpdateOnly.display",
+            helpMessageKey = "pwdUpdateOnly.help", required = true, order = 7)
+    public void setPwdUpdateOnly(boolean pwdUpdateOnly) {
+        this.pwdUpdateOnly = pwdUpdateOnly;
     }
 
     @Override
