@@ -86,7 +86,7 @@ public class SyncUserTest extends UserTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "givenName", "memberOf"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "givenName", "memberOf" }));
 
         SyncToken token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
         connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
@@ -193,7 +193,7 @@ public class SyncUserTest extends UserTest {
             assertTrue(updated.isEmpty());
 
             ModificationItem[] mod =
-                    new ModificationItem[] {new ModificationItem(
+                    new ModificationItem[] { new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member",
                 "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
@@ -216,7 +216,7 @@ public class SyncUserTest extends UserTest {
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
 
-            mod = new ModificationItem[] {new ModificationItem(
+            mod = new ModificationItem[] { new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
                 new BasicAttribute("member",
                 "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
@@ -358,7 +358,6 @@ public class SyncUserTest extends UserTest {
             // check with updated token and without any modification
             nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
 
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
@@ -416,23 +415,43 @@ public class SyncUserTest extends UserTest {
             }
         };
         // ----------------------------------
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setRetrieveDeletedUser(false);
+        newconf.setLoading(true);
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] {"sAMAccountName", "givenName"}));
+        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "givenName" }));
 
-        conf.setRetrieveDeletedUser(false);
-        conf.setLoading(true);
+        SyncToken token = null;
 
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        final ConnectorFacade newConnector = factory.newInstance(impl);
+        ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        ConnectorFacade newConnector = factory.newInstance(impl);
 
-        final SyncToken token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+        // ----------------------------------
+        // check initial loading
+        // ----------------------------------
         newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
         assertTrue(deleted.isEmpty());
-        assertTrue(updated.isEmpty());
+
+        // Since DirSync search is paginated we must loop on sync until returned
+        // handles will be empty
+        int count = 0;
+        while (count < 5) {
+            updated.clear();
+            deleted.clear();
+
+            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
+            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
+
+            if (updated.isEmpty() && deleted.isEmpty()) {
+                count++;
+            } else {
+                count = 0;
+            }
+        }
 
         // ----------------------------------
         // check sync with new user (token updated)
@@ -449,7 +468,6 @@ public class SyncUserTest extends UserTest {
             deleted.clear();
 
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-
             assertTrue(deleted.isEmpty());
             assertEquals(1, updated.size());
         } finally {

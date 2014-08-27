@@ -50,6 +50,7 @@ import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
+import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
@@ -831,5 +832,102 @@ public class UserCrudTest extends UserTest {
                 assertNull(newConnector.getObject(ObjectClass.GROUP, groupUID, null));
             }
         }
+    }
+
+    @Test
+    public void pwdUpdateOnly() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setPwdUpdateOnly(true);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("9");
+
+        Uid authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                ids.getValue(), // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        // 0. delete should be denied
+        try {
+            newConnector.delete(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null);
+            fail();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // 1. create should be denied
+        try {
+            newConnector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(util.getEntryIDs("100")), null);
+            fail();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // 2. Update without pwd ....
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "pwdUpdateOnlyName"),
+            AttributeBuilder.buildEnabled(false),
+            AttributeBuilder.build("pwdLastSet", true) });
+
+        Uid uid = newConnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("givenName", OperationalAttributes.PASSWORD_NAME, OperationalAttributes.ENABLE_NAME);
+
+        ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        List<Object> gn = object.getAttributeByName("givenName").getValue();
+        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+
+        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
+                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+
+        authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                ids.getValue(), // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+        assertNotNull(authUid);
+
+        // 3. Update including pwd ....
+        attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "pwdUpdateOnlyName"),
+            AttributeBuilder.buildEnabled(false),
+            AttributeBuilder.build("pwdLastSet", true),
+            AttributeBuilder.buildPassword(new GuardedString("Password3210".toCharArray())) });
+
+        uid = newConnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        gn = object.getAttributeByName("givenName").getValue();
+        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+
+        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
+                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+
+        authUid = newConnector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                ids.getValue(), // uid
+                new GuardedString("Password3210".toCharArray()), // password
+                null);
+        assertNotNull(authUid);
     }
 }

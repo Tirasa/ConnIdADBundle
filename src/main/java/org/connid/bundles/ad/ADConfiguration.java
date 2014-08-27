@@ -82,6 +82,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private String groupOwnerReferenceAttribute = "managedBy";
 
+    private boolean pwdUpdateOnly = false;
+
     private final ObjectClassMappingConfig accountConfig = new ObjectClassMappingConfig(
             ObjectClass.ACCOUNT,
             CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
@@ -101,7 +103,7 @@ public class ADConfiguration extends LdapConfiguration {
         setUidAttribute("sAMAccountName");
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
-        setObjectClassesToSynchronize(new String[] {"user"});
+        setObjectClassesToSynchronize(new String[] { "user" });
         setGroupMemberAttribute("member");
 
         setUsePagedResultControl(true);
@@ -349,6 +351,16 @@ public class ADConfiguration extends LdapConfiguration {
 
     public void setStartSyncFromToday(boolean startSyncFromToday) {
         this.startSyncFromToday = startSyncFromToday;
+    }
+
+    public boolean isPwdUpdateOnly() {
+        return pwdUpdateOnly;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "pwdUpdateOnly.display",
+            helpMessageKey = "pwdUpdateOnly.help", required = true, order = 18)
+    public void setPwdUpdateOnly(boolean pwdUpdateOnly) {
+        this.pwdUpdateOnly = pwdUpdateOnly;
     }
 
     @Override

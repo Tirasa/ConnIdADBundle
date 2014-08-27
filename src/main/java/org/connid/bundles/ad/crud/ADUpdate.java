@@ -90,7 +90,6 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         // retrieve new name...
-
         final Name name = AttributeUtil.getNameFromAttributes(attrs);
 
         Name newName = null;

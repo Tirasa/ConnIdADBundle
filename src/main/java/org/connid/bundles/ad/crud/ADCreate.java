@@ -83,8 +83,7 @@ public class ADCreate extends LdapModifyOperation {
         }
     }
 
-    private Uid executeImpl()
-            throws NamingException {
+    private Uid executeImpl() throws NamingException {
 
         // -------------------------------------------------
         // Retrieve DN
@@ -127,7 +126,6 @@ public class ADCreate extends LdapModifyOperation {
         int uacValue = -1;
 
         for (Attribute attr : attrs) {
-            javax.naming.directory.Attribute ldapAttr = null;
 
             if (attr.is(Name.NAME)) {
                 // Handled already.
@@ -167,7 +165,7 @@ public class ADCreate extends LdapModifyOperation {
                     uacValue = UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE;
                 }
             } else {
-                ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
+                javax.naming.directory.Attribute ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
 
                 // Do not send empty attributes. 
                 if (ldapAttr != null && ldapAttr.size() > 0) {

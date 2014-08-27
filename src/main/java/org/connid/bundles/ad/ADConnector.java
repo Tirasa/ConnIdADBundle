@@ -42,6 +42,7 @@ import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
+import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
@@ -141,6 +142,10 @@ public class ADConnector extends LdapConnector {
             final Set<Attribute> attrs,
             final OperationOptions options) {
 
+        if (ADConfiguration.class.cast(conn.getConfiguration()).isPwdUpdateOnly()) {
+            throw new IllegalStateException("Create operation not permitted");
+        }
+
         final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
@@ -172,24 +177,32 @@ public class ADConnector extends LdapConnector {
             final Set<Attribute> attrs,
             final OperationOptions options) {
 
-        final Set<Attribute> attributes = new HashSet<Attribute>(attrs);
+        final Set<Attribute> attributes = new HashSet<Attribute>();
 
-        final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
+        if (ADConfiguration.class.cast(conn.getConfiguration()).isPwdUpdateOnly()) {
+            final Attribute pwd = AttributeUtil.find(OperationalAttributes.PASSWORD_NAME, attrs);
+            if (pwd != null) {
+                attributes.add(pwd);
+            }
+        } else {
+            attributes.addAll(attrs);
+            final Attribute ldapGroups = AttributeUtil.find(LdapConstants.LDAP_GROUPS_NAME, attributes);
 
-        if (ldapGroups != null && oclass.is(ObjectClass.ACCOUNT_NAME)) {
-            attributes.remove(ldapGroups);
+            if (ldapGroups != null && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                attributes.remove(ldapGroups);
 
-            final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
-                    ldapGroups.getValue() == null
-                    ? Collections.<String>emptyList()
-                    : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
+                final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
+                        ldapGroups.getValue() == null
+                        ? Collections.<String>emptyList()
+                        : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
 
 
-            ldapGroupsToBeAdded.addAll(config.getMemberships() == null
-                    ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
+                ldapGroupsToBeAdded.addAll(config.getMemberships() == null
+                        ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
 
-            // add groups
-            attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
+                // add groups
+                attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
+            }
         }
 
         return new ADUpdate(conn, oclass, uid).update(attributes);
@@ -200,6 +213,10 @@ public class ADConnector extends LdapConnector {
             final ObjectClass oclass,
             final Uid uid,
             final OperationOptions options) {
+
+        if (ADConfiguration.class.cast(conn.getConfiguration()).isPwdUpdateOnly()) {
+            throw new IllegalStateException("Delete operation not permitted");
+        }
 
         new ADDelete(conn, oclass, uid).delete();
     }
