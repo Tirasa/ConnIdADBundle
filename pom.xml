@@ -35,7 +35,7 @@
 
   <groupId>org.connid.bundles</groupId>
   <artifactId>org.connid.bundles.ad</artifactId>
-  <version>1.0.6</version>
+  <version>1.0.7-SNAPSHOT</version>
 
   <name>ConnId Bundles: AD</name>
 
