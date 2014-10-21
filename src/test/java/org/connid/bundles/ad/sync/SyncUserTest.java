@@ -494,11 +494,11 @@ public class SyncUserTest extends UserTest {
         assertNotNull(objectGUID.getValue());
         assertEquals(1, objectGUID.getValue().size());
 
-        final String guid = DirSyncUtils.getGuidAsString((byte[]) objectGUID.getValue().get(0));
-        assertNotNull(guid);
+        assertTrue(objectGUID.getValue().get(0) instanceof String);
+        assertFalse(String.class.cast(objectGUID.getValue().get(0)).isEmpty());
 
         if (LOG.isOk()) {
-            LOG.ok("ObjectGUID (String): {0}", guid);
+            LOG.ok("ObjectGUID (String): {0}", objectGUID.getValue().get(0));
         }
     }
 

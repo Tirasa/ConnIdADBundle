@@ -22,6 +22,7 @@
  */
 package org.connid.bundles.ad.util;
 
+import static org.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
@@ -222,7 +223,10 @@ public class ADUtilities {
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
-            } else {
+            } else if(OBJECTGUID.equals(attributeName)){
+                attribute = AttributeBuilder.build(
+                        attributeName, DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            }else{
                 if (profile.get(attributeName) != null) {
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 }
