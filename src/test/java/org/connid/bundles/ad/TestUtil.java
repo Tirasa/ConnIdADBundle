@@ -121,7 +121,7 @@ public class TestUtil {
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
         }
 
-        attributes.add(AttributeBuilder.build(Uid.NAME, Collections.singletonList(ids.getValue())));
+        attributes.add(AttributeBuilder.build("sAMAccountName", Collections.singletonList(ids.getValue())));
 
         attributes.add(AttributeBuilder.buildEnabled(true));
 
@@ -149,7 +149,7 @@ public class TestUtil {
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
         }
 
-        attributes.add(AttributeBuilder.build(Uid.NAME, Collections.singletonList(ids.getValue())));
+        attributes.add(AttributeBuilder.build("sAMAccountName", Collections.singletonList(ids.getValue())));
 
         attributes.add(AttributeBuilder.build("member", Collections.singletonList(
                 getEntryDN(getEntryIDs("OfAll", ObjectClass.ACCOUNT).getKey(), ObjectClass.ACCOUNT))));

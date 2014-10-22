@@ -696,6 +696,7 @@ public class UserCrudTest extends UserTest {
                 newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build("uid", ids.getValue()));
 
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet("memberOf");
