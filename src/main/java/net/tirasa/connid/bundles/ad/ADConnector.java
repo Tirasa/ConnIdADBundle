@@ -62,6 +62,8 @@ public class ADConnector extends LdapConnector {
 
     private static final Log LOG = Log.getLog(ADConnector.class);
 
+    public static final String OBJECTGUID = "objectGUID";
+    
     public static final String UACCONTROL_ATTR = "userAccountControl";
 
     //some useful constants from lmaccess.h

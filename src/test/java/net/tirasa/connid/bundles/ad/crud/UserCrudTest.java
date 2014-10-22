@@ -55,6 +55,8 @@ import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
+import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
@@ -688,6 +690,10 @@ public class UserCrudTest extends UserTest {
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
         final Map.Entry<String, String> ids = util.getEntryIDs("AD24");
@@ -731,7 +737,7 @@ public class UserCrudTest extends UserTest {
             connector.update(
                     ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
             fail();
-        } catch (IllegalArgumentException ignore) {
+        } catch (org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException e) {
             // ignore
         }
 
@@ -761,6 +767,10 @@ public class UserCrudTest extends UserTest {
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
         final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT);
@@ -841,6 +851,10 @@ public class UserCrudTest extends UserTest {
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
+
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
         final Map.Entry<String, String> ids = util.getEntryIDs("9");

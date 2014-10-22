@@ -22,6 +22,7 @@
  */
 package net.tirasa.connid.bundles.ad.util;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
@@ -222,12 +223,15 @@ public class ADUtilities {
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
+            } else if (OBJECTGUID.equals(attributeName)) {
+                attribute = AttributeBuilder.build(
+                        attributeName, DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
             } else {
                 if (profile.get(attributeName) != null) {
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 }
             }
-            
+
             // Avoid attribute adding in case of attribute name not found
             if (attribute != null) {
                 builder.addAttribute(attribute);

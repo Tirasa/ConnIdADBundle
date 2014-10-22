@@ -22,6 +22,8 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
 import java.util.Collection;
 import java.util.HashSet;
@@ -223,8 +225,6 @@ public class ADSyncStrategy {
         searchCtls.setReturningAttributes(null);
         // -----------------------------------
 
-        SyncToken latestSyncToken = null;
-
         final String baseContextDn = conn.getConfiguration().getBaseContextsToSynchronize()[0];
         final String filter = "(CN=__CONNID-NORES__)";
 
@@ -287,7 +287,7 @@ public class ADSyncStrategy {
                     attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
-                            attributeIsDeleted.get().toString());
+                    attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {
@@ -413,7 +413,7 @@ public class ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
+        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
 
         boolean isDeleted = false;
 
@@ -425,7 +425,7 @@ public class ADSyncStrategy {
                     attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
-                            attributeIsDeleted.get().toString());
+                    attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {

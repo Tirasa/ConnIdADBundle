@@ -54,6 +54,8 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
+import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
@@ -266,6 +268,9 @@ public class SyncUserTest extends UserTest {
             final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
             final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+            // TODO: remove the line below when using ConnId >= 1.4.0.1
+            ((APIConfigurationImpl) impl).
+                    setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
 
@@ -356,7 +361,6 @@ public class SyncUserTest extends UserTest {
             deleted.clear();
 
             // check with updated token and without any modification
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
             assertTrue(deleted.isEmpty());
@@ -373,6 +377,10 @@ public class SyncUserTest extends UserTest {
 
                 final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
                 final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+                // TODO: remove the line below when using ConnId >= 1.4.0.1
+                ((APIConfigurationImpl) impl).
+                        setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+
                 final ConnectorFacade newConnector = factory.newInstance(impl);
 
                 token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
@@ -427,6 +435,10 @@ public class SyncUserTest extends UserTest {
 
         ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
         APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
+
         ConnectorFacade newConnector = factory.newInstance(impl);
 
         // ----------------------------------
@@ -494,11 +506,11 @@ public class SyncUserTest extends UserTest {
         assertNotNull(objectGUID.getValue());
         assertEquals(1, objectGUID.getValue().size());
 
-        final String guid = DirSyncUtils.getGuidAsString((byte[]) objectGUID.getValue().get(0));
-        assertNotNull(guid);
+        assertTrue(objectGUID.getValue().get(0) instanceof String);
+        assertFalse(String.class.cast(objectGUID.getValue().get(0)).isEmpty());
 
         if (LOG.isOk()) {
-            LOG.ok("ObjectGUID (String): {0}", guid);
+            LOG.ok("ObjectGUID (String): {0}", objectGUID.getValue().get(0));
         }
     }
 

@@ -51,6 +51,8 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
+import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
@@ -315,6 +317,10 @@ public class SyncGroupTest extends GroupTest {
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+        
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
         SyncToken token = newConnector.getLatestSyncToken(ObjectClass.GROUP);

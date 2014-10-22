@@ -22,9 +22,6 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import net.tirasa.connid.bundles.ad.ADConnector;
-import net.tirasa.connid.bundles.ad.ADConfiguration;
-
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -39,6 +36,8 @@ import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
+import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 
 public abstract class AbstractTest {
@@ -73,6 +72,9 @@ public abstract class AbstractTest {
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+         // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
 
         connector = factory.newInstance(impl);
 
@@ -83,6 +85,8 @@ public abstract class AbstractTest {
     protected static ADConfiguration getSimpleConf(final Properties prop) {
 
         final ADConfiguration configuration = new ADConfiguration();
+        
+        configuration.setUidAttribute("sAMAccountName");
 
         configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
         configuration.setDefaultGroupContainer("CN=Users," + BASE_CONTEXT);
