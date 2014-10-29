@@ -177,7 +177,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         // Create search filter
         // -----------------------------------
-        final String filter = oclass == ObjectClass.ACCOUNT
+        final String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
                 DirSyncUtils.createDirSyncUFilter((ADConfiguration) conn.getConfiguration())
                 : // get group filter

@@ -87,7 +87,7 @@ public class ADSearch {
             final LdapFilter filter,
             final OperationOptions options) {
 
-        this(conn, oclass, filter, options, oclass == ObjectClass.ACCOUNT
+        this(conn, oclass, filter, options, oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()
                 : ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts());
     }
