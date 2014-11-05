@@ -179,7 +179,7 @@ public class ADSyncStrategy {
         // -----------------------------------
         final String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
-                DirSyncUtils.createDirSyncUFilter((ADConfiguration) conn.getConfiguration())
+                DirSyncUtils.createDirSyncUFilter((ADConfiguration) conn.getConfiguration(), utils)
                 : // get group filter
                 DirSyncUtils.createDirSyncGFilter((ADConfiguration) conn.getConfiguration());
 

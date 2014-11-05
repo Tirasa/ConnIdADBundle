@@ -37,9 +37,7 @@ public class DirSyncUtils {
 
     private static final Log LOG = Log.getLog(DirSyncUtils.class);
 
-    public static String createDirSyncUFilter(final ADConfiguration conf) {
-
-        final String[] memberships = conf.getMemberships();
+    public static String createDirSyncUFilter(final ADConfiguration conf, final ADUtilities utils) {
 
         final String isDeleted = String.valueOf(conf.isRetrieveDeletedUser()).toUpperCase();
 
@@ -48,17 +46,9 @@ public class DirSyncUtils {
         final StringBuilder ufilter = new StringBuilder();
 
         mfilter.append("(objectClass=group)");
-
-        if (memberships != null && memberships.length > 0) {
-            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
-
-            for (String group : memberships) {
-                ufilter.append("(memberOf=").append(group).append(")");
-            }
-
-            ufilter.append(")");
-        }
-
+        
+        ufilter.append(utils.getMembershipSearchFilter(conf));     
+        
         ufilter.insert(0, "(&(objectClass=user)").append(")");
 
         filter.append("(|").append(ufilter).append(mfilter).

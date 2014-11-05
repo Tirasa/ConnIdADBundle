@@ -27,6 +27,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import javax.naming.NamingException;
@@ -49,6 +50,7 @@ import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
+import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncDelta;
 import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
@@ -196,10 +198,10 @@ public class SyncUserTest extends UserTest {
 
             ModificationItem[] mod =
                     new ModificationItem[] { new ModificationItem(
-                DirContext.ADD_ATTRIBUTE,
-                new BasicAttribute("member",
-                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
-            };
+                                DirContext.ADD_ATTRIBUTE,
+                                new BasicAttribute("member",
+                                        "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+                    };
 
             try {
                 ctx.modifyAttributes(conf.getMemberships()[0], mod);
@@ -344,7 +346,7 @@ public class SyncUserTest extends UserTest {
             uid11 = connector.update(
                     ObjectClass.ACCOUNT, uid11,
                     Collections.singleton(AttributeBuilder.build(
-                    "givenName", Collections.singleton("changed"))),
+                                    "givenName", Collections.singleton("changed"))),
                     null);
 
             updated.clear();
@@ -532,5 +534,49 @@ public class SyncUserTest extends UserTest {
 
         configuration.setAccountSearchFilter("(&(Objectclass=user)(cn=" + util.getEntryIDs("6").getKey() + "))");
         assertFalse(DirSyncUtils.verifyCustomFilter(ctx, DN, configuration));
+    }
+
+    @Test
+    public void verifySearchWithMemb() {
+
+        final ADConfiguration confWithMembership = getSimpleConf(prop);
+        confWithMembership.setMemberships("CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, confWithMembership);
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(confWithMembership));
+
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("ldapGroups", "CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT) });
+
+        Uid uid = connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(util.getEntryIDs("4").getValue()),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+
+        assertNotNull(uid);
+
+        final List<Attribute> results = new ArrayList<Attribute>();
+
+        final ResultsHandler handler = new ResultsHandler() {
+
+            @Override
+            public boolean handle(ConnectorObject co) {
+                return results.add(co.getAttributeByName("sAMAccountName"));
+            }
+        };
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Collections.singletonList("sAMAccountName"));
+
+        newConnector.search(ObjectClass.ACCOUNT, null, handler, oob.build());
+        
+        assertNotNull(results);
+        assertTrue(results.size() == 1);
     }
 }

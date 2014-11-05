@@ -22,15 +22,11 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import net.tirasa.connid.bundles.ad.ADConnector;
-import net.tirasa.connid.bundles.ad.ADConfiguration;
-
 import static org.junit.Assert.*;
-
+import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -106,7 +102,9 @@ public class BasicFeaturesTest {
         assertNotNull(connector);
         assertNotNull(connector.getConfiguration());
 
-        final String filter = DirSyncUtils.createDirSyncUFilter((ADConfiguration) connector.getConfiguration());
+        final ADConnection connection = new ADConnection((ADConfiguration) connector.getConfiguration());
+        final ADUtilities utils = new ADUtilities(connection);
+        final String filter = DirSyncUtils.createDirSyncUFilter((ADConfiguration) connector.getConfiguration(), utils);
 
         assertNotNull(filter);
         assertFalse(filter.isEmpty());

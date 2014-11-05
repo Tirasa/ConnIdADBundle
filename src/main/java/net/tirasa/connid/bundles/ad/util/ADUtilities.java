@@ -205,7 +205,7 @@ public class ADUtilities {
 
                     final String status =
                             profile.get(UACCONTROL_ATTR) == null || profile.get(UACCONTROL_ATTR).get() == null
-                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
+                                    ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
                         LOG.ok("User Account Control: {0}", status);
@@ -214,10 +214,10 @@ public class ADUtilities {
                     // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
                     builder.addAttribute(
                             status == null || Integer.parseInt(
-                            profile.get(UACCONTROL_ATTR).get().toString())
+                                    profile.get(UACCONTROL_ATTR).get().toString())
                             % 16 != UF_ACCOUNTDISABLE
-                            ? AttributeBuilder.buildEnabled(true)
-                            : AttributeBuilder.buildEnabled(false));
+                                    ? AttributeBuilder.buildEnabled(true)
+                                    : AttributeBuilder.buildEnabled(false));
 
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 } catch (NamingException e) {
@@ -284,8 +284,8 @@ public class ADUtilities {
 
         return "cn=" + cn + ","
                 + (oclass.is(ObjectClass.ACCOUNT_NAME)
-                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
-                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
+                        ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
+                        : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
 
     /**
@@ -300,5 +300,20 @@ public class ADUtilities {
         } catch (InvalidNameException ex) {
             return false;
         }
+    }
+
+    public String getMembershipSearchFilter(final ADConfiguration conf) {
+        final StringBuilder ufilter = new StringBuilder();
+        final String[] memberships = conf.getMemberships();
+        if (memberships != null && memberships.length > 0) {
+            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
+
+            for (String group : memberships) {
+                ufilter.append("(memberOf=").append(group).append(")");
+            }
+
+            ufilter.append(")");
+        }
+        return ufilter.toString();
     }
 }

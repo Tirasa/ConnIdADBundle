@@ -157,9 +157,14 @@ public class ADSearch {
 
         final String nativeFilter = filter != null ? filter.getNativeFilter() : null;
 
+        final String membershipSearchFilter =
+                oclass.equals(ObjectClass.ACCOUNT)
+                        ? utils.getMembershipSearchFilter(((ADConfiguration) conn.getConfiguration()))
+                        : null;
+
         return new LdapInternalSearch(
                 conn,
-                getSearchFilter(optionsFilter, nativeFilter, searchFilter),
+                getSearchFilter(optionsFilter, nativeFilter, searchFilter, membershipSearchFilter),
                 dns,
                 strategy,
                 controls);
