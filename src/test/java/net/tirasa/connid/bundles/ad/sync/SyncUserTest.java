@@ -393,10 +393,11 @@ public class SyncUserTest extends UserTest {
                 deleted.clear();
 
                 newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-
+                
                 assertFalse(deleted.isEmpty());
                 assertTrue(deleted.size() <= 2);
                 assertTrue(deleted.get(0).getUid().getUidValue().startsWith(util.getEntryIDs("1").getValue()));
+                assertNotNull(deleted.get(0).getObject().getAttributeByName("sAMAccountName"));
             }
         }
     }

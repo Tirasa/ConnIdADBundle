@@ -241,23 +241,6 @@ public class ADUtilities {
         return builder.build();
     }
 
-    public ConnectorObject createDeletedObject(
-            final String baseDN,
-            final Uid uid,
-            final Attributes profile,
-            final ObjectClass oclass)
-            throws NamingException {
-
-        final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        builder.setObjectClass(oclass);
-
-        builder.setUid(uid);
-        builder.setName("fake-dn");
-        builder.addAttributes(Collections.<Attribute>emptySet());
-
-        return builder.build();
-    }
-
     /**
      * Create a DN string starting from a set attributes and a default people container. This method has to be used if
      * __NAME__ attribute is not provided or it it is not a DN.
