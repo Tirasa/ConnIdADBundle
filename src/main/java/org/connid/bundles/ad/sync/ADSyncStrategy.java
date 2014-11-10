@@ -289,7 +289,7 @@ public class ADSyncStrategy {
                     attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
-                    attributeIsDeleted.get().toString());
+                            attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {
@@ -426,7 +426,7 @@ public class ADSyncStrategy {
                     attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
-                    attributeIsDeleted.get().toString());
+                            attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {
@@ -552,11 +552,7 @@ public class ADSyncStrategy {
         sdb.setUid(uid);
 
         // Set Connector Object
-        if (SyncDeltaType.DELETE == syncDeltaType) {
-            sdb.setObject(utils.createDeletedObject(entryDN, uid, profile, oclass));
-        } else {
-            sdb.setObject(utils.createConnectorObject(entryDN, profile, attrsToGet, oclass));
-        }
+        sdb.setObject(utils.createConnectorObject(entryDN, profile, attrsToGet, oclass));
 
         return sdb.build();
     }
