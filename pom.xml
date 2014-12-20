@@ -138,6 +138,7 @@
             <headerDefinition>https://raw.githubusercontent.com/Tirasa/ConnId/connid-${connid.version}/java/src/main/resources/java-single-star.xml</headerDefinition>
           </headerDefinitions>
           <excludes>
+            <exclude>README.md</exclude>
             <exclude>**/LICENSE*</exclude>
             <exclude>**/.*</exclude>
           </excludes>
