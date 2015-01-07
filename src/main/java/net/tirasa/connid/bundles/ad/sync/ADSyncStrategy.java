@@ -103,9 +103,9 @@ public class ADSyncStrategy {
                             LOG.ok("Response Controls: {0}", rspCtls.length);
                         }
 
-                        for (int i = 0; i < rspCtls.length; i++) {
-                            if (rspCtls[i] instanceof DirSyncResponseControl) {
-                                DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtls[i];
+                        for (Control rspCtl : rspCtls) {
+                            if (rspCtl instanceof DirSyncResponseControl) {
+                                DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtl;
                                 latestSyncToken = new SyncToken(dirSyncRspCtl.getCookie());
                             }
                         }
@@ -117,7 +117,7 @@ public class ADSyncStrategy {
                 }
             } catch (NamingException e) {
                 LOG.error(e, "While searching base context {0} with filter {1} and search controls {2}",
-                        baseContextDn, filter.toString(), searchCtls);
+                        baseContextDn, filter, searchCtls);
             }
         }
 
@@ -236,9 +236,9 @@ public class ADSyncStrategy {
 
             if (rspCtls != null) {
 
-                for (int i = 0; i < rspCtls.length; i++) {
-                    if (rspCtls[i] instanceof DirSyncResponseControl) {
-                        DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtls[i];
+                for (Control rspCtl : rspCtls) {
+                    if (rspCtl instanceof DirSyncResponseControl) {
+                        DirSyncResponseControl dirSyncRspCtl = (DirSyncResponseControl) rspCtl;
                         latestSyncToken = new SyncToken(dirSyncRspCtl.getCookie());
                     }
                 }
@@ -283,8 +283,7 @@ public class ADSyncStrategy {
 
             javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
 
-            isDeleted =
-                    attributeIsDeleted != null
+            isDeleted = attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
                             attributeIsDeleted.get().toString());
@@ -319,7 +318,7 @@ public class ADSyncStrategy {
 
             ctx.setRequestControls(null);
 
-            if (member11 != null && !conf.isLoading()) {
+            if (member11 != null) {
                 if (LOG.isOk()) {
                     LOG.ok("Found users 'IN' ...");
                 }
@@ -421,8 +420,7 @@ public class ADSyncStrategy {
 
             javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
 
-            isDeleted =
-                    attributeIsDeleted != null
+            isDeleted = attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
                             attributeIsDeleted.get().toString());
@@ -477,7 +475,7 @@ public class ADSyncStrategy {
 
                 ctx.setRequestControls(null);
 
-                if (member11 != null && !conf.isLoading()) {
+                if (member11 != null) {
                     if (LOG.isOk()) {
                         LOG.ok("Found entry 'IN' ...");
                     }
@@ -492,7 +490,7 @@ public class ADSyncStrategy {
                             attrsToGet);
                 }
 
-                if (member00 != null && !conf.isLoading()) {
+                if (member00 != null) {
                     // users to be removed
                     if (LOG.isOk()) {
                         LOG.ok("Found entry 'OUT' ...");
