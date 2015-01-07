@@ -38,11 +38,7 @@ import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
-import org.connid.bundles.ad.ADConnector;
 import org.connid.bundles.ad.GroupTest;
-import org.identityconnectors.framework.api.APIConfiguration;
-import org.identityconnectors.framework.api.ConnectorFacade;
-import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
@@ -51,7 +47,6 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
 public class SyncGroupTest extends GroupTest {
@@ -145,7 +140,6 @@ public class SyncGroupTest extends GroupTest {
             // ----------------------------------
             // check sync with group 'IN' group (token updated)
             // ----------------------------------
-
             // created a new user without memberships specification
             final ADConfiguration configuration = getSimpleConf(prop);
 
@@ -260,7 +254,6 @@ public class SyncGroupTest extends GroupTest {
             assertTrue(updated.isEmpty());
 
             // ----------------------------------
-
         } catch (Throwable t) {
             LOG.error(t, "Unexpected exception");
             assert (false);
@@ -279,70 +272,5 @@ public class SyncGroupTest extends GroupTest {
             assertEquals(2, deleted.size());
             assertTrue(updated.isEmpty());
         }
-    }
-
-    @Test
-    public void initialLoading() {
-        // We need to have several operation in the right sequence in order
-        // to verify synchronization ...
-
-        // ----------------------------------
-        // Handler specification
-        // ----------------------------------
-
-        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
-        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
-
-        final SyncResultsHandler handler = new SyncResultsHandler() {
-
-            @Override
-            public boolean handle(final SyncDelta sd) {
-                if (sd.getDeltaType() == SyncDeltaType.DELETE) {
-                    return deleted.add(sd);
-                } else {
-                    return updated.add(sd);
-                }
-            }
-        };
-        // ----------------------------------
-
-        // Ask just for sAMAccountName and members
-        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "member" }));
-
-        conf.setRetrieveDeletedGroup(false);
-        conf.setLoading(true);
-
-        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-        final ConnectorFacade newConnector = factory.newInstance(impl);
-
-        SyncToken token = newConnector.getLatestSyncToken(ObjectClass.GROUP);
-        newConnector.sync(ObjectClass.GROUP, token, handler, oob.build());
-
-        assertTrue(deleted.isEmpty());
-        assertTrue(updated.isEmpty());
-
-        // ----------------------------------
-        // check sync with new group (token updated)
-        // ----------------------------------
-        Map.Entry<String, String> ids13 = util.getEntryIDs("13");
-
-        Uid uid13 = null;
-
-        try {
-            // user added sync
-            uid13 = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids13), null);
-            newConnector.sync(ObjectClass.GROUP, token, handler, oob.build());
-
-            assertEquals(0, deleted.size());
-            // group and memberships creation
-            assertEquals(2, updated.size());
-        } finally {
-            if (uid13 != null) {
-                connector.delete(ObjectClass.GROUP, uid13, null);
-            }
-        }
-        // ----------------------------------
     }
 }

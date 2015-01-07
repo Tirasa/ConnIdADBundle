@@ -37,8 +37,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
     @Override
     public PropertyDescriptor[] getPropertyDescriptors() {
-        final List<PropertyDescriptor> props =
-                new ArrayList<PropertyDescriptor>();
+        final List<PropertyDescriptor> props = new ArrayList<PropertyDescriptor>();
         try {
             // ssl
             props.add(new PropertyDescriptor("ssl", ADConfiguration.class));
@@ -66,9 +65,6 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
             // pwdUpdateOnly
             props.add(new PropertyDescriptor("pwdUpdateOnly", ADConfiguration.class));
-
-            // loading
-            props.add(new PropertyDescriptor("loading", ADConfiguration.class));
 
             // failover
             props.add(new PropertyDescriptor("failover", LdapConfiguration.class));

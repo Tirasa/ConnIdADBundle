@@ -69,7 +69,6 @@ public class SyncUserTest extends UserTest {
         // ----------------------------------
         // Handler specification
         // ----------------------------------
-
         final List<SyncDelta> updated = new ArrayList<SyncDelta>();
         final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
 
@@ -194,12 +193,11 @@ public class SyncUserTest extends UserTest {
             assertTrue(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
-            ModificationItem[] mod =
-                    new ModificationItem[] { new ModificationItem(
-                                DirContext.ADD_ATTRIBUTE,
-                                new BasicAttribute("member",
-                                        "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
-                    };
+            ModificationItem[] mod = new ModificationItem[] { new ModificationItem(
+                DirContext.ADD_ATTRIBUTE,
+                new BasicAttribute("member",
+                "CN=" + ids12.getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0]))
+            };
 
             try {
                 ctx.modifyAttributes(conf.getMemberships()[0], mod);
@@ -358,7 +356,7 @@ public class SyncUserTest extends UserTest {
             deleted.clear();
 
             // check with updated token and without any modification
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
+            connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
             assertTrue(deleted.isEmpty());
@@ -385,7 +383,7 @@ public class SyncUserTest extends UserTest {
                 deleted.clear();
 
                 newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-                
+
                 assertFalse(deleted.isEmpty());
                 assertTrue(deleted.size() <= 2);
                 assertTrue(deleted.get(0).getUid().getUidValue().startsWith(util.getEntryIDs("1").getValue()));
@@ -395,100 +393,13 @@ public class SyncUserTest extends UserTest {
     }
 
     @Test
-    public void initialLoading() {
-        // We need to have several operation in the right sequence in order
-        // to verify synchronization ...
-
-        // ----------------------------------
-        // Handler specification
-        // ----------------------------------
-
-        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
-        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
-
-        final SyncResultsHandler handler = new SyncResultsHandler() {
-
-            @Override
-            public boolean handle(final SyncDelta sd) {
-                if (sd.getDeltaType() == SyncDeltaType.DELETE) {
-                    return deleted.add(sd);
-                } else {
-                    return updated.add(sd);
-                }
-            }
-        };
-        // ----------------------------------
-        final ADConfiguration newconf = getSimpleConf(prop);
-        newconf.setRetrieveDeletedUser(false);
-        newconf.setLoading(true);
-
-        // Ask just for sAMAccountName
-        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "givenName" }));
-
-        SyncToken token = null;
-
-        ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
-        APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
-        ConnectorFacade newConnector = factory.newInstance(impl);
-
-        // ----------------------------------
-        // check initial loading
-        // ----------------------------------
-        newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-
-        assertTrue(deleted.isEmpty());
-
-        // Since DirSync search is paginated we must loop on sync until returned
-        // handles will be empty
-        int count = 0;
-        while (count < 5) {
-            updated.clear();
-            deleted.clear();
-
-            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
-
-            if (updated.isEmpty() && deleted.isEmpty()) {
-                count++;
-            } else {
-                count = 0;
-            }
-        }
-
-        // ----------------------------------
-        // check sync with new user (token updated)
-        // ----------------------------------
-        Map.Entry<String, String> ids13 = util.getEntryIDs("13");
-
-        Uid uid13 = null;
-
-        try {
-            // user added sync
-            uid13 = newConnector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(ids13), null);
-
-            updated.clear();
-            deleted.clear();
-
-            newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
-        } finally {
-            if (uid13 != null) {
-                connector.delete(ObjectClass.ACCOUNT, uid13, null);
-            }
-        }
-        // ----------------------------------
-    }
-
-    @Test
     public void verifyObjectGUID() {
         // Ask just for objectGUID
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet(Collections.singleton("objectGUID"));
 
-        final ConnectorObject object =
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(util.getEntryIDs("4").getValue()), oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT,
+                new Uid(util.getEntryIDs("4").getValue()), oob.build());
 
         assertNotNull(object);
 
@@ -510,8 +421,7 @@ public class SyncUserTest extends UserTest {
         // instatiate a new configuration to avoid collisions with sync test
         final ADConfiguration configuration = getSimpleConf(prop);
 
-        final String DN =
-                "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0];
+        final String DN = "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0];
 
         final ADConnection connection = new ADConnection(configuration);
         final LdapContext ctx = connection.getInitialContext();
@@ -561,7 +471,7 @@ public class SyncUserTest extends UserTest {
         oob.setAttributesToGet(Collections.singletonList("sAMAccountName"));
 
         newConnector.search(ObjectClass.ACCOUNT, null, handler, oob.build());
-        
+
         assertNotNull(results);
         assertTrue(results.size() == 1);
     }

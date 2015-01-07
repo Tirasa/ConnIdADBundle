@@ -58,8 +58,6 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean trustAllCerts;
 
-    private boolean loading = false;
-
     private boolean membershipsInOr = false;
 
     private boolean startSyncFromToday = true;
@@ -186,27 +184,17 @@ public class ADConfiguration extends LdapConfiguration {
         this.trustAllCerts = trustAllCerts;
     }
 
-    @ConfigurationProperty(displayMessageKey = "loading.display",
-            helpMessageKey = "loading.help", order = 5)
-    public boolean isLoading() {
-        return loading;
-    }
-
-    public void setLoading(boolean loading) {
-        this.loading = loading;
-    }
-
     public boolean isMembershipsInOr() {
         return membershipsInOr;
     }
 
     @ConfigurationProperty(displayMessageKey = "membershipsInOr.display",
-            helpMessageKey = "membershipsInOr.help", order = 6)
+            helpMessageKey = "membershipsInOr.help", order = 5)
     public void setMembershipsInOr(boolean membershipsInOr) {
         this.membershipsInOr = membershipsInOr;
     }
 
-    @ConfigurationProperty(order = 7, required = true,
+    @ConfigurationProperty(order = 6, required = true,
             displayMessageKey = "baseContextsToSynchronize.display",
             helpMessageKey = "baseContextsToSynchronize.help")
     @Override
@@ -220,7 +208,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultPeopleContainer.display",
-            helpMessageKey = "defaultPeopleContainer.help", order = 8)
+            helpMessageKey = "defaultPeopleContainer.help", order = 7)
     public String getDefaultPeopleContainer() {
         if (StringUtil.isBlank(defaultPeopleContainer)) {
             return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
@@ -235,7 +223,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "defaultGroupContainer.display",
-            helpMessageKey = "defaultGroupContainer.help", order = 9)
+            helpMessageKey = "defaultGroupContainer.help", order = 8)
     public String getDefaultGroupContainer() {
         if (StringUtil.isBlank(defaultGroupContainer)) {
             return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
@@ -250,7 +238,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "userSearchScope.display",
-            helpMessageKey = "userSearchScope.help", order = 10)
+            helpMessageKey = "userSearchScope.help", order = 9)
     public String getUserSearchScope() {
         return userSearchScope == null ? SearchScope.subtree.toString() : userSearchScope.toString();
     }
@@ -260,7 +248,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchScope.display",
-            helpMessageKey = "groupSearchScope.help", order = 11)
+            helpMessageKey = "groupSearchScope.help", order = 10)
     public String getGroupSearchScope() {
         return groupSearchFilter == null ? SearchScope.subtree.toString() : groupSearchScope.toString();
     }
@@ -270,7 +258,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupSearchFilter.display",
-            helpMessageKey = "groupSearchFilter.help", order = 12)
+            helpMessageKey = "groupSearchFilter.help", order = 11)
     public String getGroupSearchFilter() {
         return groupSearchFilter;
     }
@@ -280,7 +268,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupBaseContexts.display",
-            helpMessageKey = "groupBaseContexts.help", order = 13)
+            helpMessageKey = "groupBaseContexts.help", order = 12)
     public String[] getGroupBaseContexts() {
         if (groupBaseContexts != null && groupBaseContexts.length > 0) {
             // return specified configuration
@@ -298,7 +286,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "userBaseContexts.display",
-            helpMessageKey = "userBaseContexts.help", order = 14)
+            helpMessageKey = "userBaseContexts.help", order = 13)
     public String[] getUserBaseContexts() {
         if (userBaseContexts != null && userBaseContexts.length > 0) {
             // return specified configuration
@@ -324,7 +312,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
-            helpMessageKey = "groupMemberReferenceAttribute.help", order = 15)
+            helpMessageKey = "groupMemberReferenceAttribute.help", order = 14)
     public String getGroupMemberReferenceAttribute() {
         return StringUtil.isBlank(groupMemberReferenceAttribute) ? "member" : groupMemberReferenceAttribute;
     }
@@ -334,7 +322,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
-            helpMessageKey = "groupOwnerReferenceAttribute.help", order = 16)
+            helpMessageKey = "groupOwnerReferenceAttribute.help", order = 15)
     public String getGroupOwnerReferenceAttribute() {
         return StringUtil.isBlank(groupOwnerReferenceAttribute) ? "managedBy" : groupOwnerReferenceAttribute;
     }
@@ -344,7 +332,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-            helpMessageKey = "startSyncFromToday.help", order = 17)
+            helpMessageKey = "startSyncFromToday.help", order = 16)
     public boolean isStartSyncFromToday() {
         return startSyncFromToday;
     }
@@ -358,7 +346,7 @@ public class ADConfiguration extends LdapConfiguration {
     }
 
     @ConfigurationProperty(displayMessageKey = "pwdUpdateOnly.display",
-            helpMessageKey = "pwdUpdateOnly.help", required = true, order = 18)
+            helpMessageKey = "pwdUpdateOnly.help", required = true, order = 17)
     public void setPwdUpdateOnly(boolean pwdUpdateOnly) {
         this.pwdUpdateOnly = pwdUpdateOnly;
     }
