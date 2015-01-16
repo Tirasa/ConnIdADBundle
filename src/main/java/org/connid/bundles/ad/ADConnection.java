@@ -36,6 +36,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import net.tirasa.adsddl.ntsd.data.SDFlagsControl;
 import org.connid.bundles.ad.schema.ADSchema;
 import org.connid.bundles.ad.util.TrustAllSocketFactory;
 import org.connid.bundles.ldap.LdapConnection;
@@ -51,14 +52,11 @@ public class ADConnection extends LdapConnection {
 
     private static final Log LOG = Log.getLog(ADConnection.class);
 
-    private static final String LDAP_CTX_FACTORY =
-            "com.sun.jndi.ldap.LdapCtxFactory";
+    private static final String LDAP_CTX_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
 
-    private static final String LDAP_CTX_SOCKET_FACTORY =
-            "java.naming.ldap.factory.socket";
+    private static final String LDAP_CTX_SOCKET_FACTORY = "java.naming.ldap.factory.socket";
 
-    private static final String LDAP_BINARY_ATTRIBUTE =
-            "java.naming.ldap.attributes.binary";
+    private static final String LDAP_BINARY_ATTRIBUTE = "java.naming.ldap.attributes.binary";
 
     private LdapContext initCtx = null;
 
@@ -66,7 +64,7 @@ public class ADConnection extends LdapConnection {
 
     private final ADSchema schema;
 
-    private ADConfiguration config;
+    private final ADConfiguration config;
 
     public ADConnection(ADConfiguration config) {
         super(config);
@@ -120,7 +118,7 @@ public class ADConnection extends LdapConnection {
         LdapContext ctx = null;
 
         try {
-            @SuppressWarnings({"UseOfObsoleteCollectionType", "rawtypes", "unchecked"})
+            @SuppressWarnings({ "UseOfObsoleteCollectionType", "rawtypes", "unchecked" })
             final Hashtable env = new Hashtable(getInitialContext().getEnvironment());
 
             ctx = new InitialLdapContext(env, null);
@@ -150,12 +148,18 @@ public class ADConnection extends LdapConnection {
         }
 
         this.initCtx = connect(config.getPrincipal(), config.getCredentials());
+
+        try {
+            initCtx.setRequestControls(new Control[] { new SDFlagsControl(0x00000004) });
+        } catch (Exception e) {
+            LOG.error(e, "Error initializing request controls");
+        }
+
         return initCtx;
     }
 
     private LdapContext connect(String principal, GuardedString credentials) {
-        final Pair<AuthenticationResult, LdapContext> pair =
-                createContext(principal, credentials);
+        final Pair<AuthenticationResult, LdapContext> pair = createContext(principal, credentials);
 
         if (LOG.isOk()) {
             LOG.ok("Authentication result {0}", pair.first.getType());
@@ -172,8 +176,8 @@ public class ADConnection extends LdapConnection {
     private Pair<AuthenticationResult, LdapContext> createContext(
             final String principal, final GuardedString credentials) {
 
-        final List<Pair<AuthenticationResult, LdapContext>> result =
-                new ArrayList<Pair<AuthenticationResult, LdapContext>>(1);
+        final List<Pair<AuthenticationResult, LdapContext>> result
+                = new ArrayList<Pair<AuthenticationResult, LdapContext>>(1);
 
         @SuppressWarnings("UseOfObsoleteCollectionType")
         final java.util.Hashtable<Object, Object> env = new java.util.Hashtable<Object, Object>();
@@ -190,8 +194,8 @@ public class ADConnection extends LdapConnection {
             }
         }
 
-        // needs one env property more to retrieve binary objectGUID
-        env.put(LDAP_BINARY_ATTRIBUTE, "objectGUID");
+        // needs one env property more to retrieve binary objectGUID and ntSecurityDescriptor
+        env.put(LDAP_BINARY_ATTRIBUTE, ADConnector.SDDL_ATTR + " " + ADConnector.OBJECTGUID);
 
         String authentication = isNotBlank(principal) ? "simple" : "none";
         env.put(Context.SECURITY_AUTHENTICATION, authentication);
@@ -300,7 +304,7 @@ public class ADConnection extends LdapConnection {
     public void checkAlive() {
         try {
             final Attributes attrs = getInitialContext().
-                    getAttributes("", new String[] {"subschemaSubentry"});
+                    getAttributes("", new String[] { "subschemaSubentry" });
 
             attrs.get("subschemaSubentry");
         } catch (NamingException e) {

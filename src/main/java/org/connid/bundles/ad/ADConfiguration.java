@@ -52,6 +52,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     public static final String LOCK_OUT_DEFAULT_VALUE = "0";
 
+    public static final String UCCP_FLAG = "userCannotChangePassword";
+
     public static final String CN_NAME = "CN";
 
     private List<String> memberships;

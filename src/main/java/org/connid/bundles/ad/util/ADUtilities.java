@@ -22,7 +22,9 @@
  */
 package org.connid.bundles.ad.util;
 
+import static org.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static org.connid.bundles.ad.ADConnector.OBJECTGUID;
+import static org.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
@@ -30,15 +32,23 @@ import static org.identityconnectors.common.CollectionUtil.newSet;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+import net.tirasa.adsddl.ntsd.ACE;
+import net.tirasa.adsddl.ntsd.SDDL;
+import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.data.AceObjectFlags;
+import net.tirasa.adsddl.ntsd.data.AceRights;
+import net.tirasa.adsddl.ntsd.data.AceType;
+import net.tirasa.adsddl.ntsd.utils.GUID;
+import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ldap.LdapConnection;
@@ -47,10 +57,13 @@ import org.connid.bundles.ldap.commons.LdapConstants;
 import org.connid.bundles.ldap.commons.LdapEntry;
 import org.connid.bundles.ldap.commons.LdapUtil;
 import org.connid.bundles.ldap.schema.LdapSchemaMapping;
+import org.connid.bundles.ldap.search.LdapFilter;
+import org.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
@@ -66,9 +79,11 @@ public class ADUtilities {
 
     private final Log LOG = Log.getLog(ADUtilities.class);
 
-    private ADConnection connection;
+    private final ADConnection connection;
 
-    private GroupHelper groupHelper;
+    private final GroupHelper groupHelper;
+
+    protected static final String UCP_OBJECT_GUID = "AB721A53-1E2F-11D0-9819-00AA0040529B";
 
     public ADUtilities(final ADConnection connection) {
         this.connection = connection;
@@ -100,6 +115,11 @@ public class ADUtilities {
         // We really can't return it from search.
         if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
             LOG.warn("Reading passwords not supported");
+        }
+
+        if (result.contains(UCCP_FLAG)) {
+            result.remove(UCCP_FLAG);
+            result.add(SDDL_ATTR);
         }
 
         return result;
@@ -193,8 +213,8 @@ public class ADUtilities {
                 final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entry.getDN().toString()));
                 attribute = AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
-                final Set<String> posixRefAttrs =
-                        LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.getPosixRefAttribute());
+                final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.
+                        getPosixRefAttribute());
                 final List<String> posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
                 attribute = AttributeBuilder.build(LdapConstants.POSIX_GROUPS_NAME, posixGroups);
             } else if (LdapConstants.PASSWORD.is(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
@@ -203,8 +223,8 @@ public class ADUtilities {
             } else if (UACCONTROL_ATTR.equals(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 try {
 
-                    final String status =
-                            profile.get(UACCONTROL_ATTR) == null || profile.get(UACCONTROL_ATTR).get() == null
+                    final String status = profile.get(UACCONTROL_ATTR) == null || profile.get(UACCONTROL_ATTR).get()
+                            == null
                                     ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
@@ -223,15 +243,18 @@ public class ADUtilities {
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
-            } else if(OBJECTGUID.equals(attributeName)){
+            } else if (OBJECTGUID.equals(attributeName)) {
                 attribute = AttributeBuilder.build(
                         attributeName, DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
-            }else{
+            } else if (SDDL_ATTR.equals(attributeName)) {
+                attribute = AttributeBuilder.build(
+                        UCCP_FLAG, userCannotChangePassword((byte[]) profile.get(SDDL_ATTR).get()));
+            } else {
                 if (profile.get(attributeName) != null) {
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 }
             }
-            
+
             // Avoid attribute adding in case of attribute name not found
             if (attribute != null) {
                 builder.addAttribute(attribute);
@@ -245,8 +268,9 @@ public class ADUtilities {
      * Create a DN string starting from a set attributes and a default people container. This method has to be used if
      * __NAME__ attribute is not provided or it it is not a DN.
      *
-     * @param attrs set of user attributes.
-     * @param defaulContainer default people container.
+     * @param oclass object class.
+     * @param nameAttr naming attribute.
+     * @param cnAttr cn attribute.
      * @return distinguished name string.
      */
     public final String getDN(final ObjectClass oclass, final Name nameAttr, final Attribute cnAttr) {
@@ -298,5 +322,122 @@ public class ADUtilities {
             ufilter.append(")");
         }
         return ufilter.toString();
+    }
+
+    public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
+        final String filter = connection.getConfiguration().getUidAttribute() + "=" + uid.getUidValue();
+
+        final ConnectorObject obj = LdapSearches.findObject(
+                connection, oclass, LdapFilter.forNativeFilter(filter), UACCONTROL_ATTR, SDDL_ATTR);
+
+        if (obj == null) {
+            throw new ConnectorException("Entry not found");
+        }
+
+        return obj;
+    }
+
+    public boolean userCannotChangePassword(final byte[] src) {
+        final SDDL sddl = new SDDL(src);
+
+        boolean res = false;
+
+        final List<ACE> aces = sddl.getDacl().getAces();
+        for (int i = 0; !res && i < aces.size(); i++) {
+            final ACE ace = aces.get(i);
+
+            if (ace.getType() == AceType.ACCESS_DENIED_OBJECT_ACE_TYPE
+                    && ace.getObjectFlags().getFlags().contains(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT)) {
+                if (GUID.getGuidAsString(ace.getObjectType()).equals(UCP_OBJECT_GUID)) {
+
+                    final SID sid = ace.getSid();
+                    if (sid.getSubAuthorities().size() == 1) {
+                        if ((Arrays.equals(
+                                sid.getIdentifierAuthority(), new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })
+                                && Arrays.equals(
+                                        sid.getSubAuthorities().get(0), new byte[] { 0x00, 0x00, 0x00, 0x00 }))
+                                || (Arrays.equals(
+                                        sid.getIdentifierAuthority(), new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 })
+                                && Arrays.equals(
+                                        sid.getSubAuthorities().get(0), new byte[] { 0x00, 0x00, 0x00, 0x0a }))) {
+                            res = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return res;
+    }
+
+    public javax.naming.directory.Attribute userCannotChangePassword(
+            final ConnectorObject obj, final Boolean cannot) {
+        final Attribute ntSecurityDescriptor = obj.getAttributeByName(SDDL_ATTR);
+        if (ntSecurityDescriptor == null
+                || ntSecurityDescriptor.getValue() == null
+                || ntSecurityDescriptor.getValue().isEmpty()) {
+            return null;
+        }
+
+        final SDDL sddl = new SDDL((byte[]) ntSecurityDescriptor.getValue().get(0));
+
+        final AceType type = cannot ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE;
+
+        ACE self = null;
+        ACE all = null;
+
+        final List<ACE> aces = sddl.getDacl().getAces();
+        for (int i = 0; (all == null || self == null) && i < aces.size(); i++) {
+            final ACE ace = aces.get(i);
+
+            if ((ace.getType() == AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE
+                    || ace.getType() == AceType.ACCESS_DENIED_OBJECT_ACE_TYPE)
+                    && ace.getObjectFlags().getFlags().contains(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT)) {
+                if (GUID.getGuidAsString(ace.getObjectType()).equals(UCP_OBJECT_GUID)) {
+
+                    final SID sid = ace.getSid();
+                    if (sid.getSubAuthorities().size() == 1) {
+                        if (self == null && Arrays.equals(
+                                sid.getIdentifierAuthority(), new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })
+                                && Arrays.equals(
+                                        sid.getSubAuthorities().get(0), new byte[] { 0x00, 0x00, 0x00, 0x00 })) {
+                            self = ace;
+                            self.setType(type);
+                        } else if (all == null && Arrays.equals(
+                                sid.getIdentifierAuthority(), new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 })
+                                && Arrays.equals(
+                                        sid.getSubAuthorities().get(0), new byte[] { 0x00, 0x00, 0x00, 0x0a })) {
+                            all = ace;
+                            all.setType(type);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (self == null) {
+            // prepare aces
+            self = ACE.newInstance(type);
+            self.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
+            self.setObjectType(GUID.getGuidAsByteArray(UCP_OBJECT_GUID));
+            self.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
+            SID sid = SID.newInstance(NumberFacility.getBytes(0x000000000001));
+            sid.addSubAuthority(NumberFacility.getBytes(0));
+            self.setSid(sid);
+            sddl.getDacl().getAces().add(self);
+        }
+
+        if (all == null) {
+            all = ACE.newInstance(type);
+            all.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
+            all.setObjectType(GUID.getGuidAsByteArray(UCP_OBJECT_GUID));
+            all.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
+            final SID sid = SID.newInstance(NumberFacility.getBytes(0x000000000005));
+            sid.addSubAuthority(NumberFacility.getBytes(0x0A));
+            all.setSid(sid);
+            sddl.getDacl().getAces().add(all);
+        }
+
+        return new BasicAttribute(SDDL_ATTR, sddl.toByteArray());
     }
 }

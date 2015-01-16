@@ -69,23 +69,26 @@ public class UserCrudTest extends UserTest {
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
         // create results handler
-        final List<Attribute> results = new ArrayList<Attribute>();
+        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
         final ResultsHandler handler = new ResultsHandler() {
 
             @Override
-            public boolean handle(ConnectorObject co) {
-                return results.add(co.getAttributeByName("sAMAccountName"));
+            public boolean handle(final ConnectorObject co) {
+                return results.add(co);
             }
         };
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Collections.singleton("sAMAccountName"));
+        oob.setAttributesToGet("sAMAccountName", "userCannotChangePassword");
 
         connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
 
         assertEquals(1, results.size());
-        assertEquals(Collections.singletonList(ids.getValue()), results.get(0).getValue());
+        assertEquals(Collections.singletonList(ids.getValue()),
+                results.get(0).getAttributeByName("sAMAccountName").getValue());
+
+        assertFalse(Boolean.class.cast(results.get(0).getAttributeByName("userCannotChangePassword").getValue().get(0)));
     }
 
     @Test
@@ -186,8 +189,7 @@ public class UserCrudTest extends UserTest {
         oob.setAttributesToGet("memberOf");
 
         // retrieve created object
-        final ConnectorObject object =
-                connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         // check for memberOf attribute
         assertNotNull(object);
@@ -209,7 +211,7 @@ public class UserCrudTest extends UserTest {
         assertEquals(ids.getValue(), object.getUid().getUidValue());
         assertEquals(
                 util.getEntryDN(ids.getKey(),
-                ObjectClass.ACCOUNT).toLowerCase(), object.getName().getNameValue().toLowerCase());
+                        ObjectClass.ACCOUNT).toLowerCase(), object.getName().getNameValue().toLowerCase());
 
         final Uid authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -424,7 +426,6 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-
         final String DN = "cn=" + ids.getKey() + ",cn=Computers," + BASE_CONTEXT;
 
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
@@ -560,8 +561,8 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-        final List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey()
+            + "_new") });
 
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
@@ -725,8 +726,8 @@ public class UserCrudTest extends UserTest {
         ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), oob.build());
         assertEquals(ids.getValue(), object.getUid().getUidValue());
 
-        List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] { AttributeBuilder.build(Uid.NAME, ids.getValue() + "_new") });
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(Uid.NAME, ids.getValue()
+            + "_new") });
 
         try {
             connector.update(
@@ -767,8 +768,8 @@ public class UserCrudTest extends UserTest {
         final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT);
 
         // 1. create a new group
-        Map.Entry<String, String> groupIDs =
-                new AbstractMap.SimpleEntry<String, String>("GroupTestAD27", "SAAN_GroupTestAD27");
+        Map.Entry<String, String> groupIDs = new AbstractMap.SimpleEntry<String, String>("GroupTestAD27",
+                "SAAN_GroupTestAD27");
 
         assertNull("Please remove group 'sAMAccountName: " + groupIDs.getValue() + "' from AD",
                 newConnector.getObject(ObjectClass.GROUP, new Uid(groupIDs.getValue()), null));

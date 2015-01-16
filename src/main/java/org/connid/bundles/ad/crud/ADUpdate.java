@@ -51,8 +51,6 @@ import org.connid.bundles.ldap.commons.GroupHelper.GroupMembership;
 import org.connid.bundles.ldap.commons.GroupHelper.Modification;
 import org.connid.bundles.ldap.commons.LdapConstants;
 import org.connid.bundles.ldap.commons.LdapModifyOperation;
-import org.connid.bundles.ldap.search.LdapFilter;
-import org.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -71,10 +69,12 @@ public class ADUpdate extends LdapModifyOperation {
 
     private final ObjectClass oclass;
 
-    private Uid uid;
+    private final Uid uid;
+
+    private final ADUtilities utils;
 
     @SuppressWarnings("FieldNameHidesFieldInSuperclass")
-    private ADConnection conn;
+    private final ADConnection conn;
 
     /**
      * Retrieve new name if specified.
@@ -97,8 +97,6 @@ public class ADUpdate extends LdapModifyOperation {
         if (name != null) {
             attrs.remove(name);
 
-            final ADUtilities utils = new ADUtilities(conn);
-
             if (utils.isDN(name.getNameValue())) {
                 newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
             }
@@ -107,10 +105,10 @@ public class ADUpdate extends LdapModifyOperation {
         if (newName == null
                 && !conn.getConfiguration().getUidAttribute().equalsIgnoreCase(ADConfiguration.CN_NAME)
                 && cnAttr != null) {
-            final String cnValue =
-                    cnAttr.getValue() == null || cnAttr.getValue().isEmpty() || cnAttr.getValue().get(0) == null
-                    ? null
-                    : cnAttr.getValue().get(0).toString();
+            final String cnValue = cnAttr.getValue() == null || cnAttr.getValue().isEmpty() || cnAttr.getValue().get(0)
+                    == null
+                            ? null
+                            : cnAttr.getValue().get(0).toString();
 
             try {
                 // rename if and only if Name is a DN or CN has been provided (consider that the CN can be the Name)
@@ -131,13 +129,14 @@ public class ADUpdate extends LdapModifyOperation {
 
     public ADUpdate(final ADConnection conn, final ObjectClass oclass, final Uid uid) {
         super(conn);
+        this.utils = new ADUtilities(conn);
         this.oclass = oclass;
         this.uid = uid;
         this.conn = conn;
     }
 
     public Uid update(final Set<Attribute> attrs) {
-        final ConnectorObject obj = getEntryToBeUpdated();
+        final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         String entryDN = obj.getName().getNameValue();
 
         // ---------------------------------
@@ -202,7 +201,7 @@ public class ADUpdate extends LdapModifyOperation {
     }
 
     public Uid addAttributeValues(Set<Attribute> attrs) {
-        final ConnectorObject obj = getEntryToBeUpdated();
+        final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
         final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
@@ -218,7 +217,7 @@ public class ADUpdate extends LdapModifyOperation {
     }
 
     public Uid removeAttributeValues(Set<Attribute> attrs) {
-        final ConnectorObject obj = getEntryToBeUpdated();
+        final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
         final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
@@ -252,6 +251,15 @@ public class ADUpdate extends LdapModifyOperation {
                 // Such a change would have been handled in update() above.
                 throw new IllegalArgumentException("Unable to modify an object's name");
 
+            } else if (attr.is(ADConfiguration.UCCP_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    javax.naming.directory.Attribute ntSecurityDescriptor = utils.userCannotChangePassword(
+                            obj, (Boolean) value.get(0));
+                    if (ntSecurityDescriptor != null) {
+                        ldapAttrs.put(ntSecurityDescriptor);
+                    }
+                }
             } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
@@ -380,18 +388,5 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         return null;
-    }
-
-    private ConnectorObject getEntryToBeUpdated() {
-        final String filter = conn.getConfiguration().getUidAttribute() + "=" + uid.getUidValue();
-
-        final ConnectorObject obj = LdapSearches.findObject(
-                conn, oclass, LdapFilter.forNativeFilter(filter), UACCONTROL_ATTR);
-
-        if (obj == null) {
-            throw new ConnectorException("Entry not found");
-        }
-
-        return obj;
     }
 }
