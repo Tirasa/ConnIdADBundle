@@ -25,6 +25,7 @@ package net.tirasa.connid.bundles.ad.sync;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
@@ -37,6 +38,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import net.tirasa.adsddl.ntsd.data.SDFlagsControl;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
@@ -266,7 +268,12 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        ctx.setRequestControls(new Control[] { new DeletedControl() });
+        try {
+            ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
+        } catch (IOException e) {
+            LOG.error(e, "Error initializing context request controls");
+            throw new ConnectorException(e);
+        }
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = result.getAttributes();
@@ -275,7 +282,7 @@ public class ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
+        final String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
         boolean isDeleted = false;
 
@@ -285,8 +292,7 @@ public class ADSyncStrategy {
 
             isDeleted = attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
-                    && Boolean.parseBoolean(
-                            attributeIsDeleted.get().toString());
+                    && Boolean.parseBoolean(attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {

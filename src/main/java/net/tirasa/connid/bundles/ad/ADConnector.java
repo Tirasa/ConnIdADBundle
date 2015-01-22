@@ -63,8 +63,10 @@ public class ADConnector extends LdapConnector {
     private static final Log LOG = Log.getLog(ADConnector.class);
 
     public static final String OBJECTGUID = "objectGUID";
-    
+
     public static final String UACCONTROL_ATTR = "userAccountControl";
+
+    public static final String SDDL_ATTR = "ntSecurityDescriptor";
 
     //some useful constants from lmaccess.h
     public static final int UF_ACCOUNTDISABLE = 0x0002;
@@ -195,9 +197,8 @@ public class ADConnector extends LdapConnector {
 
                 final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
                         ldapGroups.getValue() == null
-                        ? Collections.<String>emptyList()
-                        : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
-
+                                ? Collections.<String>emptyList()
+                                : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
 
                 ldapGroupsToBeAdded.addAll(config.getMemberships() == null
                         ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));

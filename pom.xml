@@ -83,6 +83,7 @@
   <properties>
     <connid.version>1.4.0.0</connid.version>
     <connid.ldap.version>1.4.0</connid.ldap.version>
+    <adsddl.verson>1.1-SNAPSHOT</adsddl.verson> 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -109,6 +110,12 @@
       <groupId>net.tirasa.connid.bundles</groupId>
       <artifactId>net.tirasa.connid.bundles.ldap</artifactId>
       <version>${connid.ldap.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>net.tirasa</groupId>
+      <artifactId>adsddl</artifactId>
+      <version>${adsddl.verson}</version>
     </dependency>
 
     <!-- TEST -->

@@ -79,8 +79,6 @@ public class GroupCrudTest extends GroupTest {
     @Test
     public void searchByDefaultCustomFilter() {
 
-        Map.Entry<String, String> ids = util.getEntryIDs("1");
-
         // create results handler
         final List<Attribute> results = new ArrayList<Attribute>();
         final ResultsHandler handler = new ResultsHandler() {
@@ -99,7 +97,7 @@ public class GroupCrudTest extends GroupTest {
 
         assertEquals(10, results.size());
 
-        ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
+        final Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
         final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
         assertNotNull(uid);
 
@@ -441,8 +439,8 @@ public class GroupCrudTest extends GroupTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("5");
 
-        final List<Attribute> attrToReplace =
-                Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
+        final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey()
+            + "_new") });
 
         Uid uid = connector.update(
                 ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);

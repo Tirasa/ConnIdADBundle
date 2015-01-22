@@ -34,6 +34,8 @@ import java.util.Set;
 import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.ModificationItem;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
@@ -125,10 +127,17 @@ public class ADCreate extends LdapModifyOperation {
 
         int uacValue = -1;
 
+        Boolean uccp = null;
+
         for (Attribute attr : attrs) {
 
             if (attr.is(Name.NAME)) {
                 // Handled already.
+            } else if (attr.is(ADConfiguration.UCCP_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    uccp = (Boolean) value.get(0);
+                }
             } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
@@ -174,8 +183,6 @@ public class ADCreate extends LdapModifyOperation {
             }
         }
 
-        final String[] entryDN = new String[1];
-
         final String pwdAttrName = conn.getConfiguration().getPasswordAttribute();
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
@@ -202,12 +209,22 @@ public class ADCreate extends LdapModifyOperation {
             }
         }
 
-        entryDN[0] = conn.getSchemaMapping().create(oclass, name, adAttrs);
+        final String entryDN = conn.getSchemaMapping().create(oclass, name, adAttrs);
 
-        if (!isEmpty(ldapGroups)) {
-            groupHelper.addLdapGroupMemberships(entryDN[0], ldapGroups);
+        if (uccp != null) {
+            // ---------------------------------
+            // Change ntSecurityDescriptor
+            // ---------------------------------
+            conn.getInitialContext().modifyAttributes(entryDN, new ModificationItem[] {
+                new ModificationItem(DirContext.REPLACE_ATTRIBUTE, utils.userCannotChangePassword(entryDN, uccp)) });
+
+            // ---------------------------------
         }
 
-        return conn.getSchemaMapping().createUid(oclass, entryDN[0]);
+        if (!isEmpty(ldapGroups)) {
+            groupHelper.addLdapGroupMemberships(entryDN, ldapGroups);
+        }
+
+        return conn.getSchemaMapping().createUid(oclass, entryDN);
     }
 }

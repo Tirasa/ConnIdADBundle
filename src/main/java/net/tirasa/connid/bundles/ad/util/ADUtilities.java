@@ -22,7 +22,9 @@
  */
 package net.tirasa.connid.bundles.ad.util;
 
+import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
@@ -30,15 +32,17 @@ import static org.identityconnectors.common.CollectionUtil.newSet;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+import net.tirasa.adsddl.ntsd.SDDL;
+import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
@@ -47,10 +51,13 @@ import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchemaMapping;
+import net.tirasa.connid.bundles.ldap.search.LdapFilter;
+import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
@@ -66,9 +73,9 @@ public class ADUtilities {
 
     private final Log LOG = Log.getLog(ADUtilities.class);
 
-    private ADConnection connection;
+    private final ADConnection connection;
 
-    private GroupHelper groupHelper;
+    private final GroupHelper groupHelper;
 
     public ADUtilities(final ADConnection connection) {
         this.connection = connection;
@@ -100,6 +107,11 @@ public class ADUtilities {
         // We really can't return it from search.
         if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
             LOG.warn("Reading passwords not supported");
+        }
+
+        if (result.contains(UCCP_FLAG)) {
+            result.remove(UCCP_FLAG);
+            result.add(SDDL_ATTR);
         }
 
         return result;
@@ -193,18 +205,18 @@ public class ADUtilities {
                 final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entry.getDN().toString()));
                 attribute = AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
-                final Set<String> posixRefAttrs =
-                        LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.getPosixRefAttribute());
+                final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.
+                        getPosixRefAttribute());
                 final List<String> posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
                 attribute = AttributeBuilder.build(LdapConstants.POSIX_GROUPS_NAME, posixGroups);
             } else if (LdapConstants.PASSWORD.is(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 // IMPORTANT!!! Return empty guarded string
                 attribute = AttributeBuilder.build(attributeName, new GuardedString());
-            } else if (UACCONTROL_ATTR.equals(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+            } else if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 try {
 
-                    final String status =
-                            profile.get(UACCONTROL_ATTR) == null || profile.get(UACCONTROL_ATTR).get() == null
+                    final String status = profile.get(UACCONTROL_ATTR) == null
+                            || profile.get(UACCONTROL_ATTR).get() == null
                                     ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
@@ -223,9 +235,16 @@ public class ADUtilities {
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
-            } else if (OBJECTGUID.equals(attributeName)) {
+            } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
                 attribute = AttributeBuilder.build(
                         attributeName, DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } else if (SDDL_ATTR.equalsIgnoreCase(attributeName)) {
+                javax.naming.directory.Attribute sddl = profile.get(SDDL_ATTR);
+                if (sddl != null) {
+                    attribute = AttributeBuilder.build(
+                            UCCP_FLAG,
+                            SDDLHelper.isUserCannotChangePassword(new SDDL(((byte[]) sddl.get()))));
+                }
             } else {
                 if (profile.get(attributeName) != null) {
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
@@ -245,8 +264,9 @@ public class ADUtilities {
      * Create a DN string starting from a set attributes and a default people container. This method has to be used if
      * __NAME__ attribute is not provided or it it is not a DN.
      *
-     * @param attrs set of user attributes.
-     * @param defaulContainer default people container.
+     * @param oclass object class.
+     * @param nameAttr naming attribute.
+     * @param cnAttr cn attribute.
      * @return distinguished name string.
      */
     public final String getDN(final ObjectClass oclass, final Name nameAttr, final Attribute cnAttr) {
@@ -298,5 +318,59 @@ public class ADUtilities {
             ufilter.append(")");
         }
         return ufilter.toString();
+    }
+
+    public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
+        final String filter = connection.getConfiguration().getUidAttribute() + "=" + uid.getUidValue();
+
+        final ConnectorObject obj = LdapSearches.findObject(
+                connection, oclass, LdapFilter.forNativeFilter(filter), UACCONTROL_ATTR, SDDL_ATTR);
+
+        if (obj == null) {
+            throw new ConnectorException("Entry not found");
+        }
+
+        return obj;
+    }
+
+    public Attributes getAttributes(final String entryDN, final String... attributes) {
+        try {
+            return connection.getInitialContext().getAttributes(entryDN, attributes);
+        } catch (NamingException e) {
+            throw new ConnectorException(e);
+        }
+    }
+
+    public javax.naming.directory.Attribute userCannotChangePassword(final String entryDN, final Boolean cannot) {
+        javax.naming.directory.Attribute ntSecurityDescriptor = getAttributes(entryDN, SDDL_ATTR).get(SDDL_ATTR);
+        if (ntSecurityDescriptor == null) {
+            return null;
+        }
+        try {
+            return userCannotChangePassword((byte[]) ntSecurityDescriptor.get(), cannot);
+        } catch (NamingException ex) {
+            LOG.error(ex, "Error retrieving sddl");
+            return null;
+        }
+    }
+
+    public javax.naming.directory.Attribute userCannotChangePassword(final ConnectorObject obj, final Boolean cannot) {
+        final Attribute ntSecurityDescriptor = obj.getAttributeByName(SDDL_ATTR);
+        if (ntSecurityDescriptor == null
+                || ntSecurityDescriptor.getValue() == null
+                || ntSecurityDescriptor.getValue().isEmpty()) {
+            return null;
+        }
+
+        return userCannotChangePassword((byte[]) ntSecurityDescriptor.getValue().get(0), cannot);
+    }
+
+    public javax.naming.directory.Attribute userCannotChangePassword(final byte[] obj, final Boolean cannot) {
+
+        if (obj == null) {
+            return null;
+        }
+
+        return new BasicAttribute(SDDL_ATTR, SDDLHelper.userCannotChangePassword(new SDDL(obj), cannot).toByteArray());
     }
 }

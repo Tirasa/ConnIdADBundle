@@ -89,7 +89,8 @@ public class SyncUserTest extends UserTest {
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(Arrays.asList(new String[] { "sAMAccountName", "givenName", "memberOf" }));
+        oob.setAttributesToGet(Arrays.asList(new String[] {
+            "sAMAccountName", "givenName", "memberOf", ADConfiguration.UCCP_FLAG }));
 
         SyncToken token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
         connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
@@ -122,16 +123,27 @@ public class SyncUserTest extends UserTest {
             // user creation and group modification
             assertEquals(3, updated.size());
 
-            final ConnectorObject obj = updated.get(0).getObject();
+            Boolean sddl = null;
 
-            // chek for returned attributes
-            assertEquals(5, updated.get(0).getObject().getAttributes().size());
-            assertNotNull(obj.getAttributeByName("sAMAccountName"));
-            assertNotNull(obj.getAttributeByName("givenName"));
-            assertNotNull(obj.getAttributeByName("__NAME__"));
-            assertNotNull(obj.getAttributeByName("__UID__"));
-            assertNotNull(obj.getAttributeByName("memberOf"));
-            assertEquals(ids11.getValue(), updated.get(0).getUid().getUidValue());
+            for (SyncDelta usr : updated) {
+                final ConnectorObject obj = usr.getObject();
+                assertEquals(ids11.getValue(), obj.getUid().getUidValue());
+
+                // chek for returned attributes
+                assertNotNull(obj.getAttributeByName("sAMAccountName"));
+                assertNotNull(obj.getAttributeByName("givenName"));
+                assertNotNull(obj.getAttributeByName("__NAME__"));
+                assertNotNull(obj.getAttributeByName("__UID__"));
+                assertNotNull(obj.getAttributeByName("memberOf"));
+
+                // Check for AD-23
+                if (obj.getAttributeByName(ADConfiguration.UCCP_FLAG) != null) {
+                    sddl = Boolean.class.cast(obj.getAttributeByName(ADConfiguration.UCCP_FLAG).getValue().get(0));
+                    assertFalse(sddl);
+                }
+            }
+
+            assertNotNull(sddl);
 
             updated.clear();
             deleted.clear();
