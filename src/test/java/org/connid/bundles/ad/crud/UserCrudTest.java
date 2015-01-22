@@ -80,7 +80,7 @@ public class UserCrudTest extends UserTest {
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("sAMAccountName", "userCannotChangePassword");
+        oob.setAttributesToGet("sAMAccountName");
 
         connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
 
@@ -88,7 +88,8 @@ public class UserCrudTest extends UserTest {
         assertEquals(Collections.singletonList(ids.getValue()),
                 results.get(0).getAttributeByName("sAMAccountName").getValue());
 
-        assertFalse(Boolean.class.cast(results.get(0).getAttributeByName("userCannotChangePassword").getValue().get(0)));
+        // AD-23 check
+        assertNull(results.get(0).getAttributeByName("userCannotChangePassword"));
     }
 
     @Test
@@ -209,9 +210,8 @@ public class UserCrudTest extends UserTest {
 
         assertEquals(expected, actual);
         assertEquals(ids.getValue(), object.getUid().getUidValue());
-        assertEquals(
-                util.getEntryDN(ids.getKey(),
-                        ObjectClass.ACCOUNT).toLowerCase(), object.getName().getNameValue().toLowerCase());
+        assertEquals(util.getEntryDN(ids.getKey(),
+                ObjectClass.ACCOUNT).toLowerCase(), object.getName().getNameValue().toLowerCase());
 
         final Uid authUid = connector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -931,5 +931,132 @@ public class UserCrudTest extends UserTest {
                 new GuardedString("Password3210".toCharArray()), // password
                 null);
         assertNotNull(authUid);
+    }
+
+    @Test
+    public void issueAD23() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        // create results handler
+        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
+        final ResultsHandler handler = new ResultsHandler() {
+
+            @Override
+            public boolean handle(final ConnectorObject co) {
+                return results.add(co);
+            }
+        };
+
+        // create options for returning attributes
+        OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("sAMAccountName", ADConfiguration.UCCP_FLAG);
+
+        // -----------------------------------------------------
+        // Create Cannot Change Password
+        // -----------------------------------------------------
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD23");
+
+        // create filter 
+        final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
+
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        Set<Attribute> attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build(ADConfiguration.UCCP_FLAG, true));
+
+        Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        try {
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
+
+            assertEquals(1, results.size());
+            assertEquals(Collections.singletonList(ids.getValue()),
+                    results.get(0).getAttributeByName("sAMAccountName").getValue());
+
+            // AD-23 check read
+            assertTrue(Boolean.class.cast(
+                    results.get(0).getAttributeByName(ADConfiguration.UCCP_FLAG).getValue().get(0)));
+        } finally {
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+        }
+        // -----------------------------------------------------
+
+        results.clear();
+
+        // -----------------------------------------------------
+        // Create Can Change Password
+        // -----------------------------------------------------
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build(ADConfiguration.UCCP_FLAG, false));
+
+        uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        // -----------------------------------------------------
+
+        try {
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            connector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
+
+            assertEquals(1, results.size());
+            assertEquals(Collections.singletonList(ids.getValue()),
+                    results.get(0).getAttributeByName("sAMAccountName").getValue());
+
+            // AD-23 check read
+            assertFalse(Boolean.class.cast(
+                    results.get(0).getAttributeByName(ADConfiguration.UCCP_FLAG).getValue().get(0)));
+
+            // -----------------------------------------------------
+            // Update ...
+            // -----------------------------------------------------
+            List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build(ADConfiguration.UCCP_FLAG, true) });
+
+            uid = connector.update(
+                    ObjectClass.ACCOUNT,
+                    new Uid(ids.getValue()),
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            assertNotNull(uid);
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertEquals(Collections.singletonList(ids.getValue()), object.getAttributeByName("sAMAccountName").
+                    getValue());
+
+            // AD-23 check read
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.UCCP_FLAG).getValue().get(0)));
+            attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build(ADConfiguration.UCCP_FLAG, false) });
+
+            uid = connector.update(
+                    ObjectClass.ACCOUNT,
+                    new Uid(ids.getValue()),
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            assertNotNull(uid);
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertEquals(Collections.singletonList(ids.getValue()), object.getAttributeByName("sAMAccountName").
+                    getValue());
+
+            // AD-23 check read
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.UCCP_FLAG).getValue().get(0)));
+            // -----------------------------------------------------
+        } finally {
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+        }
     }
 }
