@@ -128,7 +128,6 @@ public class SyncUserTest extends UserTest {
                 assertEquals(ids11.getValue(), obj.getUid().getUidValue());
 
                 // chek for returned attributes
-                assertEquals(6, updated.get(0).getObject().getAttributes().size());
                 assertNotNull(obj.getAttributeByName("sAMAccountName"));
                 assertNotNull(obj.getAttributeByName("givenName"));
                 assertNotNull(obj.getAttributeByName("__NAME__"));
