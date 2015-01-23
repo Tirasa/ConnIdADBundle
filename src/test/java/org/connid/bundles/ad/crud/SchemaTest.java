@@ -24,13 +24,15 @@ package org.connid.bundles.ad.crud;
 
 import static org.junit.Assert.*;
 
+import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.AbstractTest;
+import org.identityconnectors.framework.common.objects.AttributeInfo;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.junit.Test;
 
-public class SchemaTest extends AbstractTest{
+public class SchemaTest extends AbstractTest {
 
     @Test
     public void schema() {
@@ -44,5 +46,22 @@ public class SchemaTest extends AbstractTest{
         assertNotNull(info.getAttributeInfo());
         assertFalse(info.getAttributeInfo().isEmpty());
         assertNotNull(schema.getOperationOptionInfo());
+
+        boolean sddl = false;
+        boolean givenname = false;
+
+        for (AttributeInfo attrInfo : info.getAttributeInfo()) {
+            if (ADConfiguration.UCCP_FLAG.equals(attrInfo.getName())) {
+                sddl = true;
+                assertEquals(Boolean.class, attrInfo.getType());
+            }
+
+            if ("givenName".equalsIgnoreCase(attrInfo.getName())) {
+                givenname = true;
+                assertEquals(String.class, attrInfo.getType());
+            }
+        }
+
+        assertTrue(sddl && givenname);
     }
 }

@@ -61,7 +61,7 @@ class ADSchemaBuilder {
         "maycontain",
         "systemmaycontain",
         "mustcontain",
-        "systemmustcontain"};
+        "systemmustcontain" };
 
     public ADSchemaBuilder(final ADConnection connection) {
         this.connection = connection;
@@ -132,12 +132,18 @@ class ADSchemaBuilder {
             }
         }
 
+        schemaNames.remove(ADConnector.SDDL_ATTR);
+
         final ObjectClassInfoBuilder objClassBld = new ObjectClassInfoBuilder();
 
         // ObjectClass.ACCOUNT/ObjectClass.GROUP
         objClassBld.setType(oname);
         objClassBld.setContainer(false);
         objClassBld.addAllAttributeInfo(createAttrInfos(schemaNames));
+
+        objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.UCCP_FLAG, Boolean.class));
+        objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.LOCK_OUT_FLAG, Boolean.class));
+        objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PROMPT_USER_FLAG, Boolean.class));
 
         final ObjectClassInfo oci = objClassBld.build();
         schemaBld.defineObjectClass(oci);
@@ -198,7 +204,7 @@ class ADSchemaBuilder {
         // ------------------------------
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        searchCtls.setReturningAttributes(new String[]{IS_SINGLE_VALUE, SYSTEM_ONLY});
+        searchCtls.setReturningAttributes(new String[] { IS_SINGLE_VALUE, SYSTEM_ONLY });
         // ------------------------------
 
         int i = 0;
