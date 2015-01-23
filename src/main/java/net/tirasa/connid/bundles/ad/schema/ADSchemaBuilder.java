@@ -133,6 +133,8 @@ class ADSchemaBuilder {
         }
 
         schemaNames.remove(ADConnector.SDDL_ATTR);
+        schemaNames.remove(ADConfiguration.LOCK_OUT_FLAG);
+        schemaNames.remove(ADConfiguration.PROMPT_USER_FLAG);
 
         final ObjectClassInfoBuilder objClassBld = new ObjectClassInfoBuilder();
 
