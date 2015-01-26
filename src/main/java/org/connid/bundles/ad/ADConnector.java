@@ -64,6 +64,12 @@ public class ADConnector extends LdapConnector {
 
     public static final String OBJECTGUID = "objectGUID";
 
+    public static final String OBJECTSID = "objectSID";
+
+    public static final String PRIMARYGROUPID = "primaryGroupID";
+
+    public static final String MEMBEROF = "memberOf";
+
     public static final String UACCONTROL_ATTR = "userAccountControl";
 
     public static final String SDDL_ATTR = "ntSecurityDescriptor";

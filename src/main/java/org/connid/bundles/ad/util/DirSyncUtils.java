@@ -27,6 +27,7 @@ import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
+import org.connid.bundles.ad.ADConnector;
 import org.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -45,9 +46,9 @@ public class DirSyncUtils {
         final StringBuilder ufilter = new StringBuilder();
 
         mfilter.append("(objectClass=group)");
-        
-        ufilter.append(utils.getMembershipSearchFilter(conf));     
-        
+
+        ufilter.append(utils.getMembershipSearchFilter(conf));
+
         ufilter.insert(0, "(&(objectClass=user)").append(")");
 
         filter.append("(|").append(ufilter).append(mfilter).
@@ -85,7 +86,7 @@ public class DirSyncUtils {
 
             for (String group : memberships) {
                 mfilter.append("(distinguishedName=").append(group).append(")");
-                ufilter.append("(memberOf=").append(group).append(")");
+                ufilter.append("(").append(ADConnector.MEMBEROF).append("=").append(group).append(")");
             }
 
             ufilter.append(")");
@@ -176,7 +177,7 @@ public class DirSyncUtils {
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
 
         searchCtls.setSearchScope(SearchControls.OBJECT_SCOPE);
-        searchCtls.setReturningAttributes(new String[]{});
+        searchCtls.setReturningAttributes(new String[] {});
 
         boolean found = true;
 

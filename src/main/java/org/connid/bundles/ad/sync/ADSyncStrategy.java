@@ -133,7 +133,7 @@ public class ADSyncStrategy {
             final ObjectClass oclass) {
 
         // -----------------------------------
-        // Create search control
+        // Create basicLdapSearch control
         // -----------------------------------
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
 
@@ -177,7 +177,7 @@ public class ADSyncStrategy {
         // -----------------------------------
 
         // -----------------------------------
-        // Create search filter
+        // Create basicLdapSearch filter
         // -----------------------------------
         final String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
@@ -220,7 +220,7 @@ public class ADSyncStrategy {
 
     public SyncToken getLatestSyncToken() {
         // -----------------------------------
-        // Create search control
+        // Create basicLdapSearch control
         // -----------------------------------
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
@@ -315,7 +315,7 @@ public class ADSyncStrategy {
         final javax.naming.directory.Attribute member00;
 
         if (objectClasses.contains("group")) {
-            // search for users in adn users out
+            // basicLdapSearch for users in adn users out
 
             if (LOG.isOk()) {
                 LOG.ok("Modified group {0}", result.getNameInNamespace());

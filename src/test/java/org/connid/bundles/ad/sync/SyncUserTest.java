@@ -289,7 +289,7 @@ public class SyncUserTest extends UserTest {
             assertEquals(1, updated.size());
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
-            assertEquals(1, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
+            assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             // add user to a group not involved into the filter
             mod = new ModificationItem[] {
@@ -317,7 +317,7 @@ public class SyncUserTest extends UserTest {
             assertEquals(1, updated.size());
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
             assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
-            assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
+            assertEquals(3, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             mod = new ModificationItem[] {
                 new ModificationItem(
