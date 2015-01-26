@@ -27,7 +27,6 @@ import static org.identityconnectors.common.StringUtil.isNotBlank;
 
 import com.sun.jndi.ldap.ctl.PasswordExpiredResponseControl;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
@@ -119,7 +118,7 @@ public class ADConnection extends LdapConnection {
 
         try {
             @SuppressWarnings({ "UseOfObsoleteCollectionType", "rawtypes", "unchecked" })
-            final Hashtable env = new Hashtable(getInitialContext().getEnvironment());
+            final java.util.Hashtable env = new java.util.Hashtable(getInitialContext().getEnvironment());
 
             ctx = new InitialLdapContext(env, null);
             ctx.setRequestControls(control);
@@ -195,7 +194,8 @@ public class ADConnection extends LdapConnection {
         }
 
         // needs one env property more to retrieve binary objectGUID and ntSecurityDescriptor
-        env.put(LDAP_BINARY_ATTRIBUTE, ADConnector.SDDL_ATTR + " " + ADConnector.OBJECTGUID);
+        env.put(LDAP_BINARY_ATTRIBUTE,
+                ADConnector.SDDL_ATTR + " " + ADConnector.OBJECTGUID + " " + ADConnector.OBJECTSID);
 
         String authentication = isNotBlank(principal) ? "simple" : "none";
         env.put(Context.SECURITY_AUTHENTICATION, authentication);

@@ -32,6 +32,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.GroupTest;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -458,5 +460,162 @@ public class GroupCrudTest extends GroupTest {
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("cn"));
         assertEquals(ids.getKey() + "_new", object.getAttributeByName("cn").getValue().get(0));
+    }
+
+    @Test
+    public void issueAD29() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
+        final ResultsHandler handler = new ResultsHandler() {
+
+            @Override
+            public boolean handle(final ConnectorObject co) {
+                return results.add(co);
+            }
+        };
+
+        final String baseContext = prop.getProperty("baseContext");
+
+        // create options for returning attributes
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("sAMAccountName", "objectSID", "primaryGroupID", "memberOf");
+
+        Uid uuid = null;
+        Uid guid = null;
+
+        try {
+            // -------------------------------------------------
+            // Create a new Group
+            // -------------------------------------------------
+            final Map.Entry<String, String> gid = util.getEntryIDs("GAD29", ObjectClass.GROUP);
+
+            assertNull("Please remove group 'sAMAccountName: " + gid.getValue() + "' from AD",
+                    connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
+
+            Set<Attribute> attributes = util.getSimpleGroupProfile(gid, true);
+
+            guid = connector.create(ObjectClass.GROUP, attributes, null);
+            assertNotNull(guid);
+            assertEquals(gid.getValue(), guid.getUidValue());
+
+            final ConnectorObject group = connector.getObject(ObjectClass.GROUP, guid, oob.build());
+            final SID gsid = SID.parse((byte[]) group.getAttributeByName("objectSID").getValue().get(0));
+            assertNotNull(gsid);
+
+            final byte[] groupID = gsid.getSubAuthorities().get(gsid.getSubAuthorityCount() - 1);
+            // -------------------------------------------------
+
+            results.clear();
+
+            // -------------------------------------------------
+            // Create a new Group member
+            // -------------------------------------------------
+            final Map.Entry<String, String> ids = util.getEntryIDs("UAD29", ObjectClass.ACCOUNT);
+
+            assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                    connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+            attributes = util.getSimpleUserProfile(ids, conf, false);
+
+            // add group
+            Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
+            attributes.remove(ldapGroups);
+
+            final List<String> groupsToBeAdded = new ArrayList<String>();
+
+            if (ldapGroups != null && ldapGroups.getValue() != null) {
+                for (Object obj : ldapGroups.getValue()) {
+                    groupsToBeAdded.add(obj.toString());
+                }
+            }
+
+            groupsToBeAdded.add(String.format("CN=%s,CN=Users,%s", gid.getKey(), baseContext));
+            attributes.add(AttributeBuilder.build("ldapGroups", groupsToBeAdded));
+
+            uuid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+            assertNotNull(uuid);
+            assertEquals(ids.getValue(), uuid.getUidValue());
+
+            ConnectorObject user = connector.getObject(ObjectClass.ACCOUNT, uuid, oob.build());
+            SID usid = SID.parse((byte[]) user.getAttributeByName("objectSID").getValue().get(0));
+            assertNotNull(usid);
+
+            String primaryGID = String.class.cast(user.getAttributeByName("primaryGroupID").getValue().get(0));
+            assertNotNull(primaryGID);
+            // -------------------------------------------------
+
+            // -------------------------------------------------
+            // Update PrimaryGroupID
+            // -------------------------------------------------
+            List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build("primaryGroupID", String.valueOf(NumberFacility.getUInt(groupID))) });
+
+            uuid = connector.update(
+                    ObjectClass.ACCOUNT,
+                    new Uid(ids.getValue()),
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            user = connector.getObject(ObjectClass.ACCOUNT, uuid, oob.build());
+            usid = SID.parse((byte[]) user.getAttributeByName("objectSID").getValue().get(0));
+            assertNotNull(usid);
+
+            primaryGID = String.class.cast(user.getAttributeByName("primaryGroupID").getValue().get(0));
+            assertNotNull(primaryGID);
+
+            usid.getSubAuthorities().remove(usid.getSubAuthorityCount() - 1);
+            usid.addSubAuthority(NumberFacility.getUIntBytes(Integer.parseInt(primaryGID)));
+
+            connector.search(ObjectClass.GROUP,
+                    FilterBuilder.equalTo(AttributeBuilder.build("objectSID", usid.toByteArray())),
+                    handler,
+                    oob.build());
+            assertEquals(group.getName(), results.get(0).getName());
+            // -------------------------------------------------
+
+            // -------------------------------------------------
+            // Check for primary groups into ldapGroups
+            // -------------------------------------------------
+            user = connector.getObject(ObjectClass.ACCOUNT, uuid, oob.build());
+            ldapGroups = user.getAttributeByName("memberOf");
+
+            boolean found = false;
+            for (Object ldapGroup : ldapGroups.getValue()) {
+                if (String.class.cast(ldapGroup).equals(group.getName().getNameValue())) {
+                    found = true;
+                }
+            }
+            assertTrue(found);
+            // -------------------------------------------------
+
+            // -------------------------------------------------
+            // Update primary group
+            // -------------------------------------------------
+            attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build("description", "a new description") });
+
+            connector.update(ObjectClass.GROUP, guid, new HashSet<Attribute>(attrToReplace), null);
+            // -------------------------------------------------
+
+            // -------------------------------------------------
+            // Add group to user
+            // -------------------------------------------------
+            attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build("ldapGroups", Collections.singleton(group.getName().getNameValue())) });
+
+            connector.update(ObjectClass.ACCOUNT, uuid, new HashSet<Attribute>(attrToReplace), null);
+            // -------------------------------------------------
+
+        } finally {
+            if (uuid != null) {
+                connector.delete(ObjectClass.ACCOUNT, uuid, null);
+            }
+
+            if (guid != null) {
+                connector.delete(ObjectClass.GROUP, guid, null);
+            }
+        }
     }
 }

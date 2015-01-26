@@ -22,6 +22,8 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
+import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
@@ -41,8 +43,12 @@ import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
+import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.Hex;
+import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
@@ -53,6 +59,7 @@ import net.tirasa.connid.bundles.ldap.commons.GroupHelper.Modification;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
 import org.identityconnectors.common.Pair;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -106,8 +113,8 @@ public class ADUpdate extends LdapModifyOperation {
         if (newName == null
                 && !conn.getConfiguration().getUidAttribute().equalsIgnoreCase(ADConfiguration.CN_NAME)
                 && cnAttr != null) {
-            final String cnValue = cnAttr.getValue() == null 
-                    || cnAttr.getValue().isEmpty() 
+            final String cnValue = cnAttr.getValue() == null
+                    || cnAttr.getValue().isEmpty()
                     || cnAttr.getValue().get(0) == null
                             ? null
                             : cnAttr.getValue().get(0).toString();
@@ -171,8 +178,35 @@ public class ADUpdate extends LdapModifyOperation {
             final Set<String> oldMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
             oldMemberships.addAll(groupHelper.getLdapGroups(entryDN));
 
+            String primaryGroup = null;
+
+            final ConnectorObject profile = utils.getEntryToBeUpdated(uid, oclass);
+
+            final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
+            if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
+                final byte[] pgID = NumberFacility.getUIntBytes(
+                        Long.parseLong(primaryGroupID.getValue().get(0).toString()));
+
+                final SID pgSID = SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0));
+                pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
+                pgSID.addSubAuthority(pgID);
+
+                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
+                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())));
+                if (res == null || res.isEmpty()) {
+                    LOG.warn("Error retrieving primary group for {0}", entryDN);
+                } else {
+                    primaryGroup = res.iterator().next().getNameInNamespace();
+                    LOG.info("Found primary group {0}", primaryGroup);
+                }
+            }
+
             final Set<String> newMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
             newMemberships.addAll(ldapGroups);
+
+            if (StringUtil.isNotBlank(primaryGroup)) {
+                newMemberships.remove(primaryGroup);
+            }
 
             // Update the LDAP groups.
             final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();

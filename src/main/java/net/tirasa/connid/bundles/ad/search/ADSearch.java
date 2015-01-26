@@ -121,7 +121,7 @@ public class ADSearch {
         // filter doesn't return any values.
         //
         // In the simple case when the LdapFilter has no entryDN, we
-        // will just search over our base DNs looking for entries
+        // will just basicLdapSearch over our base DNs looking for entries
         // matching the native filter.
 
         LdapSearchStrategy strategy;

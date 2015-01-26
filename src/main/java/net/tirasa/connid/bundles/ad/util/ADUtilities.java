@@ -24,6 +24,8 @@ package net.tirasa.connid.bundles.ad.util;
 
 import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
+import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
@@ -36,15 +38,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
+import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.LdapName;
 import net.tirasa.adsddl.ntsd.SDDL;
+import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.Hex;
+import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
@@ -52,6 +61,7 @@ import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchemaMapping;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
+import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
@@ -104,7 +114,7 @@ public class ADUtilities {
         }
 
         // Our password is marked as readable because of sync().
-        // We really can't return it from search.
+        // We really can't return it from basicLdapSearch.
         if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
             LOG.warn("Reading passwords not supported");
         }
@@ -112,6 +122,12 @@ public class ADUtilities {
         if (result.contains(UCCP_FLAG)) {
             result.remove(UCCP_FLAG);
             result.add(SDDL_ATTR);
+        }
+
+        // Required attribute for 
+        if (result.contains(LdapConstants.LDAP_GROUPS_NAME)) {
+            result.add(OBJECTSID);
+            result.add(PRIMARYGROUPID);
         }
 
         return result;
@@ -201,9 +217,31 @@ public class ADUtilities {
 
             Attribute attribute = null;
 
-            if (LdapConstants.isLdapGroups(attributeName)) {
+            if (LdapConstants.isLdapGroups(attributeName) || attributeName.equals(ADConnector.MEMBEROF)) {
                 final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entry.getDN().toString()));
-                attribute = AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, ldapGroups);
+
+                final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
+                final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
+
+                if (primaryGroupID != null && primaryGroupID.get() != null
+                        && objectSID != null && objectSID.get() != null) {
+                    final byte[] pgID = NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString()));
+                    final SID pgSID = SID.parse((byte[]) objectSID.get());
+                    pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
+                    pgSID.addSubAuthority(pgID);
+
+                    final Set<SearchResult> res = basicLdapSearch(String.format(
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())));
+                    if (res == null || res.isEmpty()) {
+                        LOG.warn("Error retrieving primary group for {0}", entry.getDN());
+                    } else {
+                        final String pgDN = res.iterator().next().getNameInNamespace();
+                        LOG.info("Found primary group {0}", pgDN);
+                        ldapGroups.add(pgDN);
+                    }
+                }
+
+                attribute = AttributeBuilder.build(attributeName, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
                 final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.
                         getPosixRefAttribute());
@@ -312,7 +350,7 @@ public class ADUtilities {
             ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
 
             for (String group : memberships) {
-                ufilter.append("(memberOf=").append(group).append(")");
+                ufilter.append("(").append(ADConnector.MEMBEROF).append("=").append(group).append(")");
             }
 
             ufilter.append(")");
@@ -324,7 +362,12 @@ public class ADUtilities {
         final String filter = connection.getConfiguration().getUidAttribute() + "=" + uid.getUidValue();
 
         final ConnectorObject obj = LdapSearches.findObject(
-                connection, oclass, LdapFilter.forNativeFilter(filter), UACCONTROL_ATTR, SDDL_ATTR);
+                connection, oclass,
+                LdapFilter.forNativeFilter(filter),
+                UACCONTROL_ATTR,
+                SDDL_ATTR,
+                OBJECTSID,
+                PRIMARYGROUPID);
 
         if (obj == null) {
             throw new ConnectorException("Entry not found");
@@ -372,5 +415,42 @@ public class ADUtilities {
         }
 
         return new BasicAttribute(SDDL_ATTR, SDDLHelper.userCannotChangePassword(new SDDL(obj), cannot).toByteArray());
+    }
+
+    public Set<SearchResult> basicLdapSearch(final String filter) {
+
+        final LdapContext ctx = connection.getInitialContext();
+
+        // -----------------------------------
+        // Create basicLdapSearch control
+        // -----------------------------------
+        final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
+
+        searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+        searchCtls.setReturningAttributes(null);
+        // -----------------------------------
+
+        final Set<SearchResult> result = new HashSet<SearchResult>();
+
+        for (String baseContextDn : connection.getConfiguration().getBaseContextsToSynchronize()) {
+
+            if (LOG.isOk()) {
+                LOG.ok("Searching from " + baseContextDn);
+            }
+
+            try {
+                final NamingEnumeration<SearchResult> answer = ctx.search(baseContextDn, filter, searchCtls);
+
+                while (answer.hasMoreElements()) {
+                    result.add(answer.nextElement());
+                }
+            } catch (NamingException e) {
+                LOG.error(e, "While searching base context {0} with filter {1} and search controls {2}",
+                        baseContextDn, filter, searchCtls);
+            }
+        }
+
+        return result;
     }
 }
