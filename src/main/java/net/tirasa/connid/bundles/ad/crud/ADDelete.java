@@ -22,6 +22,8 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+
 import java.util.HashSet;
 import java.util.Set;
 import javax.naming.NamingException;
@@ -41,11 +43,7 @@ public class ADDelete extends LdapModifyOperation {
     @SuppressWarnings("FieldNameHidesFieldInSuperclass")
     private final ADConnection conn;
 
-    public ADDelete(
-            final ADConnection conn,
-            final ObjectClass oclass,
-            final Uid uid) {
-
+    public ADDelete(final ADConnection conn, final ObjectClass oclass, final Uid uid) {
         super(conn);
         this.oclass = oclass;
         this.uid = uid;
@@ -53,10 +51,14 @@ public class ADDelete extends LdapModifyOperation {
     }
 
     public void delete() {
-        final String entryDN = LdapSearches.getEntryDN(conn, oclass, uid);
+        final String entryDN;
+        if (OBJECTGUID.equals(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            entryDN = String.format("<GUID=%s>", uid.getUidValue());
+        } else {
+            entryDN = LdapSearches.getEntryDN(conn, oclass, uid);
+        }
 
         final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entryDN));
-
         groupHelper.removeLdapGroupMemberships(entryDN, ldapGroups);
 
         try {

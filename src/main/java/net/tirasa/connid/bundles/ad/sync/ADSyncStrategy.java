@@ -39,6 +39,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
 import net.tirasa.adsddl.ntsd.data.SDFlagsControl;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
@@ -282,7 +283,7 @@ public class ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        final String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get("objectGUID").get());
+        final String guid = GUID.getGuidAsString((byte[]) profile.get("objectGUID").get());
 
         boolean isDeleted = false;
 
@@ -418,7 +419,7 @@ public class ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        String guid = DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
+        String guid = GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
 
         boolean isDeleted = false;
 

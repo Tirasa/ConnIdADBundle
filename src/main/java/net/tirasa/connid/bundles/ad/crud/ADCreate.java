@@ -22,6 +22,7 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
@@ -32,10 +33,12 @@ import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
 import java.util.List;
 import java.util.Set;
 import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
@@ -108,11 +111,8 @@ public class ADCreate extends LdapModifyOperation {
         if (utils.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
-            Uid uidAttr = AttributeUtil.getUidAttribute(attrs);
-
-            if (uidAttr == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
-                uidAttr = new Uid(nameAttr.getNameValue());
-                attrs.add(uidAttr);
+            if (AttributeUtil.getUidAttribute(attrs) == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
+                attrs.add(new Uid(nameAttr.getNameValue()));
             }
 
             name = new Name(utils.getDN(oclass, nameAttr, cnAttr));
@@ -173,6 +173,8 @@ public class ADCreate extends LdapModifyOperation {
                 } else {
                     uacValue = UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE;
                 }
+            } else if (attr.is(OBJECTGUID)) {
+                // ignore info
             } else {
                 javax.naming.directory.Attribute ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
 
@@ -225,6 +227,11 @@ public class ADCreate extends LdapModifyOperation {
             groupHelper.addLdapGroupMemberships(entryDN, ldapGroups);
         }
 
-        return conn.getSchemaMapping().createUid(oclass, entryDN);
+        if (OBJECTGUID.equals(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            final Attributes profile = conn.getInitialContext().getAttributes(entryDN, new String[] { OBJECTGUID });
+            return new Uid(GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+        } else {
+            return conn.getSchemaMapping().createUid(oclass, entryDN);
+        }
     }
 }

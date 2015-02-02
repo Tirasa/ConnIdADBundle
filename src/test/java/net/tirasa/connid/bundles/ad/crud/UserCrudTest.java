@@ -693,7 +693,7 @@ public class UserCrudTest extends UserTest {
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
         // TODO: remove the line below when using ConnId >= 1.4.0.1
         ((APIConfigurationImpl) impl).
-                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
 
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
@@ -702,7 +702,8 @@ public class UserCrudTest extends UserTest {
         assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
                 newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
-        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+        final Set<Attribute> attributes = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT).
+                getSimpleProfile(ids);
 
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet("memberOf");
@@ -770,7 +771,7 @@ public class UserCrudTest extends UserTest {
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
         // TODO: remove the line below when using ConnId >= 1.4.0.1
         ((APIConfigurationImpl) impl).
-                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
 
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
@@ -1070,6 +1071,84 @@ public class UserCrudTest extends UserTest {
             // -----------------------------------------------------
         } finally {
             connector.delete(ObjectClass.ACCOUNT, uid, null);
+        }
+    }
+
+    @Test
+    public void searchByObjectGUID() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setUidAttribute(ADConnector.OBJECTGUID);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
+
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        // create options for returning attributes
+        OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("sAMAccountName", ADConnector.OBJECTGUID);
+
+        // -----------------------------------------------------
+        // Create new user
+        // -----------------------------------------------------
+        final String sAMAccountName = "SAAN_AD33";
+        final String cn = "AD33";
+
+        final Set<Attribute> attributes = new HashSet<Attribute>();
+
+        attributes.add(new Name(null));
+        attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
+
+        attributes.add(AttributeBuilder.buildEnabled(true));
+
+        if (conf.isSsl()) {
+            attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
+        }
+
+        attributes.add(AttributeBuilder.build("sAMAccountName", Collections.singletonList(sAMAccountName)));
+        attributes.add(AttributeBuilder.build("sn", Collections.singletonList("sntest")));
+        attributes.add(AttributeBuilder.build("givenName", Collections.singletonList("gntest")));
+        attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
+
+        final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        // -----------------------------------------------------
+
+        try {
+            final ConnectorObject user = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            final Attribute objectguid = user.getAttributeByName(ADConnector.OBJECTGUID);
+
+            assertEquals(objectguid.getValue(), uid.getValue());
+
+            // create results handler
+            final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
+            final ResultsHandler handler = new ResultsHandler() {
+
+                @Override
+                public boolean handle(final ConnectorObject co) {
+                    return results.add(co);
+                }
+            };
+
+            // -----------------------------------------------------
+            // Search by ObjectGUID
+            // -----------------------------------------------------
+            final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build(
+                    ADConnector.OBJECTGUID, objectguid.getValue().get(0)));
+
+            newConnector.search(ObjectClass.ACCOUNT, filter, handler, oob.build());
+
+            assertEquals(1, results.size());
+            assertEquals(Collections.singletonList(sAMAccountName),
+                    results.get(0).getAttributeByName("sAMAccountName").getValue());
+            assertEquals(objectguid.getValue(), results.get(0).getUid().getValue());
+
+            // -----------------------------------------------------
+        } finally {
+            newConnector.delete(ObjectClass.ACCOUNT, uid, null);
         }
     }
 }

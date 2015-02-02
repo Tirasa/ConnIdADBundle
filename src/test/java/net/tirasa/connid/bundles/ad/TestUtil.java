@@ -161,9 +161,8 @@ public class TestUtil {
     }
 
     public void cleanup(final int num) {
-        Uid uid = null;
         for (int i = 1; i <= num; i++) {
-            uid = new Uid(getEntryIDs(String.valueOf(i)).getValue());
+            Uid uid = new Uid(getEntryIDs(String.valueOf(i)).getValue());
 
             try {
                 connector.delete(oclass, uid, null);

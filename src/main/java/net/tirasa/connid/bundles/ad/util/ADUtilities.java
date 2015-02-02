@@ -48,6 +48,7 @@ import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.LdapName;
 import net.tirasa.adsddl.ntsd.SDDL;
 import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
@@ -210,7 +211,12 @@ public class ADUtilities {
         final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
         builder.setObjectClass(oclass);
 
-        builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
+        if (OBJECTGUID.equals(connection.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
+        } else {
+            builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
+        }
+
         builder.setName(connection.getSchemaMapping().createName(oclass, entry));
 
         for (String attributeName : attrsToGet) {
@@ -275,7 +281,7 @@ public class ADUtilities {
                 }
             } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
                 attribute = AttributeBuilder.build(
-                        attributeName, DirSyncUtils.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+                        attributeName, GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
             } else if (SDDL_ATTR.equalsIgnoreCase(attributeName)) {
                 javax.naming.directory.Attribute sddl = profile.get(SDDL_ATTR);
                 if (sddl != null) {
@@ -338,7 +344,7 @@ public class ADUtilities {
     public final boolean isDN(final String dn) {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
-        } catch (InvalidNameException ex) {
+        } catch (InvalidNameException e) {
             return false;
         }
     }

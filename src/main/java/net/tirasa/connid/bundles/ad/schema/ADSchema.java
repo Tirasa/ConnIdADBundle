@@ -27,7 +27,7 @@ import org.identityconnectors.framework.common.objects.Schema;
 
 public class ADSchema {
 
-    private ADConnection connection;
+    private final ADConnection connection;
 
     private Schema schema;
 

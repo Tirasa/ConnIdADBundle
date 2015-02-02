@@ -22,6 +22,7 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
 import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
@@ -340,6 +341,8 @@ public class ADUpdate extends LdapModifyOperation {
                         uacValue += UF_ACCOUNTDISABLE;
                     }
                 }
+            } else if (attr.is(OBJECTGUID)) {
+                // ignore info
             } else {
                 ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
             }

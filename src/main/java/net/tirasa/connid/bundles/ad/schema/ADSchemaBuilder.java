@@ -53,11 +53,11 @@ class ADSchemaBuilder {
 
     private static final Log LOG = Log.getLog(ADSchemaBuilder.class);
 
-    private ADConnection connection;
+    private final ADConnection connection;
 
     private Schema schema;
 
-    private static String[] ATTRIBUTES_TO_GET = {
+    private static final String[] ATTRIBUTES_TO_GET = {
         "maycontain",
         "systemmaycontain",
         "mustcontain",
