@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -74,7 +74,7 @@ import org.identityconnectors.framework.common.objects.Uid;
 
 public class ADUtilities {
 
-    private final Log LOG = Log.getLog(ADUtilities.class);
+    private final static Log LOG = Log.getLog(ADUtilities.class);
 
     private final ADConnection connection;
 
@@ -328,10 +328,11 @@ public class ADUtilities {
      * @param dn string to be checked.
      * @return TRUE if the value provided is a DN; FALSE otherwise.
      */
-    public final boolean isDN(final String dn) {
+    public final static boolean isDN(final String dn) {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
         } catch (InvalidNameException ex) {
+            LOG.warn(ex, "Invalid DN {0}", dn);
             return false;
         }
     }
