@@ -21,15 +21,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.LdapConfiguration;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.ObjectClassMappingConfig;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
+import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 public class ADConfiguration extends LdapConfiguration {
+
+    private final Log LOG = Log.getLog(ADConfiguration.class);
 
     private boolean ssl = true;
 
@@ -139,12 +143,16 @@ public class ADConfiguration extends LdapConfiguration {
         return memberships.toArray(new String[memberships.size()]);
     }
 
-    public void setMemberships(String... memberships) {
+    public void setMemberships(final String... memberships) {
         this.memberships = new ArrayList<String>();
 
         if (memberships != null) {
             for (String membership : memberships) {
-                this.memberships.add(membership.trim());
+                if (ADUtilities.isDN(membership)) {
+                    this.memberships.add(membership.trim());
+                } else {
+                    LOG.warn("Skip membership! \"{0}\" is not a valid distinguished name (DN)", membership);
+                }
             }
         }
     }

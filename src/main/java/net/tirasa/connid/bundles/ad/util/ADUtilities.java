@@ -75,7 +75,7 @@ import org.identityconnectors.framework.common.objects.Uid;
 
 public class ADUtilities {
 
-    private final Log LOG = Log.getLog(ADUtilities.class);
+    private final static Log LOG = Log.getLog(ADUtilities.class);
 
     private final ADConnection connection;
 
@@ -334,10 +334,11 @@ public class ADUtilities {
      * @param dn string to be checked.
      * @return TRUE if the value provided is a DN; FALSE otherwise.
      */
-    public final boolean isDN(final String dn) {
+    public final static boolean isDN(final String dn) {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
         } catch (InvalidNameException e) {
+            LOG.warn(e, "Invalid DN {0}", dn);
             return false;
         }
     }
