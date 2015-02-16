@@ -22,6 +22,7 @@ import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -95,7 +96,7 @@ public class ADUpdate extends LdapModifyOperation {
         if (name != null) {
             attrs.remove(name);
 
-            if (utils.isDN(name.getNameValue())) {
+            if (ADUtilities.isDN(name.getNameValue())) {
                 newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
             }
         }
@@ -180,8 +181,11 @@ public class ADUpdate extends LdapModifyOperation {
                 pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
                 pgSID.addSubAuthority(pgID);
 
-                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
-                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())));
+                final Set<SearchResult> res = utils.basicLdapSearch(
+                        Arrays.asList(((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts()),
+                        String.format("(&(objectclass=group)(%s=%s))", OBJECTSID,
+                                Hex.getEscaped(pgSID.toByteArray())));
+
                 if (res == null || res.isEmpty()) {
                     LOG.warn("Error retrieving primary group for {0}", entryDN);
                 } else {
