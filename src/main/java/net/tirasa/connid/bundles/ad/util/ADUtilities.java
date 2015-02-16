@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -229,8 +229,11 @@ public class ADUtilities {
                     pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
                     pgSID.addSubAuthority(pgID);
 
-                    final Set<SearchResult> res = basicLdapSearch(String.format(
-                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())));
+                    final Set<SearchResult> res = basicLdapSearch(
+                            Arrays.asList(((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts()),
+                            String.format("(&(objectclass=group)(%s=%s))",
+                                    OBJECTSID, Hex.getEscaped(pgSID.toByteArray())));
+                    
                     if (res == null || res.isEmpty()) {
                         LOG.warn("Error retrieving primary group for {0}", entry.getDN());
                     } else {
@@ -417,7 +420,7 @@ public class ADUtilities {
         return new BasicAttribute(SDDL_ATTR, SDDLHelper.userCannotChangePassword(new SDDL(obj), cannot).toByteArray());
     }
 
-    public Set<SearchResult> basicLdapSearch(final String filter) {
+    public Set<SearchResult> basicLdapSearch(final Collection<String> baseContextDNs, final String filter) {
 
         final LdapContext ctx = connection.getInitialContext();
 
@@ -433,7 +436,7 @@ public class ADUtilities {
 
         final Set<SearchResult> result = new HashSet<SearchResult>();
 
-        for (String baseContextDn : connection.getConfiguration().getBaseContextsToSynchronize()) {
+        for (String baseContextDn : baseContextDNs) {
 
             if (LOG.isOk()) {
                 LOG.ok("Searching from " + baseContextDn);
