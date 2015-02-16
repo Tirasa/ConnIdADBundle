@@ -101,7 +101,7 @@ public class ADCreate extends LdapModifyOperation {
 
         Name name;
 
-        if (utils.isDN(nameAttr.getNameValue())) {
+        if (ADUtilities.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
             if (AttributeUtil.getUidAttribute(attrs) == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {

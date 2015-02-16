@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -217,7 +218,8 @@ public class ADUtilities {
             Attribute attribute = null;
 
             if (LdapConstants.isLdapGroups(attributeName) || attributeName.equals(ADConnector.MEMBEROF)) {
-                final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entry.getDN().toString()));
+                final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+                ldapGroups.addAll(groupHelper.getLdapGroups(entry.getDN().toString()));
 
                 final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
                 final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
