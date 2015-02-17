@@ -26,10 +26,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.DirContext;
+import javax.naming.ldap.LdapContext;
 import org.connid.bundles.ad.ADConfiguration;
+import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.ADConnector;
 import org.connid.bundles.ad.TestUtil;
 import org.connid.bundles.ad.UserTest;
+import org.connid.bundles.ldap.commons.LdapConstants;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
 import org.identityconnectors.framework.api.ConnectorFacade;
@@ -48,6 +56,8 @@ import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
+import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
@@ -1050,6 +1060,130 @@ public class UserCrudTest extends UserTest {
             // -----------------------------------------------------
         } finally {
             connector.delete(ObjectClass.ACCOUNT, uid, null);
+        }
+    }
+    
+    @Test
+    public void issueAD40() {
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setMemberships();
+        newconf.setUserBaseContexts("ou=test1," + BASE_CONTEXT);
+        newconf.setGroupBaseContexts("ou=groups,ou=test1," + BASE_CONTEXT);
+        newconf.setDefaultPeopleContainer("ou=test1," + BASE_CONTEXT);
+        newconf.setDefaultGroupContainer("ou=groups,ou=test1," + BASE_CONTEXT);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
+
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        // create options for returning attributes
+        OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("sAMAccountName", LdapConstants.LDAP_GROUPS_NAME, ADConnector.MEMBEROF,
+                ADConnector.OBJECTGUID);
+
+        final ADConnection connection = new ADConnection(newconf);
+        final LdapContext ctx = connection.getInitialContext();
+
+        try {
+            // ----------------------------------
+            // Setup a complex scenario
+            // Root
+            // --test1
+            // ----users
+            // ----groups
+            // ----excludedgrps
+            // --test2
+            // ----------------------------------
+            Attributes attrs = new BasicAttributes(true);
+            BasicAttribute objclass = new BasicAttribute("objectclass");
+            objclass.add("top");
+            objclass.add("organizationalUnit");
+            attrs.put(objclass);
+
+            // Create the context
+            final DirContext test1 = ctx.createSubcontext("ou=test1," + BASE_CONTEXT, attrs);
+            createGrp(test1, "test1grp");
+
+            final DirContext users = test1.createSubcontext("ou=users", attrs);
+            createGrp(users, "usersgrp");
+
+            final DirContext groups = test1.createSubcontext("ou=groups", attrs);
+            createGrp(groups, "groupsgrp");
+
+            final DirContext excluded = test1.createSubcontext("ou=excludedgrps", attrs);
+            createGrp(excluded, "excludedgrp");
+
+            final DirContext test2 = ctx.createSubcontext("ou=test2," + BASE_CONTEXT, attrs);
+            createGrp(test2, "test2grp");
+            // ----------------------------------
+
+            // -----------------------------------------------------
+            // Create new user
+            // -----------------------------------------------------
+            final String sAMAccountName = "SAAN_AD40";
+            final String cn = "AD40";
+
+            final Set<Attribute> attributes = new HashSet<Attribute>();
+
+            attributes.add(new Name(null));
+            attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
+
+            attributes.add(AttributeBuilder.buildEnabled(true));
+
+            if (conf.isSsl()) {
+                attributes.add(AttributeBuilder.buildPassword("Password123".toCharArray()));
+            }
+
+            attributes.add(AttributeBuilder.build("sAMAccountName", Collections.singletonList(sAMAccountName)));
+            attributes.add(AttributeBuilder.build("sn", Collections.singletonList("sntest")));
+            attributes.add(AttributeBuilder.build("givenName", Collections.singletonList("gntest")));
+            attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
+            attributes.add(AttributeBuilder.build("ldapGroups",
+                    "CN=test1grp,ou=test1," + BASE_CONTEXT,
+                    "CN=test2grp,ou=test2," + BASE_CONTEXT,
+                    "CN=groupsgrp,ou=groups,ou=test1," + BASE_CONTEXT,
+                    "CN=excludedgrp,ou=excludedgrps,ou=test1," + BASE_CONTEXT,
+                    "CN=usersgrp,ou=users,ou=test1," + BASE_CONTEXT));
+
+            final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, null);
+            assertNotNull(uid);
+            // -----------------------------------------------------
+
+            final ConnectorObject obj = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertEquals(1, obj.getAttributeByName(ADConnector.MEMBEROF).getValue().size(), 0);
+            assertEquals("cn=groupsgrp,ou=groups,ou=test1," + BASE_CONTEXT.toLowerCase(),
+                    obj.getAttributeByName(ADConnector.MEMBEROF).getValue().get(0).toString().toLowerCase());
+
+            assertEquals(1, obj.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().size(), 0);
+            assertEquals("cn=groupsgrp,ou=groups,ou=test1," + BASE_CONTEXT.toLowerCase(),
+                    obj.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().get(0).toString().toLowerCase());
+
+        } catch (NamingException e) {
+            LOG.error(e, "Error setting-up");
+            fail();
+        } finally {
+            try {
+                // clean all ....
+                newConnector.delete(ObjectClass.ACCOUNT, new Uid("SAAN_AD40"), null);
+                ctx.destroySubcontext("CN=usersgrp,ou=users,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("ou=users,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("CN=groupsgrp,ou=groups,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("ou=groups,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("CN=excludedgrp,ou=excludedgrps,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("ou=excludedgrps,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("CN=test1grp,ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("ou=test1," + BASE_CONTEXT);
+                ctx.destroySubcontext("CN=test2grp,ou=test2," + BASE_CONTEXT);
+                ctx.destroySubcontext("ou=test2," + BASE_CONTEXT);
+            } catch (NamingException e) {
+                LOG.error(e, "Error removing ad-hoc setup");
+                fail();
+            }
         }
     }
 }

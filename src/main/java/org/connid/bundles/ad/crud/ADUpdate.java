@@ -22,7 +22,6 @@ import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -165,8 +164,12 @@ public class ADUpdate extends LdapModifyOperation {
         final List<String> ldapGroups = getStringListValue(attrsToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
 
         if (ldapGroups != null) {
-            final Set<String> oldMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-            oldMemberships.addAll(groupHelper.getLdapGroups(entryDN));
+            // All current roles ....
+            final Set<String> currents = utils.getGroups(entryDN,
+                    ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+
+            // Current role into the managed group base contexts
+            final Set<String> oldMemberships = utils.getGroups(entryDN);
 
             String primaryGroup = null;
 
@@ -181,10 +184,9 @@ public class ADUpdate extends LdapModifyOperation {
                 pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
                 pgSID.addSubAuthority(pgID);
 
-                final Set<SearchResult> res = utils.basicLdapSearch(
-                        Arrays.asList(((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts()),
-                        String.format("(&(objectclass=group)(%s=%s))", OBJECTSID,
-                                Hex.getEscaped(pgSID.toByteArray())));
+                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
+                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
+                        ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
 
                 if (res == null || res.isEmpty()) {
                     LOG.warn("Error retrieving primary group for {0}", entryDN);
@@ -194,8 +196,15 @@ public class ADUpdate extends LdapModifyOperation {
                 }
             }
 
+            // Check if group already exists
             final Set<String> newMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-            newMemberships.addAll(ldapGroups);
+            for (String grp : ldapGroups) {
+                if (currents.contains(grp)) {
+                    oldMemberships.remove(grp);
+                } else {
+                    newMemberships.add(grp);
+                }
+            }
 
             if (StringUtil.isNotBlank(primaryGroup)) {
                 newMemberships.remove(primaryGroup);
@@ -204,22 +213,12 @@ public class ADUpdate extends LdapModifyOperation {
             // Update the LDAP groups.
             final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();
 
-            if (!newMemberships.equals(oldMemberships)) {
-                final Set<String> toBeRemoved = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-                toBeRemoved.addAll(oldMemberships);
-                toBeRemoved.removeAll(newMemberships);
+            for (String membership : oldMemberships) {
+                ldapGroupMod.remove(new GroupMembership(entryDN, membership));
+            }
 
-                for (String membership : toBeRemoved) {
-                    ldapGroupMod.remove(new GroupMembership(entryDN, membership));
-                }
-
-                final Set<String> toBeAdded = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-                toBeAdded.addAll(newMemberships);
-                toBeAdded.removeAll(oldMemberships);
-
-                for (String membership : toBeAdded) {
-                    ldapGroupMod.add(new GroupMembership(entryDN, membership));
-                }
+            for (String membership : newMemberships) {
+                ldapGroupMod.add(new GroupMembership(entryDN, membership));
             }
 
             groupHelper.modifyLdapGroupMemberships(ldapGroupMod);

@@ -20,6 +20,11 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
+import javax.naming.NamingException;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.DirContext;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
@@ -115,13 +120,13 @@ public abstract class AbstractTest {
     }
 
     protected static void baseSetup(final TestUtil util) {
-        final Set<Attribute> uMemberOfAll =
-                util.getSimpleUserProfile(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT), conf, true);
+        final Set<Attribute> uMemberOfAll = util.getSimpleUserProfile(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT),
+                conf, true);
         final Uid user = connector.create(ObjectClass.ACCOUNT, uMemberOfAll, null);
         assertNotNull(user);
 
-        final Set<Attribute> gMemberInFilter =
-                util.getSimpleGroupProfile(util.getEntryIDs("InFilter", ObjectClass.GROUP), true);
+        final Set<Attribute> gMemberInFilter = util.getSimpleGroupProfile(util.
+                getEntryIDs("InFilter", ObjectClass.GROUP), true);
 
         // remove members
         Attribute attr = AttributeUtil.find("member", gMemberInFilter);
@@ -151,5 +156,21 @@ public abstract class AbstractTest {
         uid = new Uid(util.getEntryIDs("InFilter", ObjectClass.GROUP).getValue());
         connector.delete(ObjectClass.GROUP, uid, null);
         assertNull(connector.getObject(ObjectClass.GROUP, uid, null));
+    }
+
+    protected void createGrp(final DirContext ctx, final String name) throws NamingException {
+        createGrp(ctx, name, null);
+    }
+
+    protected void createGrp(final DirContext ctx, final String name, final String baseContext) throws NamingException {
+        final BasicAttributes attrs = new BasicAttributes(true);
+        attrs.put(new BasicAttribute("cn", name));
+        attrs.put(new BasicAttribute("sAMAccountName", name));
+        attrs.put(new BasicAttribute("objectClass", "top"));
+        attrs.put(new BasicAttribute("objectClass", "group"));
+
+        ctx.createSubcontext(
+                String.format("CN=%s%s", name, StringUtil.isNotBlank(baseContext) ? "," + baseContext : ""),
+                attrs);
     }
 }

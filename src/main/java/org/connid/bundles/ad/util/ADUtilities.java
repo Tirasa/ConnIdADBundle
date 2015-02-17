@@ -22,6 +22,7 @@ import static org.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static org.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static org.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static org.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 
@@ -212,9 +213,7 @@ public class ADUtilities {
             Attribute attribute = null;
 
             if (LdapConstants.isLdapGroups(attributeName) || attributeName.equals(ADConnector.MEMBEROF)) {
-                final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-                ldapGroups.addAll(groupHelper.getLdapGroups(entry.getDN().toString()));
-
+                final Set<String> ldapGroups = getGroups(entry.getDN().toString());
                 final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
                 final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
 
@@ -225,10 +224,10 @@ public class ADUtilities {
                     pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
                     pgSID.addSubAuthority(pgID);
 
-                    final Set<SearchResult> res = basicLdapSearch(
-                            Arrays.asList(((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts()),
-                            String.format("(&(objectclass=group)(%s=%s))", OBJECTSID,
-                                    Hex.getEscaped(pgSID.toByteArray())));
+                    final Set<SearchResult> res = basicLdapSearch(String.format(
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
+                            ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
+
                     if (res == null || res.isEmpty()) {
                         LOG.warn("Error retrieving primary group for {0}", entry.getDN());
                     } else {
@@ -336,7 +335,9 @@ public class ADUtilities {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
         } catch (InvalidNameException ex) {
-            LOG.warn(ex, "Invalid DN {0}", dn);
+            if (LOG.isOk()) {
+                LOG.ok(ex, "Invalid DN {0}", dn);
+            }
             return false;
         }
     }
@@ -415,7 +416,7 @@ public class ADUtilities {
         return new BasicAttribute(SDDL_ATTR, SDDLHelper.userCannotChangePassword(new SDDL(obj), cannot).toByteArray());
     }
 
-    public Set<SearchResult> basicLdapSearch(final Collection<String> baseContextDNs, final String filter) {
+    public Set<SearchResult> basicLdapSearch(final String filter, final String... baseContextDNs) {
 
         final LdapContext ctx = connection.getInitialContext();
 
@@ -423,10 +424,8 @@ public class ADUtilities {
         // Create basicLdapSearch control
         // -----------------------------------
         final SearchControls searchCtls = LdapInternalSearch.createDefaultSearchControls();
-
         searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
-        searchCtls.setReturningAttributes(null);
+        searchCtls.setReturningAttributes(new String[0]);
         // -----------------------------------
 
         final Set<SearchResult> result = new HashSet<SearchResult>();
@@ -450,5 +449,40 @@ public class ADUtilities {
         }
 
         return result;
+    }
+
+    public Set<String> getGroups(final String entryDN) {
+        return getGroups(entryDN, ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
+    }
+
+    public Set<String> getGroups(final String entryDN, final String... baseContexts) {
+        final String member = ((ADConfiguration) connection.getConfiguration()).
+                getGroupMemberReferenceAttribute();
+
+        final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (SearchResult res : basicLdapSearch(filterInOr(member, entryDN), baseContexts)) {
+            ldapGroups.add(res.getNameInNamespace());
+        }
+
+        return ldapGroups;
+    }
+
+    private String filterInOr(final String attr, final String... values) {
+        final StringBuilder builder = new StringBuilder();
+        boolean multi = values != null && values.length > 1;
+        if (multi) {
+            builder.append("(|");
+        }
+        for (String memberValue : values) {
+            builder.append('(');
+            builder.append(attr);
+            builder.append('=');
+            escapeAttrValue(memberValue, builder);
+            builder.append(')');
+        }
+        if (multi) {
+            builder.append(")");
+        }
+        return builder.toString();
     }
 }

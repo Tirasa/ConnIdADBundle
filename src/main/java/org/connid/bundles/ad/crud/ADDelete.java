@@ -15,8 +15,8 @@
  */
 package org.connid.bundles.ad.crud;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.naming.NamingException;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ldap.commons.LdapModifyOperation;
@@ -48,7 +48,8 @@ public class ADDelete extends LdapModifyOperation {
     public void delete() {
         final String entryDN = LdapSearches.getEntryDN(conn, oclass, uid);
 
-        final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entryDN));
+        final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        ldapGroups.addAll(groupHelper.getLdapGroups(entryDN));
 
         groupHelper.removeLdapGroupMemberships(entryDN, ldapGroups);
 
