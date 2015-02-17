@@ -17,8 +17,8 @@ package net.tirasa.connid.bundles.ad.crud;
 
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.naming.NamingException;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
@@ -51,7 +51,9 @@ public class ADDelete extends LdapModifyOperation {
             entryDN = LdapSearches.getEntryDN(conn, oclass, uid);
         }
 
-        final Set<String> ldapGroups = new HashSet<String>(groupHelper.getLdapGroups(entryDN));
+        final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        ldapGroups.addAll(groupHelper.getLdapGroups(entryDN));
+
         groupHelper.removeLdapGroupMemberships(entryDN, ldapGroups);
 
         try {

@@ -23,9 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
-import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
@@ -139,15 +137,8 @@ public class SyncGroupTest extends GroupTest {
             final ADConnection connection = new ADConnection(configuration);
             final LdapContext ctx = connection.getInitialContext();
 
-            final Attributes attrs = new BasicAttributes(true);
-            attrs.put(new BasicAttribute("cn", "GroupTestFor11"));
-            attrs.put(new BasicAttribute("sAMAccountName", "GroupTestFor11"));
-            attrs.put(new BasicAttribute("objectClass", "top"));
-            attrs.put(new BasicAttribute("objectClass", "group"));
-
             try {
-
-                ctx.createSubcontext("CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0], attrs);
+                createGrp(ctx, "GroupTestFor11", "CN=Users," + configuration.getUserBaseContexts()[0]);
                 groupTestFor11 = new Uid("GroupTestFor11");
 
             } catch (NamingException e) {
