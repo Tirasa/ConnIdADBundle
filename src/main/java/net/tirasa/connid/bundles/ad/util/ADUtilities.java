@@ -1,31 +1,21 @@
 /**
  * Copyright (C) 2011 ConnId (connid-dev@googlegroups.com)
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package net.tirasa.connid.bundles.ad.util;
 
-import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
-import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
-import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
-import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
-import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
-import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
-import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
-import static org.identityconnectors.common.CollectionUtil.newSet;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -48,18 +38,28 @@ import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
+import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
+import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
+import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
+import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
+import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
+import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchemaMapping;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
+import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
+import static org.identityconnectors.common.CollectionUtil.newSet;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -78,9 +78,7 @@ import org.identityconnectors.framework.common.objects.Uid;
 public class ADUtilities {
 
     private final static Log LOG = Log.getLog(ADUtilities.class);
-
     private final ADConnection connection;
-
     private final GroupHelper groupHelper;
 
     public ADUtilities(final ADConnection connection) {
@@ -157,9 +155,15 @@ public class ADUtilities {
 
         final ObjectClassInfo oci = conn.getSchemaMapping().schema().findObjectClassInfo(oclass.getObjectClassValue());
 
+        // some attribs must be removed - ADDS 2012
+        final ArrayList<String> removedAttrs = new ArrayList<String>();
+        removedAttrs.add("msds-memberOfTransitive");
+        removedAttrs.add("msDS-parentdistname");
+        removedAttrs.add("msds-memberTransitive");
+
         if (oci != null) {
             for (AttributeInfo info : oci.getAttributeInfo()) {
-                if (info.isReturnedByDefault()) {
+                if (info.isReturnedByDefault() && !removedAttrs.contains(info.getName())) {
                     result.add(info.getName());
                 }
             }
@@ -227,18 +231,21 @@ public class ADUtilities {
                         && objectSID != null && objectSID.get() != null) {
                     final byte[] pgID = NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString()));
                     final SID pgSID = SID.parse((byte[]) objectSID.get());
-                    pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
-                    pgSID.addSubAuthority(pgID);
+                    final SID groupSID = SID.newInstance(pgSID.getIdentifierAuthority());
+                    for (int i = 0; i < pgSID.getSubAuthorityCount() - 1; i++) {
+                        groupSID.addSubAuthority(pgSID.getSubAuthorities().get(i));
+                    }
+                    groupSID.addSubAuthority(pgID);
 
                     final Set<SearchResult> res = basicLdapSearch(String.format(
-                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
                             ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
 
                     if (res == null || res.isEmpty()) {
                         LOG.warn("Error retrieving primary group for {0}", entry.getDN());
                     } else {
                         final String pgDN = res.iterator().next().getNameInNamespace();
-                        LOG.info("Found primary group {0}", pgDN);
+                        // LOG.info("Found primary group {0}", pgDN);
                         ldapGroups.add(pgDN);
                     }
                 }
@@ -257,7 +264,7 @@ public class ADUtilities {
 
                     final String status = profile.get(UACCONTROL_ATTR) == null
                             || profile.get(UACCONTROL_ATTR).get() == null
-                                    ? null : profile.get(UACCONTROL_ATTR).get().toString();
+                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
                         LOG.ok("User Account Control: {0}", status);
@@ -266,10 +273,10 @@ public class ADUtilities {
                     // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
                     builder.addAttribute(
                             status == null || Integer.parseInt(
-                                    profile.get(UACCONTROL_ATTR).get().toString())
+                            profile.get(UACCONTROL_ATTR).get().toString())
                             % 16 != UF_ACCOUNTDISABLE
-                                    ? AttributeBuilder.buildEnabled(true)
-                                    : AttributeBuilder.buildEnabled(false));
+                            ? AttributeBuilder.buildEnabled(true)
+                            : AttributeBuilder.buildEnabled(false));
 
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 } catch (NamingException e) {
@@ -301,8 +308,9 @@ public class ADUtilities {
     }
 
     /**
-     * Create a DN string starting from a set attributes and a default people container. This method has to be used if
-     * __NAME__ attribute is not provided or it it is not a DN.
+     * Create a DN string starting from a set attributes and a default people
+     * container. This method has to be used if __NAME__ attribute is not
+     * provided or it it is not a DN.
      *
      * @param oclass object class.
      * @param nameAttr naming attribute.
@@ -327,8 +335,8 @@ public class ADUtilities {
 
         return "cn=" + cn + ","
                 + (oclass.is(ObjectClass.ACCOUNT_NAME)
-                        ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
-                        : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
+                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
+                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
 
     /**
@@ -337,7 +345,7 @@ public class ADUtilities {
      * @param dn string to be checked.
      * @return TRUE if the value provided is a DN; FALSE otherwise.
      */
-    public final static boolean isDN(final String dn) {
+    public static boolean isDN(final String dn) {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
         } catch (InvalidNameException ex) {
