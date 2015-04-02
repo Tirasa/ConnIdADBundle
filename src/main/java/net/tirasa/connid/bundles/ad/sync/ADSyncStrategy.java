@@ -1,17 +1,17 @@
 /**
  * Copyright (C) 2011 ConnId (connid-dev@googlegroups.com)
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package net.tirasa.connid.bundles.ad.sync;
 
@@ -53,16 +53,14 @@ import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 
 /**
- * An implementation of the sync operation based on the DirSync protocol, for Active Directory.
+ * An implementation of the sync operation based on the DirSync protocol, for
+ * Active Directory.
  */
 public class ADSyncStrategy {
 
     private static final Log LOG = Log.getLog(ADSyncStrategy.class);
-
     private final transient ADConnection conn;
-
     private transient SyncToken latestSyncToken;
-
     private final ADUtilities utils;
 
     public ADSyncStrategy(final ADConnection conn) {
@@ -151,7 +149,7 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with empty token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[] { new DirSyncControl() });
+                ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
 
                 if (((ADConfiguration) conn.getConfiguration()).isStartSyncFromToday()) {
                     search(ctx, "(cn=__CONNID-NORES__)", searchCtls, true);
@@ -163,7 +161,7 @@ public class ADSyncStrategy {
                     LOG.ok("Synchronization with token.");
                 }
 
-                ctx = conn.getSyncContext(new Control[] { new DirSyncControl((byte[]) token.getValue()) });
+                ctx = conn.getSyncContext(new Control[]{new DirSyncControl((byte[]) token.getValue())});
             }
         } catch (Exception e) {
             throw new ConnectorException("Could not set DirSync request controls", e);
@@ -225,7 +223,7 @@ public class ADSyncStrategy {
         final String filter = "(CN=__CONNID-NORES__)";
 
         try {
-            final LdapContext ctx = conn.getSyncContext(new Control[] { new DirSyncControl() });
+            final LdapContext ctx = conn.getSyncContext(new Control[]{new DirSyncControl()});
             ctx.search(baseContextDn, filter, searchCtls);
 
             final Control[] rspCtls = ctx.getResponseControls();
@@ -262,12 +260,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-//        try {
-            ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
-//        } catch (IOException e) {
-//            LOG.error(e, "Error initializing context request controls");
-//            throw new ConnectorException(e);
-//        }
+        ctx.setRequestControls(new Control[]{new DeletedControl(), new SDFlagsControl(0x00000004)});
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = result.getAttributes();
@@ -385,9 +378,7 @@ public class ADSyncStrategy {
                         attrsToGet);
             }
         } else {
-//            if (LOG.isInfo()) {
-                LOG.warn("Invalid object type {0}", objectClasses);
-//            }
+            LOG.warn("Invalid object type {0}", objectClasses);
         }
     }
 
@@ -403,7 +394,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        ctx.setRequestControls(new Control[] { new DeletedControl() });
+        ctx.setRequestControls(new Control[]{new DeletedControl()});
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = sr.getAttributes();
@@ -423,7 +414,7 @@ public class ADSyncStrategy {
             isDeleted = attributeIsDeleted != null
                     && attributeIsDeleted.get() != null
                     && Boolean.parseBoolean(
-                            attributeIsDeleted.get().toString());
+                    attributeIsDeleted.get().toString());
 
         } catch (NoSuchElementException e) {
             if (LOG.isOk()) {
@@ -507,9 +498,7 @@ public class ADSyncStrategy {
                 }
             }
         } else {
-//            if (LOG.isInfo()) {
-                LOG.warn("Invalid object type {0}", objectClasses);
-//            }
+            LOG.warn("Invalid object type {0}", objectClasses);
         }
     }
 
@@ -586,7 +575,7 @@ public class ADSyncStrategy {
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME) && !objectClasses.contains("user")
                 || oclass.is(ObjectClass.GROUP_NAME) && !objectClasses.contains("group")) {
-            // LOG.warn("Invalid type: skip object {0}", dn);
+            LOG.warn("Invalid type: skip object {0}", dn);
             return;
         }
 

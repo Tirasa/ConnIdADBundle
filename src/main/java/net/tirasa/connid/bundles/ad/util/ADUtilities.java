@@ -15,6 +15,17 @@
  */
 package net.tirasa.connid.bundles.ad.util;
 
+import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
+import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
+import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
+import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
+import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
+import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
+import static org.identityconnectors.common.CollectionUtil.newSet;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,28 +49,18 @@ import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
-import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
-import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
-import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
-import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
-import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
-import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchemaMapping;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
-import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
-import static org.identityconnectors.common.CollectionUtil.newSet;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -78,7 +79,9 @@ import org.identityconnectors.framework.common.objects.Uid;
 public class ADUtilities {
 
     private final static Log LOG = Log.getLog(ADUtilities.class);
+    
     private final ADConnection connection;
+    
     private final GroupHelper groupHelper;
 
     public ADUtilities(final ADConnection connection) {
@@ -245,7 +248,7 @@ public class ADUtilities {
                         LOG.warn("Error retrieving primary group for {0}", entry.getDN());
                     } else {
                         final String pgDN = res.iterator().next().getNameInNamespace();
-                        // LOG.info("Found primary group {0}", pgDN);
+                        LOG.info("Found primary group {0}", pgDN);
                         ldapGroups.add(pgDN);
                     }
                 }
@@ -264,7 +267,7 @@ public class ADUtilities {
 
                     final String status = profile.get(UACCONTROL_ATTR) == null
                             || profile.get(UACCONTROL_ATTR).get() == null
-                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
+                                    ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
                         LOG.ok("User Account Control: {0}", status);
@@ -273,10 +276,10 @@ public class ADUtilities {
                     // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
                     builder.addAttribute(
                             status == null || Integer.parseInt(
-                            profile.get(UACCONTROL_ATTR).get().toString())
+                                    profile.get(UACCONTROL_ATTR).get().toString())
                             % 16 != UF_ACCOUNTDISABLE
-                            ? AttributeBuilder.buildEnabled(true)
-                            : AttributeBuilder.buildEnabled(false));
+                                    ? AttributeBuilder.buildEnabled(true)
+                                    : AttributeBuilder.buildEnabled(false));
 
                     attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
                 } catch (NamingException e) {
@@ -335,8 +338,8 @@ public class ADUtilities {
 
         return "cn=" + cn + ","
                 + (oclass.is(ObjectClass.ACCOUNT_NAME)
-                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
-                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
+                        ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
+                        : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
 
     /**

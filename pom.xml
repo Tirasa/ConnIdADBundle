@@ -75,9 +75,9 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.4.0.0</connid.version>
-    <connid.ldap.version>1.4.0</connid.ldap.version>
-    <adsddl.verson>1.2</adsddl.verson>
+    <connid.version>1.4.2.0-SNAPSHOT</connid.version>
+    <connid.ldap.version>1.4.1-SNAPSHOT</connid.ldap.version>
+    <adsddl.verson>1.3-SNAPSHOT</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -86,13 +86,13 @@
     <dependency>
       <groupId>net.tirasa.connid</groupId>
       <artifactId>connector-framework</artifactId>
-      <version>1.4.2.0-SNAPSHOT</version>
+      <version>${connid.version}</version>
     </dependency>
 
     <dependency>
       <groupId>net.tirasa.connid</groupId>
       <artifactId>connector-framework-internal</artifactId>
-      <version>1.4.2.0-SNAPSHOT</version>
+      <version>${connid.version}</version>
     </dependency>
         
     <dependency>
@@ -117,12 +117,7 @@
     <dependency>
       <groupId>net.tirasa</groupId>
       <artifactId>adsddl</artifactId>
-      <version>1.3-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>net.tirasa.connid.bundles.ldap</artifactId>
-      <version>1.4.1-SNAPSHOT</version>
+      <version>${adsddl.verson}</version>
     </dependency>
   </dependencies>
 
