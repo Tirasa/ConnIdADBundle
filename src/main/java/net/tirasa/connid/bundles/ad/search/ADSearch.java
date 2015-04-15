@@ -1,17 +1,17 @@
 /**
  * Copyright (C) 2011 ConnId (connid-dev@googlegroups.com)
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package net.tirasa.connid.bundles.ad.search;
 
@@ -19,6 +19,7 @@ import static java.util.Collections.singletonList;
 import static org.identityconnectors.common.StringUtil.isBlank;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -49,19 +50,12 @@ import org.identityconnectors.framework.common.objects.ResultsHandler;
 public class ADSearch {
 
     private final LdapConnection conn;
-
     private final ObjectClass oclass;
-
     private final LdapFilter filter;
-
     private final OperationOptions options;
-
     private final String[] baseDNs;
-
     private final ADUtilities utils;
-
     private static final Log LOG = Log.getLog(ADSearch.class);
-
     private final static Pattern oguidp = Pattern.compile(
             "objectGUID=([a-z0-9]{8,8}+-[a-z0-9]{4,4}+-[a-z0-9]{4,4}+-[a-z0-9]{4,4}+-[a-z0-9]{12,12}+)");
 
@@ -99,7 +93,6 @@ public class ADSearch {
         final LdapInternalSearch search = getInternalSearch(attrsToGet);
 
         search.execute(new SearchResultsHandler() {
-
             @Override
             public boolean handle(final String baseDN, final SearchResult result)
                     throws NamingException {
@@ -125,7 +118,7 @@ public class ADSearch {
         // matching the native filter.
 
         LdapSearchStrategy strategy;
-        List<String> dns;
+        List<String> dns = new ArrayList();
         int searchScope;
 
         final String filterEntryDN = filter != null ? filter.getEntryDN() : null;
@@ -135,7 +128,13 @@ public class ADSearch {
             // outside the base contexts, so not checking in order to be on the
             // safe side.
             strategy = new ADDefaultSearchStrategy(true);
-            dns = singletonList(filterEntryDN);
+            for (String dn : getBaseDNs()) {
+                if (filterEntryDN.contains("=")) {
+                    dns.add(filterEntryDN + "," + dn);
+                } else {
+                    dns.add("CN=" + filterEntryDN + "," + dn);
+                }
+            }
             searchScope = SearchControls.OBJECT_SCOPE;
         } else {
             strategy = getSearchStrategy();
@@ -210,10 +209,10 @@ public class ADSearch {
         final String toBeFound = ADConnector.OBJECTGUID.toLowerCase();
 
         final StringBuilder bld = new StringBuilder();
-        
+
         int from = 0;
         int to = 0;
-        
+
         do {
             from = resToLowerCase.indexOf(toBeFound, to);
             if (from >= 0) {
@@ -221,7 +220,7 @@ public class ADSearch {
                 bld.append(res.substring(to, from));
                 to += from + 36;
                 bld.append(Hex.getEscaped(GUID.getGuidAsByteArray(res.substring(from, to))));
-            }else{
+            } else {
                 bld.append(res.substring(to, res.length()));
             }
         } while (from >= 0 && to < res.length());
