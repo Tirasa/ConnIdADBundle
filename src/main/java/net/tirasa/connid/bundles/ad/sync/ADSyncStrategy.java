@@ -18,7 +18,6 @@ package net.tirasa.connid.bundles.ad.sync;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
@@ -262,12 +261,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        try {
-            ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
-        } catch (IOException e) {
-            LOG.error(e, "Error initializing context request controls");
-            throw new ConnectorException(e);
-        }
+        ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = result.getAttributes();
@@ -385,9 +379,7 @@ public class ADSyncStrategy {
                         attrsToGet);
             }
         } else {
-            if (LOG.isInfo()) {
-                LOG.info("Invalid object type {0}", objectClasses);
-            }
+            LOG.warn("Invalid object type {0}", objectClasses);
         }
     }
 
@@ -507,9 +499,7 @@ public class ADSyncStrategy {
                 }
             }
         } else {
-            if (LOG.isInfo()) {
-                LOG.info("Invalid object type {0}", objectClasses);
-            }
+            LOG.warn("Invalid object type {0}", objectClasses);
         }
     }
 
@@ -586,7 +576,7 @@ public class ADSyncStrategy {
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME) && !objectClasses.contains("user")
                 || oclass.is(ObjectClass.GROUP_NAME) && !objectClasses.contains("group")) {
-            LOG.info("Invalid type: skip object {0}", dn);
+            LOG.warn("Invalid type: skip object {0}", dn);
             return;
         }
 

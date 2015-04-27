@@ -21,6 +21,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static net.tirasa.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
@@ -182,15 +183,13 @@ public class ADUpdate extends LdapModifyOperation {
 
             final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
             if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
-                final byte[] pgID = NumberFacility.getUIntBytes(
-                        Long.parseLong(primaryGroupID.getValue().get(0).toString()));
 
-                final SID pgSID = SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0));
-                pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
-                pgSID.addSubAuthority(pgID);
+                final SID groupSID = getPrimaryGroupSID(
+                        SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0)),
+                        NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.getValue().get(0).toString())));
 
                 final Set<SearchResult> res = utils.basicLdapSearch(String.format(
-                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
+                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
                         ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
 
                 if (res == null || res.isEmpty()) {

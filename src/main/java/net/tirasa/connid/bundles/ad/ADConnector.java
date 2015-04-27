@@ -18,6 +18,7 @@ package net.tirasa.connid.bundles.ad;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import net.tirasa.connid.bundles.ad.authentication.ADAuthenticate;
 import net.tirasa.connid.bundles.ad.crud.ADCreate;
@@ -65,6 +66,10 @@ public class ADConnector extends LdapConnector {
     public static final String UACCONTROL_ATTR = "userAccountControl";
 
     public static final String SDDL_ATTR = "ntSecurityDescriptor";
+
+    // These attributes have to be removed for ADDS 2012
+    public final static List<String> ADDS2012_ATTRIBUTES_TO_BE_REMOVED = Arrays.asList(
+            "msds-memberOfTransitive", "msDS-parentdistname", "msds-memberTransitive");
 
     //some useful constants from lmaccess.h
     public static final int UF_ACCOUNTDISABLE = 0x0002;

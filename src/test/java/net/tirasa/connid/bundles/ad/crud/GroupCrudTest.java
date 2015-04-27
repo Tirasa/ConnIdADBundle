@@ -28,6 +28,7 @@ import java.util.Set;
 import net.tirasa.adsddl.ntsd.SID;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.GroupTest;
+import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
@@ -558,11 +559,11 @@ public class GroupCrudTest extends GroupTest {
             primaryGID = String.class.cast(user.getAttributeByName("primaryGroupID").getValue().get(0));
             assertNotNull(primaryGID);
 
-            usid.getSubAuthorities().remove(usid.getSubAuthorityCount() - 1);
-            usid.addSubAuthority(NumberFacility.getUIntBytes(Integer.parseInt(primaryGID)));
+            final SID groupSID = ADUtilities.getPrimaryGroupSID(usid,
+                    NumberFacility.getUIntBytes(Integer.parseInt(primaryGID)));
 
             connector.search(ObjectClass.GROUP,
-                    FilterBuilder.equalTo(AttributeBuilder.build("objectSID", usid.toByteArray())),
+                    FilterBuilder.equalTo(AttributeBuilder.build("objectSID", groupSID.toByteArray())),
                     handler,
                     oob.build());
             assertEquals(group.getName(), results.get(0).getName());

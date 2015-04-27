@@ -19,13 +19,17 @@ import static java.util.Collections.singletonList;
 import static org.identityconnectors.common.StringUtil.isBlank;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapName;
 import javax.naming.ldap.PagedResultsControl;
 import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.adsddl.ntsd.utils.Hex;
@@ -128,14 +132,21 @@ public class ADSearch {
         List<String> dns;
         int searchScope;
 
-        final String filterEntryDN = filter != null ? filter.getEntryDN() : null;
+        final String filterEntryDN = filter == null ? null : filter.getEntryDN();
         if (filterEntryDN != null) {
             // Would be good to check that filterEntryDN is under the configured 
             // base contexts. However, the adapter is likely to pass entries
             // outside the base contexts, so not checking in order to be on the
             // safe side.
             strategy = new ADDefaultSearchStrategy(true);
-            dns = singletonList(filterEntryDN);
+
+            try {
+                dns = buildBaseContextFilter(filterEntryDN);
+            } catch (InvalidNameException e) {
+                LOG.error(e, "Error building entry DN filter starting from '{0}'", filterEntryDN);
+                dns = getBaseDNs();
+            }
+
             searchScope = SearchControls.OBJECT_SCOPE;
         } else {
             strategy = getSearchStrategy();
@@ -185,6 +196,37 @@ public class ADSearch {
                 controls);
     }
 
+    /**
+     * Accept DNs filter provided by CN only or prefix only or full DN.
+     *
+     * @param filterEntryDN provided entry DN filter.
+     * @return base context filter.
+     */
+    private List<String> buildBaseContextFilter(final String filterEntryDN) throws InvalidNameException {
+        final List<String> res = new ArrayList<String>();
+
+        LdapName prefix = null;
+
+        try {
+            prefix = new LdapName(filterEntryDN);
+        } catch (InvalidNameException ine) {
+            LOG.info(ine, "'{0}' is not am entry DN. Let's try derive it", filterEntryDN);
+            prefix = new LdapName(String.format("CN=%s", filterEntryDN));
+        }
+
+        for (String dn : getBaseDNs()) {
+            final LdapName suffix = new LdapName(dn);
+
+            if (prefix.startsWith(suffix)) {
+                return Collections.singletonList(prefix.toString());
+            }
+
+            res.add(suffix.addAll(prefix).toString());
+        }
+
+        return res;
+    }
+
     private String getSearchFilter(final String... optionalFilters) {
         final StringBuilder builder = new StringBuilder();
         final String ocFilter = getObjectClassFilter();
@@ -210,10 +252,10 @@ public class ADSearch {
         final String toBeFound = ADConnector.OBJECTGUID.toLowerCase();
 
         final StringBuilder bld = new StringBuilder();
-        
+
         int from = 0;
         int to = 0;
-        
+
         do {
             from = resToLowerCase.indexOf(toBeFound, to);
             if (from >= 0) {
@@ -221,7 +263,7 @@ public class ADSearch {
                 bld.append(res.substring(to, from));
                 to += from + 36;
                 bld.append(Hex.getEscaped(GUID.getGuidAsByteArray(res.substring(from, to))));
-            }else{
+            } else {
                 bld.append(res.substring(to, res.length()));
             }
         } while (from >= 0 && to < res.length());

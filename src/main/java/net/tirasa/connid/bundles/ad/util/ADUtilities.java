@@ -22,6 +22,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static net.tirasa.connid.bundles.ad.ADConnector.ADDS2012_ATTRIBUTES_TO_BE_REMOVED;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
@@ -86,6 +87,23 @@ public class ADUtilities {
     public ADUtilities(final ADConnection connection) {
         this.connection = connection;
         groupHelper = new GroupHelper(connection);
+    }
+
+    public static SID getPrimaryGroupSID(final SID sid, final byte[] pgID) {
+        final SID pgSID = SID.newInstance(sid.getIdentifierAuthority());
+        pgSID.setRevision(sid.getRevision());
+
+        final List<byte[]> subAuthorities = sid.getSubAuthorities();
+
+        if (subAuthorities != null && !subAuthorities.isEmpty()) {
+            for (int i = 0; i < subAuthorities.size() - 1; i++) {
+                pgSID.addSubAuthority(subAuthorities.get(i));
+            }
+        }
+
+        pgSID.addSubAuthority(pgID);
+
+        return pgSID;
     }
 
     public Set<String> getAttributesToGet(final String[] attributesToGet, final ObjectClass oclass) {
@@ -159,7 +177,7 @@ public class ADUtilities {
 
         if (oci != null) {
             for (AttributeInfo info : oci.getAttributeInfo()) {
-                if (info.isReturnedByDefault()) {
+                if (info.isReturnedByDefault() && !ADDS2012_ATTRIBUTES_TO_BE_REMOVED.contains(info.getName())) {
                     result.add(info.getName());
                 }
             }
@@ -225,13 +243,12 @@ public class ADUtilities {
 
                 if (primaryGroupID != null && primaryGroupID.get() != null
                         && objectSID != null && objectSID.get() != null) {
-                    final byte[] pgID = NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString()));
-                    final SID pgSID = SID.parse((byte[]) objectSID.get());
-                    pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
-                    pgSID.addSubAuthority(pgID);
+
+                    final SID groupSID = getPrimaryGroupSID(SID.parse((byte[]) objectSID.get()),
+                            NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString())));
 
                     final Set<SearchResult> res = basicLdapSearch(String.format(
-                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
                             ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
 
                     if (res == null || res.isEmpty()) {
@@ -337,7 +354,7 @@ public class ADUtilities {
      * @param dn string to be checked.
      * @return TRUE if the value provided is a DN; FALSE otherwise.
      */
-    public final static boolean isDN(final String dn) {
+    public static boolean isDN(final String dn) {
         try {
             return StringUtil.isNotBlank(dn) && new LdapName(dn) != null;
         } catch (InvalidNameException ex) {
