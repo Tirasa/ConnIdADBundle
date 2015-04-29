@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,8 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
+import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static org.junit.Assert.*;
 
 import java.util.AbstractMap;
@@ -544,7 +546,7 @@ public class GroupCrudTest extends GroupTest {
             // Update PrimaryGroupID
             // -------------------------------------------------
             List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-                AttributeBuilder.build("primaryGroupID", String.valueOf(NumberFacility.getUInt(groupID))) });
+                AttributeBuilder.build(PRIMARYGROUPID, String.valueOf(NumberFacility.getUInt(groupID))) });
 
             uuid = connector.update(
                     ObjectClass.ACCOUNT,
@@ -553,17 +555,17 @@ public class GroupCrudTest extends GroupTest {
                     null);
 
             user = connector.getObject(ObjectClass.ACCOUNT, uuid, oob.build());
-            usid = SID.parse((byte[]) user.getAttributeByName("objectSID").getValue().get(0));
+            usid = SID.parse((byte[]) user.getAttributeByName(OBJECTSID).getValue().get(0));
             assertNotNull(usid);
 
-            primaryGID = String.class.cast(user.getAttributeByName("primaryGroupID").getValue().get(0));
+            primaryGID = String.class.cast(user.getAttributeByName(PRIMARYGROUPID).getValue().get(0));
             assertNotNull(primaryGID);
 
             final SID groupSID = ADUtilities.getPrimaryGroupSID(usid,
                     NumberFacility.getUIntBytes(Integer.parseInt(primaryGID)));
 
             connector.search(ObjectClass.GROUP,
-                    FilterBuilder.equalTo(AttributeBuilder.build("objectSID", groupSID.toByteArray())),
+                    FilterBuilder.equalTo(AttributeBuilder.build(OBJECTSID, groupSID.toByteArray())),
                     handler,
                     oob.build());
             assertEquals(group.getName(), results.get(0).getName());

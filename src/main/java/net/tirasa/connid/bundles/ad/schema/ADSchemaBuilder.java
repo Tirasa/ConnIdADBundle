@@ -128,6 +128,7 @@ class ADSchemaBuilder {
         schemaNames.remove(ADConnector.SDDL_ATTR);
         schemaNames.remove(ADConfiguration.LOCK_OUT_FLAG);
         schemaNames.remove(ADConfiguration.PROMPT_USER_FLAG);
+        schemaNames.remove(ADConfiguration.PRIMARY_GROUP_DN_NAME);
 
         final ObjectClassInfoBuilder objClassBld = new ObjectClassInfoBuilder();
 
@@ -139,6 +140,7 @@ class ADSchemaBuilder {
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.UCCP_FLAG, Boolean.class));
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.LOCK_OUT_FLAG, Boolean.class));
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PROMPT_USER_FLAG, Boolean.class));
+        objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, String.class));
 
         final ObjectClassInfo oci = objClassBld.build();
         schemaBld.defineObjectClass(oci);

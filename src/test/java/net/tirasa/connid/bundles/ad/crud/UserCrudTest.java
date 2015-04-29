@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -1272,6 +1272,135 @@ public class UserCrudTest extends UserTest {
             } catch (NamingException e) {
                 LOG.error(e, "Error removing ad-hoc setup");
                 fail();
+            }
+        }
+    }
+
+    @Test
+    public void workWithPrimaryGroupID() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final String baseContext = prop.getProperty("baseContext");
+
+        final String before = "testBeforeGroup43";
+        final String after = "testAfterGroup43";
+        final String rootSuffix = String.format("CN=Users,%s", baseContext);
+        final String beforeDN = String.format("CN=%s,%s", before, rootSuffix);
+        final String afterDN = String.format("CN=%s,%s", after, rootSuffix);
+
+        // create groups ....
+        final ADConnection connection = new ADConnection(conf);
+        final LdapContext ctx = connection.getInitialContext();
+
+        try {
+            createGrp(ctx, before, rootSuffix);
+            createGrp(ctx, after, rootSuffix);
+
+        } catch (Exception e) {
+            LOG.error(e, "Error creating groups ...");
+
+            try {
+                ctx.destroySubcontext(beforeDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(afterDN);
+            } catch (NamingException ignore) {
+            }
+
+            fail();
+        }
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("43");
+
+//        connector.delete(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null);
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
+
+        final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
+        attributes.remove(ldapGroups);
+
+        final List<String> groupsToBeAdded = new ArrayList<String>();
+
+        if (ldapGroups != null && ldapGroups.getValue() != null) {
+            for (Object obj : ldapGroups.getValue()) {
+                groupsToBeAdded.add(obj.toString());
+            }
+        }
+
+        groupsToBeAdded.add(beforeDN);
+        groupsToBeAdded.add(afterDN);
+
+        attributes.add(AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, groupsToBeAdded));
+
+        // specify primary group
+        attributes.add(AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, beforeDN));
+
+        Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        try {
+            // Ask for ldapGroups and primary group info
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet(
+                    LdapConstants.LDAP_GROUPS_NAME,
+                    ADConnector.PRIMARYGROUPID,
+                    ADConfiguration.PRIMARY_GROUP_DN_NAME);
+
+            // retrieve created object
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            // check for memberOf attribute
+            assertNotNull(object);
+            assertNotNull(object.getAttributes());
+
+            // Returned attributes: memberOf, NAME and UID
+            assertEquals(5, object.getAttributes().size());
+            assertNotNull(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(beforeDN));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(afterDN));
+
+            final Attribute primaryGroupId = object.getAttributeByName(ADConnector.PRIMARYGROUPID);
+
+            assertNotNull(primaryGroupId);
+            assertEquals(beforeDN, object.getAttributeByName(ADConfiguration.PRIMARY_GROUP_DN_NAME).getValue().get(0));
+
+            List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(
+                ADConfiguration.PRIMARY_GROUP_DN_NAME, afterDN) });
+
+            uid = connector.update(
+                    ObjectClass.ACCOUNT,
+                    uid,
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            assertNotNull(uid);
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(beforeDN));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(afterDN));
+
+            assertNotEquals(primaryGroupId, object.getAttributeByName(ADConnector.PRIMARYGROUPID));
+            assertEquals(afterDN, object.getAttributeByName(ADConfiguration.PRIMARY_GROUP_DN_NAME).getValue().get(0));
+        } finally {
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+            try {
+                ctx.destroySubcontext(beforeDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(afterDN);
+            } catch (NamingException ignore) {
             }
         }
     }

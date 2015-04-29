@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -164,91 +164,26 @@ public class ADUpdate extends LdapModifyOperation {
         }
         // ---------------------------------
 
-        // ---------------------------------
-        // Perform group memberships
-        // ---------------------------------
-        final List<String> ldapGroups = getStringListValue(attrsToBeUpdated, LdapConstants.LDAP_GROUPS_NAME);
-
-        if (ldapGroups != null) {
-            // All current roles ....
-            final Set<String> currents = utils.getGroups(entryDN,
-                    ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
-
-            // Current role into the managed group base contexts
-            final Set<String> oldMemberships = utils.getGroups(entryDN);
-
-            String primaryGroup = null;
-
-            final ConnectorObject profile = utils.getEntryToBeUpdated(uid, oclass);
-
-            final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
-            if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
-
-                final SID groupSID = getPrimaryGroupSID(
-                        SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0)),
-                        NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.getValue().get(0).toString())));
-
-                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
-                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
-                        ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
-
-                if (res == null || res.isEmpty()) {
-                    LOG.warn("Error retrieving primary group for {0}", entryDN);
-                } else {
-                    primaryGroup = res.iterator().next().getNameInNamespace();
-                    LOG.info("Found primary group {0}", primaryGroup);
-                }
-            }
-
-            // Check if group already exists
-            final Set<String> newMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-            for (String grp : ldapGroups) {
-                if (currents.contains(grp)) {
-                    oldMemberships.remove(grp);
-                } else {
-                    newMemberships.add(grp);
-                }
-            }
-
-            if (StringUtil.isNotBlank(primaryGroup)) {
-                newMemberships.remove(primaryGroup);
-            }
-
-            // Update the LDAP groups.
-            final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();
-
-            for (String membership : oldMemberships) {
-                ldapGroupMod.remove(new GroupMembership(entryDN, membership));
-            }
-
-            for (String membership : newMemberships) {
-                ldapGroupMod.add(new GroupMembership(entryDN, membership));
-            }
-
-            groupHelper.modifyLdapGroupMemberships(ldapGroupMod);
-        }
-        // ---------------------------------
+        modifyMemberships(entryDN, attrsToBeUpdated);
+        modifyPrimaryGroupID(entryDN, attrsToBeUpdated);
 
         return conn.getSchemaMapping().createUid(oclass, entryDN);
     }
 
-    public Uid addAttributeValues(Set<Attribute> attrs) {
+    public Uid addAttributeValues(final Set<Attribute> attrs) {
         final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
         final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
 
         modifyAttributes(entryDN, attrsToModify, DirContext.ADD_ATTRIBUTE);
-
-        List<String> ldapGroups = getStringListValue(attrs, LdapConstants.LDAP_GROUPS_NAME);
-        if (!isEmpty(ldapGroups)) {
-            groupHelper.addLdapGroupMemberships(entryDN, ldapGroups);
-        }
+        modifyMemberships(entryDN, attrs);
+        modifyPrimaryGroupID(entryDN, attrs);
 
         return uid;
     }
 
-    public Uid removeAttributeValues(Set<Attribute> attrs) {
+    public Uid removeAttributeValues(final Set<Attribute> attrs) {
         final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
@@ -268,6 +203,7 @@ public class ADUpdate extends LdapModifyOperation {
             final ConnectorObject obj, final Set<Attribute> attrs) {
 
         final BasicAttributes ldapAttrs = new BasicAttributes();
+
         ADGuardedPasswordAttribute pwdAttr = null;
 
         int uacValue = -1;
@@ -383,7 +319,11 @@ public class ADUpdate extends LdapModifyOperation {
         NamingEnumeration<? extends javax.naming.directory.Attribute> attrEnum = attrs.first.getAll();
 
         while (attrEnum.hasMoreElements()) {
-            modItems.add(new ModificationItem(modifyOp, attrEnum.nextElement()));
+            final javax.naming.directory.Attribute attr = attrEnum.nextElement();
+            if (!attr.getID().equalsIgnoreCase(LdapConstants.LDAP_GROUPS_NAME)
+                    && !attr.getID().equalsIgnoreCase(ADConfiguration.PRIMARY_GROUP_DN_NAME)) {
+                modItems.add(new ModificationItem(modifyOp, attr));
+            }
         }
 
         if (attrs.second != null) {
@@ -422,5 +362,98 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         return null;
+    }
+
+    /**
+     * Modify primaryGrupID.
+     *
+     * @param entryDN entry to be modified.
+     * @param attrs source attributes.
+     * @throws NamingException
+     */
+    private void modifyPrimaryGroupID(
+            final String entryDN,
+            final Set<org.identityconnectors.framework.common.objects.Attribute> attrs) {
+        final List<String> primaryGroupDN = getStringListValue(attrs, ADConfiguration.PRIMARY_GROUP_DN_NAME);
+
+        if (primaryGroupDN != null && !primaryGroupDN.isEmpty()) {
+            try {
+                conn.getInitialContext().modifyAttributes(entryDN, new ModificationItem[] {
+                    new ModificationItem(DirContext.REPLACE_ATTRIBUTE, utils.getGroupID(primaryGroupDN.get(0))) });
+            } catch (NamingException e) {
+                LOG.error(e, "Error setting primaryGroupID '{0}' for '{1}'", primaryGroupDN, entryDN);
+            }
+        }
+    }
+
+    /**
+     * Perform group membership.
+     *
+     * @param entryDN entry to be modified.
+     * @param attrs source attributes.
+     */
+    private void modifyMemberships(
+            final String entryDN,
+            final Set<org.identityconnectors.framework.common.objects.Attribute> attrs) {
+        final List<String> ldapGroups = getStringListValue(attrs, LdapConstants.LDAP_GROUPS_NAME);
+
+        if (ldapGroups != null) {
+            // All current roles ....
+            final Set<String> currents = utils.getGroups(entryDN,
+                    ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+
+            // Current role into the managed group base contexts
+            final Set<String> oldMemberships = utils.getGroups(entryDN);
+
+            String primaryGroup = null;
+
+            final ConnectorObject profile = utils.getEntryToBeUpdated(uid, oclass);
+
+            final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
+            if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
+
+                final SID groupSID = getPrimaryGroupSID(
+                        SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0)),
+                        NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.getValue().get(0).toString())));
+
+                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
+                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
+                        ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+
+                if (res == null || res.isEmpty()) {
+                    LOG.warn("Error retrieving primary group for {0}", entryDN);
+                } else {
+                    primaryGroup = res.iterator().next().getNameInNamespace();
+                    LOG.info("Found primary group {0}", primaryGroup);
+                }
+            }
+
+            // Check if group already exists
+            final Set<String> newMemberships = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+            for (String grp : ldapGroups) {
+                if (currents.contains(grp)) {
+                    oldMemberships.remove(grp);
+                } else {
+                    newMemberships.add(grp);
+                }
+            }
+
+            if (StringUtil.isNotBlank(primaryGroup)) {
+                newMemberships.remove(primaryGroup);
+            }
+
+            // Update the LDAP groups.
+            final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();
+
+            for (String membership : oldMemberships) {
+                ldapGroupMod.remove(new GroupMembership(entryDN, membership));
+            }
+
+            for (String membership : newMemberships) {
+                ldapGroupMod.add(new GroupMembership(entryDN, membership));
+            }
+
+            groupHelper.modifyLdapGroupMemberships(ldapGroupMod);
+        }
     }
 }
