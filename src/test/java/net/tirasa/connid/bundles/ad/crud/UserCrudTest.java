@@ -1404,4 +1404,156 @@ public class UserCrudTest extends UserTest {
             }
         }
     }
+
+    @Test
+    public void conservativeMembershipPolicy() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final ADConfiguration newconf = getSimpleConf(prop);
+        newconf.setMembershipConservativePolicy(true);
+
+        final String baseContext = prop.getProperty("baseContext");
+
+        final String first = "testFirstGroup44";
+        final String second = "testSecondGroup44";
+        final String third = "testThirdGroup44";
+        final String rootSuffix = String.format("CN=Users,%s", baseContext);
+        final String firstDN = String.format("CN=%s,%s", first, rootSuffix);
+        final String secondDN = String.format("CN=%s,%s", second, rootSuffix);
+        final String thirdDN = String.format("CN=%s,%s", third, rootSuffix);
+
+        // create groups ....
+        final ADConnection connection = new ADConnection(conf);
+        final LdapContext ctx = connection.getInitialContext();
+
+        try {
+            createGrp(ctx, first, rootSuffix);
+            createGrp(ctx, second, rootSuffix);
+            createGrp(ctx, third, rootSuffix);
+
+        } catch (Exception e) {
+            LOG.error(e, "Error creating groups ...");
+
+            try {
+                ctx.destroySubcontext(firstDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(secondDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(thirdDN);
+            } catch (NamingException ignore) {
+            }
+
+            fail();
+        }
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("44");
+
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
+
+        Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
+        attributes.remove(ldapGroups);
+
+        final List<String> groupsToBeAdded = new ArrayList<String>();
+
+        if (ldapGroups != null && ldapGroups.getValue() != null) {
+            for (Object obj : ldapGroups.getValue()) {
+                groupsToBeAdded.add(obj.toString());
+            }
+        }
+
+        groupsToBeAdded.add(firstDN);
+        groupsToBeAdded.add(secondDN);
+
+        attributes.add(AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, groupsToBeAdded));
+
+        // specify primary group
+        attributes.add(AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, firstDN));
+
+        Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        try {
+            // Ask for ldapGroups and primary group info
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet(
+                    LdapConstants.LDAP_GROUPS_NAME,
+                    ADConnector.PRIMARYGROUPID,
+                    ADConfiguration.PRIMARY_GROUP_DN_NAME);
+
+            // retrieve created object
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            // check for memberOf attribute
+            assertNotNull(object);
+            assertNotNull(object.getAttributes());
+
+            // Returned attributes: memberOf, NAME and UID
+            assertEquals(5, object.getAttributes().size());
+            assertNotNull(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(firstDN));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(secondDN));
+
+            final Attribute primaryGroupId = object.getAttributeByName(ADConnector.PRIMARYGROUPID);
+
+            assertNotNull(primaryGroupId);
+            assertEquals(firstDN, object.getAttributeByName(ADConfiguration.PRIMARY_GROUP_DN_NAME).getValue().get(0));
+
+            final List<Attribute> attrToReplace = new ArrayList<Attribute>();
+
+            final List<String> groupsToBeUpdated = new ArrayList<String>();
+
+            groupsToBeUpdated.add(secondDN);
+            groupsToBeUpdated.add(thirdDN);
+
+            attrToReplace.add(AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, secondDN));
+            attrToReplace.add(AttributeBuilder.build(LdapConstants.LDAP_GROUPS_NAME, groupsToBeUpdated));
+
+            uid = connector.update(
+                    ObjectClass.ACCOUNT,
+                    uid,
+                    new HashSet<Attribute>(attrToReplace),
+                    null);
+
+            assertNotNull(uid);
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(firstDN));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(secondDN));
+            assertTrue(object.getAttributeByName(LdapConstants.LDAP_GROUPS_NAME).getValue().contains(thirdDN));
+
+            assertNotEquals(primaryGroupId, object.getAttributeByName(ADConnector.PRIMARYGROUPID));
+            assertEquals(secondDN, object.getAttributeByName(ADConfiguration.PRIMARY_GROUP_DN_NAME).getValue().get(0));
+        } finally {
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+            try {
+                ctx.destroySubcontext(firstDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(secondDN);
+            } catch (NamingException ignore) {
+            }
+
+            try {
+                ctx.destroySubcontext(thirdDN);
+            } catch (NamingException ignore) {
+            }
+        }
+    }
 }

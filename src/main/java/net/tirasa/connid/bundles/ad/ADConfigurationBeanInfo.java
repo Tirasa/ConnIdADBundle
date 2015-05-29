@@ -80,6 +80,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // memberships
             props.add(new PropertyDescriptor("memberships", ADConfiguration.class));
 
+            // membershipConservativePolicy
+            props.add(new PropertyDescriptor("membershipConservativePolicy", ADConfiguration.class));
+
             // accountSearchFilter
             props.add(new PropertyDescriptor("accountSearchFilter", LdapConfiguration.class));
 

@@ -445,8 +445,10 @@ public class ADUpdate extends LdapModifyOperation {
             // Update the LDAP groups.
             final Modification<GroupMembership> ldapGroupMod = new Modification<GroupMembership>();
 
-            for (String membership : oldMemberships) {
-                ldapGroupMod.remove(new GroupMembership(entryDN, membership));
+            if (!ADConfiguration.class.cast(conn.getConfiguration()).isMembershipConservativePolicy()) {
+                for (String membership : oldMemberships) {
+                    ldapGroupMod.remove(new GroupMembership(entryDN, membership));
+                }
             }
 
             for (String membership : newMemberships) {

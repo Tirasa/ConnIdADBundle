@@ -57,6 +57,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private List<String> memberships;
 
+    private boolean membershipConservativePolicy;
+
     private boolean trustAllCerts;
 
     private boolean membershipsInOr = false;
@@ -354,6 +356,16 @@ public class ADConfiguration extends LdapConfiguration {
             helpMessageKey = "pwdUpdateOnly.help", required = true, order = 17)
     public void setPwdUpdateOnly(boolean pwdUpdateOnly) {
         this.pwdUpdateOnly = pwdUpdateOnly;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "membershipConservativePolicy.display",
+            helpMessageKey = "membershipConservativePolicy.help", order = 18)
+    public boolean isMembershipConservativePolicy() {
+        return membershipConservativePolicy;
+    }
+
+    public void setMembershipConservativePolicy(boolean membershipConservativePolicy) {
+        this.membershipConservativePolicy = membershipConservativePolicy;
     }
 
     @Override
