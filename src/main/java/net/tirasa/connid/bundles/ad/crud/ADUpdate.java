@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,6 +52,7 @@ import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper.GroupMembership;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper.Modification;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
+import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.StringUtil;
@@ -407,25 +408,32 @@ public class ADUpdate extends LdapModifyOperation {
 
             String primaryGroup = null;
 
-            final ConnectorObject profile = utils.getEntryToBeUpdated(uid, oclass);
+            final LdapEntry profile = utils.getEntryToBeUpdated(entryDN);
 
-            final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
-            if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
+            try {
+                final javax.naming.directory.Attribute primaryGroupID = profile.getAttributes().get(PRIMARYGROUPID);
+                if (primaryGroupID != null && primaryGroupID.get() != null) {
 
-                final SID groupSID = getPrimaryGroupSID(
-                        SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0)),
-                        NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.getValue().get(0).toString())));
+                    final javax.naming.directory.Attribute objectsid = profile.getAttributes().get(OBJECTSID);
 
-                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
-                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
-                        ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                    final SID groupSID = getPrimaryGroupSID(
+                            SID.parse((byte[]) objectsid.get()),
+                            NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString())));
 
-                if (res == null || res.isEmpty()) {
-                    LOG.warn("Error retrieving primary group for {0}", entryDN);
-                } else {
-                    primaryGroup = res.iterator().next().getNameInNamespace();
-                    LOG.info("Found primary group {0}", primaryGroup);
+                    final Set<SearchResult> res = utils.basicLdapSearch(String.format(
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
+                            ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+
+                    if (res == null || res.isEmpty()) {
+                        LOG.warn("Error retrieving primary group for {0}", entryDN);
+                    } else {
+                        primaryGroup = res.iterator().next().getNameInNamespace();
+                        LOG.info("Found primary group {0}", primaryGroup);
+                    }
                 }
+            } catch (NamingException ne) {
+                LOG.error(ne, "Error retrieving primary group");
+                throw new ConnectorException(ne);
             }
 
             // Check if group already exists
