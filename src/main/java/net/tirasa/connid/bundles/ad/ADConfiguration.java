@@ -107,10 +107,6 @@ public class ADConfiguration extends LdapConfiguration {
         setObjectClassesToSynchronize(new String[] { "user" });
         setGroupMemberAttribute("member");
 
-        setUsePagedResultControl(true);
-        setBlockSize(100);
-        setUseBlocks(true);
-
         setPasswordAttribute("unicodePwd");
         setPort(636);
 

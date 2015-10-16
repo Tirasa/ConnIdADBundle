@@ -32,14 +32,13 @@ import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.SortControl;
 import javax.naming.ldap.SortResponseControl;
-import net.tirasa.connid.bundles.ldap.search.SearchResultsHandler;
+import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.VlvIndexSearchStrategy;
 import org.identityconnectors.common.logging.Log;
 
 public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
 
-    private static final Log LOG =
-            Log.getLog(ADVlvIndexSearchStrategy.class);
+    private static final Log LOG = Log.getLog(ADVlvIndexSearchStrategy.class);
 
     private final String vlvIndexAttr;
 
@@ -83,7 +82,7 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
             final List<String> baseDNs,
             final String query,
             final SearchControls searchControls,
-            final SearchResultsHandler handler)
+            final LdapSearchResultsHandler handler)
             throws IOException, NamingException {
 
         if (LOG.isOk()) {
@@ -97,8 +96,7 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
         LdapContext ctx = initCtx.newInstance(null);
         try {
             while (baseDNIter.hasNext() && proceed) {
-                proceed = searchBaseDN(
-                        ctx, baseDNIter.next(), query, searchControls, handler);
+                proceed = searchBaseDN(ctx, baseDNIter.next(), query, searchControls, handler);
             }
         } finally {
             ctx.close();
@@ -110,7 +108,7 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
             final String baseDN,
             final String query,
             final SearchControls searchControls,
-            final SearchResultsHandler handler)
+            final LdapSearchResultsHandler handler)
             throws IOException, NamingException {
 
         if (LOG.isOk()) {
@@ -124,8 +122,7 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
         String lastResultName = null;
 
         for (;;) {
-            SortControl sortControl =
-                    new SortControl(vlvIndexAttr, Control.CRITICAL);
+            SortControl sortControl = new SortControl(vlvIndexAttr, Control.CRITICAL);
 
             int afterCount = blockSize - 1;
             VirtualListViewControl vlvControl = new VirtualListViewControl(
@@ -137,18 +134,16 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
                         index, afterCount);
             }
 
-            ctx.setRequestControls(new Control[]{sortControl, vlvControl});
+            ctx.setRequestControls(new Control[] { sortControl, vlvControl });
 
             // Need to process the response controls, which are available after
             // all results have been processed, before sending anything to the caller
             // (because processing the response controls might throw exceptions that
             // invalidate anything we might have sent otherwise).
             // So storing the results before actually sending them to the handler.
-            List<SearchResult> resultList =
-                    new ArrayList<SearchResult>(blockSize);
+            List<SearchResult> resultList = new ArrayList<SearchResult>(blockSize);
 
-            NamingEnumeration<SearchResult> results =
-                    ctx.search(baseDN, query, searchControls);
+            NamingEnumeration<SearchResult> results = ctx.search(baseDN, query, searchControls);
             try {
                 // hasMore call for referral resolution ... it fails with AD
                 // while (results.hasMore()) {
@@ -211,16 +206,14 @@ public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
         if (controls != null) {
             for (Control control : controls) {
                 if (control instanceof SortResponseControl) {
-                    SortResponseControl sortControl =
-                            (SortResponseControl) control;
+                    SortResponseControl sortControl = (SortResponseControl) control;
                     if (!sortControl.isSorted()
                             || (sortControl.getResultCode() != 0)) {
                         throw sortControl.getException();
                     }
                 }
                 if (control instanceof VirtualListViewResponseControl) {
-                    VirtualListViewResponseControl vlvControl =
-                            (VirtualListViewResponseControl) control;
+                    VirtualListViewResponseControl vlvControl = (VirtualListViewResponseControl) control;
                     if (vlvControl.getResultCode() == 0) {
                         lastListSize = vlvControl.getListSize();
                         cookie = vlvControl.getContextID();

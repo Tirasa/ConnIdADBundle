@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
@@ -41,18 +40,21 @@ import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
+import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchStrategy;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
-import net.tirasa.connid.bundles.ldap.search.SearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.QualifiedUid;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
+import org.identityconnectors.framework.spi.SearchResultsHandler;
 
 public class ADSearch {
 
     private final LdapConnection conn;
+
+    private final ResultsHandler handler;
 
     private final ObjectClass oclass;
 
@@ -66,19 +68,18 @@ public class ADSearch {
 
     private static final Log LOG = Log.getLog(ADSearch.class);
 
-    private final static Pattern oguidp = Pattern.compile(
-            "objectGUID=([a-z0-9]{8,8}+-[a-z0-9]{4,4}+-[a-z0-9]{4,4}+-[a-z0-9]{4,4}+-[a-z0-9]{12,12}+)");
-
     public ADSearch(
             final LdapConnection conn,
             final ObjectClass oclass,
             final LdapFilter filter,
+            final ResultsHandler handler,
             final OperationOptions options,
             final String[] baseDNs) {
 
         this.conn = conn;
         this.oclass = oclass;
         this.filter = filter;
+        this.handler = handler;
         this.options = options;
         this.baseDNs = baseDNs;
 
@@ -89,9 +90,10 @@ public class ADSearch {
             final LdapConnection conn,
             final ObjectClass oclass,
             final LdapFilter filter,
+            final ResultsHandler handler,
             final OperationOptions options) {
 
-        this(conn, oclass, filter, options, oclass.is(ObjectClass.ACCOUNT_NAME)
+        this(conn, oclass, filter, handler, options, oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()
                 : ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts());
     }
@@ -102,7 +104,7 @@ public class ADSearch {
 
         final LdapInternalSearch search = getInternalSearch(attrsToGet);
 
-        search.execute(new SearchResultsHandler() {
+        search.execute(new LdapSearchResultsHandler() {
 
             @Override
             public boolean handle(final String baseDN, final SearchResult result)
@@ -133,7 +135,12 @@ public class ADSearch {
         int searchScope;
 
         final String filterEntryDN = filter == null ? null : filter.getEntryDN();
-        if (filterEntryDN != null) {
+
+        if (filterEntryDN == null) {
+            strategy = getSearchStrategy();
+            dns = getBaseDNs();
+            searchScope = getLdapSearchScope();
+        } else {
             // Would be good to check that filterEntryDN is under the configured 
             // base contexts. However, the adapter is likely to pass entries
             // outside the base contexts, so not checking in order to be on the
@@ -148,10 +155,6 @@ public class ADSearch {
             }
 
             searchScope = SearchControls.OBJECT_SCOPE;
-        } else {
-            strategy = getSearchStrategy();
-            dns = getBaseDNs();
-            searchScope = getLdapSearchScope();
         }
 
         final SearchControls controls = LdapInternalSearch.createDefaultSearchControls();
@@ -205,7 +208,7 @@ public class ADSearch {
     private List<String> buildBaseContextFilter(final String filterEntryDN) throws InvalidNameException {
         final List<String> res = new ArrayList<String>();
 
-        LdapName prefix = null;
+        LdapName prefix;
 
         try {
             prefix = new LdapName(filterEntryDN);
@@ -253,7 +256,7 @@ public class ADSearch {
 
         final StringBuilder bld = new StringBuilder();
 
-        int from = 0;
+        int from;
         int to = 0;
 
         do {
@@ -272,27 +275,27 @@ public class ADSearch {
     }
 
     private LdapSearchStrategy getSearchStrategy() {
-        LdapSearchStrategy strategy;
-        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
-            // Only consider paged strategies for accounts,
-            // just as the adapter does.
+        final LdapSearchStrategy result;
 
-            boolean useBlocks = conn.getConfiguration().isUseBlocks();
-            boolean usePagedResultsControl = conn.getConfiguration().isUsePagedResultControl();
-            int pageSize = conn.getConfiguration().getBlockSize();
-
-            if (useBlocks && !usePagedResultsControl && conn.supportsControl(VirtualListViewControl.OID)) {
+        if (options.getPageSize() != null) {
+            if (conn.getConfiguration().isUseVlvControls() && conn.supportsControl(VirtualListViewControl.OID)) {
                 String vlvSortAttr = conn.getConfiguration().getVlvSortAttribute();
-                strategy = new ADVlvIndexSearchStrategy(vlvSortAttr, pageSize);
-            } else if (useBlocks && conn.supportsControl(PagedResultsControl.OID)) {
-                strategy = new ADSimplePagedSearchStrategy(pageSize);
+                result = new ADVlvIndexSearchStrategy(vlvSortAttr, options.getPageSize());
+            } else if (conn.supportsControl(PagedResultsControl.OID)) {
+                result = new ADPagedSearchStrategy(
+                        options.getPageSize(),
+                        options.getPagedResultsCookie(),
+                        options.getPagedResultsOffset(),
+                        handler instanceof SearchResultsHandler ? (SearchResultsHandler) handler : null,
+                        options.getSortKeys()
+                );
             } else {
-                strategy = new ADDefaultSearchStrategy(false);
+                result = new ADDefaultSearchStrategy(true);
             }
         } else {
-            strategy = new ADDefaultSearchStrategy(false);
+            result = new ADDefaultSearchStrategy(true);
         }
-        return strategy;
+        return result;
     }
 
     private static void appendFilter(String filter, StringBuilder toBuilder) {

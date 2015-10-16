@@ -70,7 +70,7 @@ public abstract class AbstractTest {
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-         // TODO: remove the line below when using ConnId >= 1.4.0.1
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
         ((APIConfigurationImpl) impl).
                 setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
 
@@ -83,7 +83,7 @@ public abstract class AbstractTest {
     protected static ADConfiguration getSimpleConf(final Properties prop) {
 
         final ADConfiguration configuration = new ADConfiguration();
-        
+
         configuration.setUidAttribute("sAMAccountName");
 
         configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
@@ -119,7 +119,8 @@ public abstract class AbstractTest {
         configuration.setGroupSearchScope("subtree");
 
         configuration.setGroupSearchFilter(
-                "(&(cn=GroupTest*)(memberOf=CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT + "))");
+                "(&(cn=GroupTest*)"
+                + "(| (memberOf=CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT + ")(cn=GroupTestInFilter)))");
 
         assertFalse(configuration.getMemberships() == null || configuration.getMemberships().length == 0);
 
@@ -177,7 +178,6 @@ public abstract class AbstractTest {
         attrs.put(new BasicAttribute("objectClass", "group"));
 
         ctx.createSubcontext(
-                String.format("CN=%s%s", name, StringUtil.isNotBlank(baseContext) ? "," + baseContext : ""),
-                attrs);
+                String.format("CN=%s%s", name, StringUtil.isNotBlank(baseContext) ? "," + baseContext : ""), attrs);
     }
 }

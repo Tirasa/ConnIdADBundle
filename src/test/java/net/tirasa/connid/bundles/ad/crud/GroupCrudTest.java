@@ -27,8 +27,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.LdapName;
 import net.tirasa.adsddl.ntsd.SID;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
+import net.tirasa.connid.bundles.ad.ADConfiguration;
+import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.GroupTest;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -93,7 +97,7 @@ public class GroupCrudTest extends GroupTest {
 
         connector.search(ObjectClass.GROUP, null, handler, oob.build());
 
-        assertEquals(10, results.size());
+        assertEquals(11, results.size());
 
         final Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
         final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
@@ -102,10 +106,16 @@ public class GroupCrudTest extends GroupTest {
         results.clear();
         connector.search(ObjectClass.GROUP, null, handler, oob.build());
 
-        // retrieve 10 then 11
-        assertEquals(10, results.size());
+        assertEquals(11, results.size());
 
-        connector.delete(ObjectClass.GROUP, uid, null);
+        try {
+            final ADConfiguration configuration = getSimpleConf(prop);
+            final ADConnection connection = new ADConnection(configuration);
+            final LdapContext ctx = connection.getInitialContext();
+            ctx.destroySubcontext(new LdapName(util.getEntryDN(ids.getKey(), ObjectClass.GROUP)));
+        } catch (Exception e) {
+            fail();
+        }
     }
 
     @Test

@@ -128,7 +128,7 @@ public class ADConnector extends LdapConnector {
             final LdapFilter query,
             final ResultsHandler handler,
             final OperationOptions options) {
-        new ADSearch(conn, oclass, query, options).executeADQuery(handler);
+        new ADSearch(conn, oclass, query, handler, options).executeADQuery(handler);
     }
 
     @Override
@@ -201,7 +201,8 @@ public class ADConnector extends LdapConnector {
                 final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
                         ldapGroups.getValue() == null
                                 ? Collections.<String>emptyList()
-                                : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
+                                : Arrays.asList(ldapGroups.getValue().toArray(
+                                                new String[ldapGroups.getValue().size()])));
 
                 ldapGroupsToBeAdded.addAll(config.getMemberships() == null
                         ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));

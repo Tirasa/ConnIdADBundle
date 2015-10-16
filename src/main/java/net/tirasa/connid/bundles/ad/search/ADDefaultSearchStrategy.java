@@ -15,6 +15,7 @@
  */
 package net.tirasa.connid.bundles.ad.search;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -24,10 +25,14 @@ import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.PagedResultsControl;
+import javax.naming.ldap.PagedResultsResponseControl;
 import net.tirasa.connid.bundles.ldap.search.DefaultSearchStrategy;
-import net.tirasa.connid.bundles.ldap.search.SearchResultsHandler;
+import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 
 public class ADDefaultSearchStrategy extends DefaultSearchStrategy {
 
@@ -67,45 +72,65 @@ public class ADDefaultSearchStrategy extends DefaultSearchStrategy {
             final List<String> baseDNs,
             final String query,
             final SearchControls searchControls,
-            final SearchResultsHandler handler)
+            final LdapSearchResultsHandler handler)
             throws NamingException {
 
         if (LOG.isOk()) {
-            LOG.ok("Searching in {0} with filter {1} and {2}",
-                    baseDNs, query, searchControlsToString(searchControls));
+            LOG.ok("Searching in {0} with filter {1} and {2}", baseDNs, query, searchControlsToString(searchControls));
         }
 
-        Iterator<String> baseDNIter = baseDNs.iterator();
-        boolean proceed = true;
+        LdapContext ctx = initCtx.newInstance(null);
 
-        while (baseDNIter.hasNext() && proceed) {
-            String baseDN = baseDNIter.next();
+        try {
+            Iterator<String> baseDNIter = baseDNs.iterator();
+            boolean proceed = true;
 
-            NamingEnumeration<SearchResult> results;
-            try {
-                results = initCtx.search(baseDN, query, searchControls);
-            } catch (NameNotFoundException e) {
-                if (!ignoreNonExistingBaseDNs) {
-                    throw e;
+            while (baseDNIter.hasNext() && proceed) {
+                try {
+                    String baseDN = baseDNIter.next();
+                    byte[] cookie = null;
+                    do {
+                        ctx.setRequestControls(
+                                new Control[] { new PagedResultsControl(1000, cookie, Control.CRITICAL) });
+                        final NamingEnumeration<SearchResult> results = ctx.search(baseDN, query, searchControls);
+                        try {
+                            // hasMore call for referral resolution ... it fails with AD
+                            while (proceed && results.hasMoreElements()) {
+                                proceed = handler.handle(baseDN, results.next());
+                            }
+                        } finally {
+                            results.close();
+                        }
+                        cookie = getResponseCookie(ctx.getResponseControls());
+                    } while (cookie != null);
+                } catch (NameNotFoundException e) {
+                    if (!ignoreNonExistingBaseDNs) {
+                        throw e;
+                    }
+                    LOG.warn(e, null);
+                } catch (InvalidNameException e) {
+                    if (!ignoreNonExistingBaseDNs) {
+                        throw e;
+                    }
+                    LOG.warn(e, null);
                 }
-                LOG.warn(e, null);
-                continue;
-            } catch (InvalidNameException e) {
-                if (!ignoreNonExistingBaseDNs) {
-                    throw e;
-                }
-                LOG.warn(e, null);
-                continue;
             }
-            try {
-                // hasMore call for referral resolution ... it fails with AD
-                // while (proceed && results.hasMore()) {
-                while (proceed && results.hasMoreElements()) {
-                    proceed = handler.handle(baseDN, results.next());
+        } catch (IOException ex) {
+            throw new ConnectorException(ex);
+        } finally {
+            ctx.close();
+        }
+    }
+
+    private byte[] getResponseCookie(final Control[] controls) {
+        if (controls != null) {
+            for (Control control : controls) {
+                if (control instanceof PagedResultsResponseControl) {
+                    PagedResultsResponseControl pagedControl = (PagedResultsResponseControl) control;
+                    return pagedControl.getCookie();
                 }
-            } finally {
-                results.close();
             }
         }
+        return null;
     }
 }

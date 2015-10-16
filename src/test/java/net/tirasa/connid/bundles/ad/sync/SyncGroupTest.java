@@ -27,6 +27,7 @@ import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.LdapName;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.GroupTest;
@@ -101,20 +102,28 @@ public class SyncGroupTest extends GroupTest {
             token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
-            assertEquals(1, deleted.size());
+            assertEquals(0, deleted.size());
 
             // group and memberships (update from member update of GroupTestInFilter and the group itself) creation
-            assertEquals(3, updated.size());
+            assertEquals(4, updated.size());
 
-            final ConnectorObject obj = updated.get(0).getObject();
+            ConnectorObject obj = null;
+
+            for (SyncDelta updatedObj : updated) {
+                if (ids11.getValue().equals(updatedObj.getUid().getUidValue())) {
+                    obj = updatedObj.getObject();
+                }
+            }
+
+            assertNotNull(obj);
 
             // chek for returned attributes
-            assertEquals(4, updated.get(0).getObject().getAttributes().size());
+            assertEquals(4, obj.getAttributes().size());
             assertNotNull(obj.getAttributeByName("sAMAccountName"));
             assertNotNull(obj.getAttributeByName("__NAME__"));
             assertNotNull(obj.getAttributeByName("__UID__"));
             assertNotNull(obj.getAttributeByName("member"));
-            assertEquals(ids11.getValue(), updated.get(0).getUid().getUidValue());
+            assertEquals(ids11.getValue(), obj.getUid().getUidValue());
 
             updated.clear();
             deleted.clear();
@@ -177,10 +186,10 @@ public class SyncGroupTest extends GroupTest {
             token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
-            assertEquals(1, deleted.size());
+            assertEquals(0, deleted.size());
 
             // group in
-            assertEquals(1, updated.size());
+            assertEquals(2, updated.size());
             // ----------------------------------
 
             // ----------------------------------
@@ -206,8 +215,22 @@ public class SyncGroupTest extends GroupTest {
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
-            assertEquals(2, deleted.size());
-            assertTrue(updated.isEmpty());
+            assertEquals(1, deleted.size());
+            assertEquals(1, updated.size());
+
+            // restore to be ready for deletion
+            mod = new ModificationItem[] {
+                new ModificationItem(
+                DirContext.ADD_ATTRIBUTE,
+                new BasicAttribute("member", "CN=GroupTestFor11,CN=Users," + configuration.getUserBaseContexts()[0]))
+            };
+
+            try {
+                ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey(), ObjectClass.GROUP), mod);
+            } catch (NamingException e) {
+                LOG.error(e, "Error adding membership for newMemberFor11");
+                assert (false);
+            }
             // ----------------------------------
 
             // ----------------------------------
@@ -225,9 +248,9 @@ public class SyncGroupTest extends GroupTest {
             token = nextToken;
 
             assertFalse(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertEquals(2, updated.size());
 
-            connector.delete(ObjectClass.GROUP, uid, null);
+            ctx.destroySubcontext(new LdapName(util.getEntryDN(ids.getKey(), ObjectClass.GROUP)));
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
@@ -235,7 +258,7 @@ public class SyncGroupTest extends GroupTest {
 
             // always returned
             assertFalse(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertEquals(2, updated.size());
 
             // ----------------------------------
         } catch (Throwable t) {
