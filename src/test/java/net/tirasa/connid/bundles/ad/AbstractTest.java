@@ -70,6 +70,8 @@ public abstract class AbstractTest {
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
+        impl.getResultsHandlerConfiguration().setFilteredResultsHandlerInValidationMode(true);
+        
         // TODO: remove the line below when using ConnId >= 1.4.0.1
         ((APIConfigurationImpl) impl).
                 setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));

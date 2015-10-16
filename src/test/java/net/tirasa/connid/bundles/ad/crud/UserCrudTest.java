@@ -53,6 +53,8 @@ import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
+import org.identityconnectors.framework.common.objects.SearchResult;
+import org.identityconnectors.framework.common.objects.SortKey;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
@@ -62,6 +64,38 @@ import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
 public class UserCrudTest extends UserTest {
+
+    @Test
+    public void pagedSearch() {
+        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
+        final ResultsHandler handler = new ResultsHandler() {
+
+            @Override
+            public boolean handle(final ConnectorObject co) {
+                return results.add(co);
+            }
+        };
+
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("sAMAccountName");
+        oob.setPageSize(2);
+        oob.setSortKeys(new SortKey("sAMAccountName", false));
+
+        connector.search(ObjectClass.ACCOUNT, null, handler, oob.build());
+
+        assertEquals(2, results.size());
+
+        results.clear();
+
+        String cookie = "";
+        do {
+            oob.setPagedResultsCookie(cookie);
+            final SearchResult searchResult = connector.search(ObjectClass.ACCOUNT, null, handler, oob.build());
+            cookie = searchResult.getPagedResultsCookie();
+        } while (cookie != null);
+
+        assertEquals(12, results.size());
+    }
 
     @Test
     public void search() {
