@@ -114,7 +114,7 @@ public class SyncUserTest extends UserTest {
             assertTrue(deleted.isEmpty());
 
             // user creation and group modification
-            assertEquals(3, updated.size());
+            assertFalse(updated.isEmpty());
 
             Boolean sddl = null;
 
