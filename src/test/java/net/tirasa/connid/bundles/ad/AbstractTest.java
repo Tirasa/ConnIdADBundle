@@ -24,6 +24,7 @@ import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
+import javax.naming.ldap.LdapContext;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -70,7 +71,7 @@ public abstract class AbstractTest {
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
 
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
-         // TODO: remove the line below when using ConnId >= 1.4.0.1
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
         ((APIConfigurationImpl) impl).
                 setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
 
@@ -83,7 +84,7 @@ public abstract class AbstractTest {
     protected static ADConfiguration getSimpleConf(final Properties prop) {
 
         final ADConfiguration configuration = new ADConfiguration();
-        
+
         configuration.setUidAttribute("sAMAccountName");
 
         configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
@@ -160,8 +161,17 @@ public abstract class AbstractTest {
         connector.delete(ObjectClass.ACCOUNT, uid, null);
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
 
-        uid = new Uid(util.getEntryIDs("InFilter", ObjectClass.GROUP).getValue());
-        connector.delete(ObjectClass.GROUP, uid, null);
+        final ADConnection connection = new ADConnection(conf);
+        final LdapContext ctx = connection.getInitialContext();
+
+        try {
+            ctx.destroySubcontext(util.getEntryDN(
+                    util.getEntryIDs("InFilter", ObjectClass.GROUP).getKey(), ObjectClass.GROUP));
+        } catch (NamingException ex) {
+            LOG.error(ex, "Failure");
+            fail();
+        }
+
         assertNull(connector.getObject(ObjectClass.GROUP, uid, null));
     }
 

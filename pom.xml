@@ -77,8 +77,8 @@
 
   <properties>
     <connid.version>1.4.1.0</connid.version>
-    <connid.ldap.version>1.4.0</connid.ldap.version>
-    <adsddl.verson>1.4</adsddl.verson>
+    <connid.ldap.version>1.4.1-SNAPSHOT</connid.ldap.version>
+    <adsddl.verson>1.5</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>

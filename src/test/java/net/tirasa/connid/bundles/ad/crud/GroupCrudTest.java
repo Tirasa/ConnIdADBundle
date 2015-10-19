@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,8 +27,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.naming.NamingException;
+import javax.naming.ldap.LdapContext;
 import net.tirasa.adsddl.ntsd.SID;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
+import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.GroupTest;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -105,7 +108,15 @@ public class GroupCrudTest extends GroupTest {
         // retrieve 10 then 11
         assertEquals(10, results.size());
 
-        connector.delete(ObjectClass.GROUP, uid, null);
+        final ADConnection connection = new ADConnection(conf);
+        final LdapContext ctx = connection.getInitialContext();
+
+        try {
+            ctx.destroySubcontext(util.getEntryDN(ids.getKey(), ObjectClass.GROUP));
+        } catch (NamingException ex) {
+            LOG.error(ex, "Failure");
+            fail();
+        }
     }
 
     @Test

@@ -138,7 +138,7 @@ public class ADSearch {
             // base contexts. However, the adapter is likely to pass entries
             // outside the base contexts, so not checking in order to be on the
             // safe side.
-            strategy = new ADDefaultSearchStrategy(true);
+            strategy = conn.getConfiguration().newDefaultSearchStrategy(true);
 
             try {
                 dns = buildBaseContextFilter(filterEntryDN);
@@ -287,10 +287,10 @@ public class ADSearch {
             } else if (useBlocks && conn.supportsControl(PagedResultsControl.OID)) {
                 strategy = new ADSimplePagedSearchStrategy(pageSize);
             } else {
-                strategy = new ADDefaultSearchStrategy(false);
+                strategy = conn.getConfiguration().newDefaultSearchStrategy(false);
             }
         } else {
-            strategy = new ADDefaultSearchStrategy(false);
+            strategy = conn.getConfiguration().newDefaultSearchStrategy(false);
         }
         return strategy;
     }

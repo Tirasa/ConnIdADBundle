@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -227,7 +227,12 @@ public class SyncGroupTest extends GroupTest {
             assertFalse(deleted.isEmpty());
             assertTrue(updated.isEmpty());
 
-            connector.delete(ObjectClass.GROUP, uid, null);
+            try {
+                ctx.destroySubcontext(util.getEntryDN(ids.getKey(), ObjectClass.GROUP));
+            } catch (NamingException ex) {
+                LOG.error(ex, "Failure");
+                fail();
+            }
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
@@ -246,7 +251,16 @@ public class SyncGroupTest extends GroupTest {
             connector.delete(ObjectClass.GROUP, uid11, null);
 
             assertNotNull(groupTestFor11);
-            connector.delete(ObjectClass.GROUP, groupTestFor11, null);
+            final ADConnection connection = new ADConnection(conf);
+            final LdapContext ctx = connection.getInitialContext();
+
+            try {
+                ctx.destroySubcontext(util.getEntryDN(
+                        groupTestFor11.getUidValue().replaceAll("SAAN_", ""), ObjectClass.GROUP));
+            } catch (NamingException ex) {
+                LOG.error(ex, "Failure");
+                fail();
+            }
 
             updated.clear();
             deleted.clear();
