@@ -94,7 +94,7 @@ public class UserCrudTest extends UserTest {
             cookie = searchResult.getPagedResultsCookie();
         } while (cookie != null);
 
-        assertEquals(12, results.size());
+        assertEquals(11, results.size());
     }
 
     @Test

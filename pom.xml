@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.4.1.0</version>
+    <version>1.4.2.0-SNAPSHOT</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
@@ -76,9 +76,9 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.4.1.0</connid.version>
+    <connid.version>1.4.2.0-SNAPSHOT</connid.version>
     <connid.ldap.version>1.5.0-SNAPSHOT</connid.ldap.version>
-    <adsddl.verson>1.4</adsddl.verson>
+    <adsddl.verson>1.5</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>

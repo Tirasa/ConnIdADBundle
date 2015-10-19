@@ -21,10 +21,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.tirasa.connid.bundles.ad.search.ADDefaultSearchStrategy;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.LdapConfiguration;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.ObjectClassMappingConfig;
+import net.tirasa.connid.bundles.ldap.search.DefaultSearchStrategy;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -114,6 +116,11 @@ public class ADConfiguration extends LdapConfiguration {
 
         userSearchScope = SearchScope.subtree;
         groupSearchScope = SearchScope.subtree;
+    }
+
+    @Override
+    public DefaultSearchStrategy newDefaultSearchStrategy(boolean ignoreNonExistingBaseDN) {
+        return new ADDefaultSearchStrategy(ignoreNonExistingBaseDN);
     }
 
     @Override
