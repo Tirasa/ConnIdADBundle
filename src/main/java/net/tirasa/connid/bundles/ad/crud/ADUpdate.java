@@ -160,7 +160,7 @@ public class ADUpdate extends LdapModifyOperation {
         modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
 
         // Rename the entry if needed.
-        if (newName != null) {
+        if (newName != null && !newName.equals(obj.getName())) {
             entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
         }
         // ---------------------------------
