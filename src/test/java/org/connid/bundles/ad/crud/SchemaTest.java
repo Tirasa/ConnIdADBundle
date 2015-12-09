@@ -29,6 +29,8 @@ public class SchemaTest extends AbstractTest {
 
     @Test
     public void schema() {
+        AbstractTest.init();
+        
         final Schema schema = connector.schema();
         assertNotNull(schema);
 
