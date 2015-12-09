@@ -27,6 +27,7 @@ import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -169,6 +170,19 @@ public class ADUtilities {
             result.add(UACCONTROL_ATTR);
         }
 
+        // -------------------------------------------------
+        // AD-52 (paged membership retrieving: 1k a time)
+        // -------------------------------------------------
+        final String memberships
+                = ADConfiguration.class.cast(connection.getConfiguration()).getGroupMemberReferenceAttribute();
+
+        if (oclass.is(ObjectClass.GROUP_NAME) && result.contains(memberships)) {
+            // AD specific, for checking wether a user is enabled or not
+            result.remove(memberships);
+            result.add(String.format("%s;range=%d-%d", memberships, 0, 999));
+        }
+        // -------------------------------------------------
+
         // Our password is marked as readable because of sync().
         // We really can't return it from basicLdapSearch.
         if (result.contains(OperationalAttributes.PASSWORD_NAME)) {
@@ -302,7 +316,7 @@ public class ADUtilities {
 
                     final String status = profile.get(UACCONTROL_ATTR) == null
                             || profile.get(UACCONTROL_ATTR).get() == null
-                                    ? null : profile.get(UACCONTROL_ATTR).get().toString();
+                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
 
                     if (LOG.isOk()) {
                         LOG.ok("User Account Control: {0}", status);
@@ -335,10 +349,56 @@ public class ADUtilities {
                     pgDN = getPrimaryGroupDN(entry, profile);
                 }
                 attribute = AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, pgDN);
-            } else {
-                if (profile.get(attributeName) != null) {
-                    attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
+            } else if (oclass.is(ObjectClass.GROUP_NAME)
+                    && String.format("%s;range=%d-%d", ADConfiguration.class.cast(connection.getConfiguration()).
+                            getGroupMemberReferenceAttribute(), 0, 999).equalsIgnoreCase(attributeName)) {
+                // loop on membership ranges and populate member attribute
+
+                final String membAttrPrefix
+                        = ADConfiguration.class.cast(connection.getConfiguration()).
+                        getGroupMemberReferenceAttribute();
+
+                // search for less than 1k memberships
+                String membAttrName = String.format("%s;range=0-*", membAttrPrefix);
+                attribute = connection.getSchemaMapping().createAttribute(oclass, membAttrName, entry, true);
+
+                final ArrayList<Object> values = new ArrayList<Object>(attribute.getValue());
+
+                if (values.isEmpty()) {
+                    // loop among ranges
+                    int start = 0;
+                    int end = 999;
+                    membAttrName = String.format("%s;range=%d-%d", membAttrPrefix, start, end);
+                    attribute = connection.getSchemaMapping().createAttribute(oclass, membAttrName, entry, true);
+
+                    values.addAll(attribute.getValue());
+
+                    boolean theEnd = CollectionUtil.isEmpty(attribute.getValue());
+                    while (!theEnd) { // more than 1 page ....    
+                        start += 1000;
+                        end += 1000;
+                        membAttrName = String.format("%s;range=%d-%d", membAttrPrefix, start, end);
+                        Attributes membAttrs = getAttributes(entry.getDN().toString(), membAttrName);
+
+                        if (membAttrs == null || membAttrs.size() <= 0) {
+                            theEnd = true;
+                        } else {
+                            javax.naming.directory.Attribute membAttr = membAttrs.getAll().next();
+                            theEnd = membAttr.getID().equalsIgnoreCase(
+                                    String.format("%s;range=%d-0", membAttrPrefix, start));
+
+                            final NamingEnumeration<?> ne = membAttr.getAll();
+                            while (ne.hasMore()) {
+                                values.add(ne.next());
+                            }
+                        }
+
+                    }
                 }
+
+                attribute = AttributeBuilder.build(membAttrPrefix, values);
+            } else if (profile.get(attributeName) != null) {
+                attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
             }
 
             // Avoid attribute adding in case of attribute name not found
@@ -351,7 +411,8 @@ public class ADUtilities {
     }
 
     /**
-     * Create a DN string starting from a set attributes and a default people container. This method has to be used if
+     * Create a DN string starting from a set attributes and a default people container. This method has to be used
+     * if
      * __NAME__ attribute is not provided or it it is not a DN.
      *
      * @param oclass object class.
@@ -377,8 +438,8 @@ public class ADUtilities {
 
         return "cn=" + cn + ","
                 + (oclass.is(ObjectClass.ACCOUNT_NAME)
-                        ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
-                        : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
+                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
+                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
     }
 
     /**
