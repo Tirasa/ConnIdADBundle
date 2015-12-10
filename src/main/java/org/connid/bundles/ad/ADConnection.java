@@ -28,7 +28,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
-import net.tirasa.adsddl.ntsd.data.SDFlagsControl;
+import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 import org.connid.bundles.ad.schema.ADSchema;
 import org.connid.bundles.ad.util.TrustAllSocketFactory;
 import org.connid.bundles.ldap.LdapConnection;

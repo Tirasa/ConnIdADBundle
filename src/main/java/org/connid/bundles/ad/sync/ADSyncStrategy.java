@@ -31,7 +31,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
-import net.tirasa.adsddl.ntsd.data.SDFlagsControl;
+import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 import org.connid.bundles.ad.ADConfiguration;
 import org.connid.bundles.ad.ADConnection;
 import org.connid.bundles.ad.util.ADUtilities;
@@ -263,12 +263,7 @@ public class ADSyncStrategy {
             throw new ConnectorException("Invalid context or search result.");
         }
 
-        try {
-            ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
-        } catch (IOException e) {
-            LOG.error(e, "Error initializing context request controls");
-            throw new ConnectorException(e);
-        }
+        ctx.setRequestControls(new Control[] { new DeletedControl(), new SDFlagsControl(0x00000004) });
 
         // Just used to retrieve object classes and to pass to getSyncDelta
         Attributes profile = result.getAttributes();
