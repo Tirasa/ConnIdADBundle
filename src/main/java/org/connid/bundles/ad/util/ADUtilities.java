@@ -88,6 +88,64 @@ public class ADUtilities {
         groupHelper = new GroupHelper(connection);
     }
 
+    public static SID getPrimaryGroupSID(final SID sid, final byte[] pgID) {
+        final SID pgSID = SID.newInstance(sid.getIdentifierAuthority());
+        pgSID.setRevision(sid.getRevision());
+
+        final List<byte[]> subAuthorities = sid.getSubAuthorities();
+
+        if (subAuthorities != null && !subAuthorities.isEmpty()) {
+            for (int i = 0; i < subAuthorities.size() - 1; i++) {
+                pgSID.addSubAuthority(subAuthorities.get(i));
+            }
+        }
+
+        pgSID.addSubAuthority(pgID);
+
+        return pgSID;
+    }
+
+    public javax.naming.directory.Attribute getGroupID(final String dn) throws InvalidNameException {
+        try {
+            final LdapName name = new LdapName(dn);
+            final Attributes group = connection.getInitialContext().getAttributes(name, new String[] { OBJECTSID });
+            final SID gsid = SID.parse((byte[]) group.get(OBJECTSID).get());
+            final byte[] groupID = gsid.getSubAuthorities().get(gsid.getSubAuthorityCount() - 1);
+            return new BasicAttribute(PRIMARYGROUPID, String.valueOf(NumberFacility.getUInt(groupID)));
+        } catch (Exception e) {
+            LOG.error(e, "Invalid group DN '{0}'", dn);
+            throw new ConnectorException(e);
+        }
+    }
+
+    public String getPrimaryGroupDN(final LdapEntry entry, final Attributes profile) throws NamingException {
+
+        final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
+        final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
+
+        final String pgDN;
+
+        if (primaryGroupID == null || primaryGroupID.get() == null || objectSID == null || objectSID.get() == null) {
+            pgDN = null;
+        } else {
+            final SID groupSID = getPrimaryGroupSID(SID.parse((byte[]) objectSID.get()),
+                    NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString())));
+
+            final Set<SearchResult> res = basicLdapSearch(String.format(
+                    "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
+                    ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
+
+            if (res == null || res.isEmpty()) {
+                LOG.warn("Error retrieving primary group for {0}", entry.getDN());
+                pgDN = null;
+            } else {
+                pgDN = res.iterator().next().getNameInNamespace();
+                LOG.info("Found primary group {0}", pgDN);
+            }
+        }
+
+        return pgDN;
+    }
     public Set<String> getAttributesToGet(final String[] attributesToGet, final ObjectClass oclass) {
         final Set<String> result;
 
@@ -222,35 +280,20 @@ public class ADUtilities {
         builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
         builder.setName(connection.getSchemaMapping().createName(oclass, entry));
 
+        String pgDN = null;
+
         for (String attributeName : attrsToGet) {
 
             Attribute attribute = null;
 
             if (LdapConstants.isLdapGroups(attributeName) || attributeName.equals(ADConnector.MEMBEROF)) {
                 final Set<String> ldapGroups = getGroups(entry.getDN().toString());
-                final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
-                final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
-
-                if (primaryGroupID != null && primaryGroupID.get() != null
-                        && objectSID != null && objectSID.get() != null) {
-                    final byte[] pgID = NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.get().toString()));
-                    final SID pgSID = SID.parse((byte[]) objectSID.get());
-                    pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
-                    pgSID.addSubAuthority(pgID);
-
-                    final Set<SearchResult> res = basicLdapSearch(String.format(
-                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
-                            ((ADConfiguration) connection.getConfiguration()).getGroupBaseContexts());
-
-                    if (res == null || res.isEmpty()) {
-                        LOG.warn("Error retrieving primary group for {0}", entry.getDN());
-                    } else {
-                        final String pgDN = res.iterator().next().getNameInNamespace();
-                        LOG.info("Found primary group {0}", pgDN);
-                        ldapGroups.add(pgDN);
-                    }
+                if (StringUtil.isBlank(pgDN)) {
+                    pgDN = getPrimaryGroupDN(entry, profile);
                 }
-
+                if (StringUtil.isNotBlank(pgDN)) {
+                    ldapGroups.add(pgDN);
+                }
                 attribute = AttributeBuilder.build(attributeName, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
                 final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.
@@ -293,6 +336,11 @@ public class ADUtilities {
                             UCCP_FLAG,
                             SDDLHelper.isUserCannotChangePassword(new SDDL(((byte[]) sddl.get()))));
                 }
+            } else if (ADConfiguration.PRIMARY_GROUP_DN_NAME.equalsIgnoreCase(attributeName)) {
+                if (StringUtil.isBlank(pgDN)) {
+                    pgDN = getPrimaryGroupDN(entry, profile);
+                }
+                attribute = AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, pgDN);
             } else if (oclass.is(ObjectClass.GROUP_NAME)
                     && String.format("%s;range=%d-%d", ADConfiguration.class.cast(connection.getConfiguration()).
                             getGroupMemberReferenceAttribute(), 0, 999).equalsIgnoreCase(attributeName)) {

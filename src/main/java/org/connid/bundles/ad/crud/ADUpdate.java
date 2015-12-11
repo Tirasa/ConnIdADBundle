@@ -20,6 +20,7 @@ import static org.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
 import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
+import static org.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -177,23 +178,23 @@ public class ADUpdate extends LdapModifyOperation {
 
             final Attribute primaryGroupID = profile.getAttributeByName(PRIMARYGROUPID);
             if (primaryGroupID != null && primaryGroupID.getValue() != null && !primaryGroupID.getValue().isEmpty()) {
-                final byte[] pgID = NumberFacility.getUIntBytes(
-                        Long.parseLong(primaryGroupID.getValue().get(0).toString()));
 
-                final SID pgSID = SID.parse((byte[]) profile.getAttributeByName(OBJECTSID).getValue().get(0));
-                pgSID.getSubAuthorities().remove(pgSID.getSubAuthorityCount() - 1);
-                pgSID.addSubAuthority(pgID);
+                    final Attribute objectsid = profile.getAttributeByName(OBJECTSID);
 
-                final Set<SearchResult> res = utils.basicLdapSearch(String.format(
-                        "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(pgSID.toByteArray())),
-                        ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                    final SID groupSID = getPrimaryGroupSID(
+                            SID.parse((byte[]) objectsid.getValue().get(0)),
+                            NumberFacility.getUIntBytes(Long.parseLong(primaryGroupID.getValue().get(0).toString())));
 
-                if (res == null || res.isEmpty()) {
-                    LOG.warn("Error retrieving primary group for {0}", entryDN);
-                } else {
-                    primaryGroup = res.iterator().next().getNameInNamespace();
-                    LOG.info("Found primary group {0}", primaryGroup);
-                }
+                    final Set<SearchResult> res = utils.basicLdapSearch(String.format(
+                            "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
+                            ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+
+                    if (res == null || res.isEmpty()) {
+                        LOG.warn("Error retrieving primary group for {0}", entryDN);
+                    } else {
+                        primaryGroup = res.iterator().next().getNameInNamespace();
+                        LOG.info("Found primary group {0}", primaryGroup);
+                    }
             }
 
             // Check if group already exists

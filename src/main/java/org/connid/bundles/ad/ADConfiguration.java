@@ -53,6 +53,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     public static final String CN_NAME = "CN";
 
+    public static final String PRIMARY_GROUP_DN_NAME = "primaryGroupDN";
+
     private List<String> memberships;
 
     private boolean trustAllCerts;
