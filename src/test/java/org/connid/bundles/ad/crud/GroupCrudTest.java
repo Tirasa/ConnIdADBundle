@@ -16,7 +16,6 @@
 package org.connid.bundles.ad.crud;
 
 import static org.connid.bundles.ad.ADConnector.OBJECTSID;
-import static org.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static org.junit.Assert.*;
 
 import java.util.AbstractMap;

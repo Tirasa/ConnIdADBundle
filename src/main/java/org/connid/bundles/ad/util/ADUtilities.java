@@ -146,6 +146,7 @@ public class ADUtilities {
 
         return pgDN;
     }
+
     public Set<String> getAttributesToGet(final String[] attributesToGet, final ObjectClass oclass) {
         final Set<String> result;
 
@@ -376,14 +377,13 @@ public class ADUtilities {
                         } else {
                             javax.naming.directory.Attribute membAttr = membAttrs.getAll().next();
                             theEnd = membAttr.getID().equalsIgnoreCase(
-                                    String.format("%s;range=%d-0", membAttrPrefix, start));
+                                    String.format("%s;range=%d-*", membAttrPrefix, start));
 
                             final NamingEnumeration<?> ne = membAttr.getAll();
                             while (ne.hasMore()) {
                                 values.add(ne.next());
                             }
                         }
-
                     }
                 }
 
