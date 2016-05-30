@@ -18,6 +18,8 @@ package net.tirasa.connid.bundles.ad;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import javax.naming.NamingException;
@@ -34,6 +36,10 @@ import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.SyncDelta;
+import org.identityconnectors.framework.common.objects.SyncDeltaType;
+import org.identityconnectors.framework.common.objects.SyncResultsHandler;
+import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
 import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
@@ -190,4 +196,40 @@ public abstract class AbstractTest {
                 String.format("CN=%s%s", name, StringUtil.isNotBlank(baseContext) ? "," + baseContext : ""),
                 attrs);
     }
+
+    public static class TestSyncResultsHandler implements SyncResultsHandler {
+
+        SyncToken latestReceivedToken = null;
+
+        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
+
+        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
+
+        @Override
+        public boolean handle(final SyncDelta sd) {
+            latestReceivedToken = sd.getToken();
+            if (sd.getDeltaType() == SyncDeltaType.DELETE) {
+                return deleted.add(sd);
+            } else {
+                return updated.add(sd);
+            }
+        }
+
+        public SyncToken getLatestReceivedToken() {
+            return latestReceivedToken;
+        }
+
+        public List<SyncDelta> getUpdated() {
+            return updated;
+        }
+
+        public List<SyncDelta> getDeleted() {
+            return deleted;
+        }
+
+        public void clear() {
+            updated.clear();
+            deleted.clear();
+        }
+    };
 }

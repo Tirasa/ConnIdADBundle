@@ -18,9 +18,7 @@ package net.tirasa.connid.bundles.ad.sync;
 import static org.junit.Assert.*;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
@@ -33,9 +31,6 @@ import net.tirasa.connid.bundles.ad.GroupTest;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
-import org.identityconnectors.framework.common.objects.SyncDelta;
-import org.identityconnectors.framework.common.objects.SyncDeltaType;
-import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.junit.Test;
@@ -49,20 +44,7 @@ public class SyncGroupTest extends GroupTest {
         // ----------------------------------
         // Handler specification
         // ----------------------------------
-        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
-        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
-
-        final SyncResultsHandler handler = new SyncResultsHandler() {
-
-            @Override
-            public boolean handle(final SyncDelta sd) {
-                if (sd.getDeltaType() == SyncDeltaType.DELETE) {
-                    return deleted.add(sd);
-                } else {
-                    return updated.add(sd);
-                }
-            }
-        };
+        final TestSyncResultsHandler handler = new TestSyncResultsHandler();
         // ----------------------------------
 
         // Ask just for sAMAccountName
@@ -76,8 +58,8 @@ public class SyncGroupTest extends GroupTest {
         // ----------------------------------
         connector.sync(ObjectClass.GROUP, token, handler, oob.build());
 
-        assertTrue(deleted.isEmpty());
-        assertTrue(updated.isEmpty());
+        assertTrue(handler.getDeleted().isEmpty());
+        assertTrue(handler.getUpdated().isEmpty());
 
         final Map.Entry<String, String> ids11 = util.getEntryIDs("11");
 
@@ -93,39 +75,37 @@ public class SyncGroupTest extends GroupTest {
             uid11 = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids11), null);
             token = nextToken;
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
-            assertEquals(1, deleted.size());
+            assertEquals(1, handler.getDeleted().size());
 
             // group and memberships (update from member update of GroupTestInFilter and the group itself) creation
-            assertEquals(3, updated.size());
+            assertEquals(3, handler.getUpdated().size());
 
-            final ConnectorObject obj = updated.get(0).getObject();
+            final ConnectorObject obj = handler.getUpdated().get(0).getObject();
 
             // chek for returned attributes
-            assertEquals(4, updated.get(0).getObject().getAttributes().size());
+            assertEquals(4, handler.getUpdated().get(0).getObject().getAttributes().size());
             assertNotNull(obj.getAttributeByName("sAMAccountName"));
             assertNotNull(obj.getAttributeByName("__NAME__"));
             assertNotNull(obj.getAttributeByName("__UID__"));
             assertNotNull(obj.getAttributeByName("member"));
-            assertEquals(ids11.getValue(), updated.get(0).getUid().getUidValue());
+            assertEquals(ids11.getValue(), handler.getUpdated().get(0).getUid().getUidValue());
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             // check with updated token and without any modification
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
-            assertTrue(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
             // ----------------------------------
 
             // ----------------------------------
@@ -146,15 +126,14 @@ public class SyncGroupTest extends GroupTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
-            assertFalse(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertFalse(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
 
             ModificationItem[] mod = new ModificationItem[] {
                 new ModificationItem(
@@ -169,18 +148,17 @@ public class SyncGroupTest extends GroupTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
             // group related to uid11 memberOf (it doesn't match the filter) 
-            assertEquals(1, deleted.size());
+            assertEquals(1, handler.getDeleted().size());
 
             // group in
-            assertEquals(1, updated.size());
+            assertEquals(1, handler.getUpdated().size());
             // ----------------------------------
 
             // ----------------------------------
@@ -199,22 +177,20 @@ public class SyncGroupTest extends GroupTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
-            assertEquals(2, deleted.size());
-            assertTrue(updated.isEmpty());
+            assertEquals(2, handler.getDeleted().size());
+            assertTrue(handler.getUpdated().isEmpty());
             // ----------------------------------
 
             // ----------------------------------
             // Check for group which doesn't match the specified group search filter
             // ----------------------------------
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
             final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
@@ -224,8 +200,8 @@ public class SyncGroupTest extends GroupTest {
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
             token = nextToken;
 
-            assertFalse(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertFalse(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
 
             try {
                 ctx.destroySubcontext(util.getEntryDN(ids.getKey(), ObjectClass.GROUP));
@@ -239,8 +215,8 @@ public class SyncGroupTest extends GroupTest {
             token = nextToken;
 
             // always returned
-            assertFalse(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertFalse(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
 
             // ----------------------------------
         } catch (Throwable t) {
@@ -262,13 +238,12 @@ public class SyncGroupTest extends GroupTest {
                 fail();
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
 
-            assertEquals(2, deleted.size());
-            assertTrue(updated.isEmpty());
+            assertEquals(2, handler.getDeleted().size());
+            assertTrue(handler.getUpdated().isEmpty());
         }
     }
 }

@@ -188,12 +188,13 @@ public class ADSyncStrategy {
 
         final Set<SearchResult> changes = search(ctx, filter, searchCtls, true);
 
+        int count = changes.size();
+
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             for (SearchResult sr : changes) {
                 try {
-
-                    handleSyncUDelta(ctx, sr, attrsToGet, handler);
-
+                    handleSyncUDelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
+                    count--;
                 } catch (NamingException e) {
                     LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                 }
@@ -201,9 +202,8 @@ public class ADSyncStrategy {
         } else {
             for (SearchResult sr : changes) {
                 try {
-
-                    handleSyncGDelta(ctx, sr, attrsToGet, handler);
-
+                    handleSyncGDelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
+                    count--;
                 } catch (NamingException e) {
                     LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                 }
@@ -254,6 +254,7 @@ public class ADSyncStrategy {
             final LdapContext ctx,
             final SearchResult result,
             final Collection<String> attrsToGet,
+            final SyncToken token,
             final SyncResultsHandler handler)
             throws NamingException {
 
@@ -323,6 +324,7 @@ public class ADSyncStrategy {
                         (NamingEnumeration<String>) member11.getAll(),
                         DirSyncUtils.getUserFilter(conf),
                         handler,
+                        token,
                         conf,
                         attrsToGet);
             }
@@ -339,6 +341,7 @@ public class ADSyncStrategy {
                         (NamingEnumeration<String>) member00.getAll(),
                         DirSyncUtils.getUserFilter(conf),
                         handler,
+                        token,
                         conf,
                         attrsToGet);
             }
@@ -359,6 +362,7 @@ public class ADSyncStrategy {
                             ObjectClass.ACCOUNT,
                             result.getNameInNamespace(),
                             SyncDeltaType.DELETE,
+                            token,
                             profile,
                             attrsToGet));
                 }
@@ -375,6 +379,7 @@ public class ADSyncStrategy {
                         result.getNameInNamespace(),
                         DirSyncUtils.getUserFilter(conf),
                         handler,
+                        token,
                         conf,
                         attrsToGet);
             }
@@ -388,6 +393,7 @@ public class ADSyncStrategy {
             final LdapContext ctx,
             final SearchResult sr,
             final Collection<String> attrsToGet,
+            final SyncToken token,
             final SyncResultsHandler handler)
             throws NamingException {
 
@@ -448,6 +454,7 @@ public class ADSyncStrategy {
                             ObjectClass.GROUP,
                             sr.getNameInNamespace(),
                             SyncDeltaType.DELETE,
+                            token,
                             profile,
                             attrsToGet));
                 }
@@ -460,7 +467,8 @@ public class ADSyncStrategy {
 
                 String userDN = sr.getNameInNamespace();
 
-                handleEntry(ctx, ObjectClass.GROUP, userDN, conf.getGroupSearchFilter(), handler, conf, attrsToGet);
+                handleEntry(
+                        ctx, ObjectClass.GROUP, userDN, conf.getGroupSearchFilter(), handler, token, conf, attrsToGet);
 
                 final javax.naming.directory.Attribute member11 = sr.getAttributes().get("member;range=1-1");
                 final javax.naming.directory.Attribute member00 = sr.getAttributes().get("member;range=0-0");
@@ -478,6 +486,7 @@ public class ADSyncStrategy {
                             (NamingEnumeration<String>) member11.getAll(),
                             "(&(objectclass=group)" + conf.getGroupSearchFilter() + ")",
                             handler,
+                            token,
                             conf,
                             attrsToGet);
                 }
@@ -494,6 +503,7 @@ public class ADSyncStrategy {
                             (NamingEnumeration<String>) member00.getAll(),
                             "(&(objectclass=group)" + conf.getGroupSearchFilter() + ")",
                             handler,
+                            token,
                             conf,
                             attrsToGet);
                 }
@@ -507,6 +517,7 @@ public class ADSyncStrategy {
             final ObjectClass oclass,
             final String entryDN,
             final SyncDeltaType syncDeltaType,
+            final SyncToken token,
             final Attributes profile,
             final Collection<String> attrsToGet)
             throws NamingException {
@@ -514,7 +525,7 @@ public class ADSyncStrategy {
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
 
         // Set token
-        sdb.setToken(latestSyncToken);
+        sdb.setToken(token);
 
         // Set Delta Type
         sdb.setDeltaType(syncDeltaType);
@@ -550,13 +561,14 @@ public class ADSyncStrategy {
             final NamingEnumeration<String> dns,
             final String filter,
             final SyncResultsHandler handler,
+            final SyncToken token,
             final ADConfiguration conf,
             final Collection<String> attrsToGet)
             throws NamingException {
 
         while (dns.hasMoreElements()) {
             // for each new user "in" we must verify custom ldap filter
-            handleEntry(ctx, oclass, dns.next(), filter, handler, conf, attrsToGet);
+            handleEntry(ctx, oclass, dns.next(), filter, handler, token, conf, attrsToGet);
         }
     }
 
@@ -566,6 +578,7 @@ public class ADSyncStrategy {
             final String dn,
             final String filter,
             final SyncResultsHandler handler,
+            final SyncToken token,
             final ADConfiguration conf,
             final Collection<String> attrsToGet)
             throws NamingException {
@@ -606,6 +619,7 @@ public class ADSyncStrategy {
                     oclass,
                     dn,
                     deltaType,
+                    token,
                     profile,
                     attrsToGet));
         }

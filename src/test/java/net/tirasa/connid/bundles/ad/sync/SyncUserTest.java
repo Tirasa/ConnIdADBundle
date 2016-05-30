@@ -45,8 +45,6 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncDelta;
-import org.identityconnectors.framework.common.objects.SyncDeltaType;
-import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
@@ -64,20 +62,7 @@ public class SyncUserTest extends UserTest {
         // ----------------------------------
         // Handler specification
         // ----------------------------------
-        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
-        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
-
-        final SyncResultsHandler handler = new SyncResultsHandler() {
-
-            @Override
-            public boolean handle(final SyncDelta sd) {
-                if (sd.getDeltaType() == SyncDeltaType.DELETE) {
-                    return deleted.add(sd);
-                } else {
-                    return updated.add(sd);
-                }
-            }
-        };
+        final TestSyncResultsHandler handler = new TestSyncResultsHandler();
         // ----------------------------------
 
         // Ask just for sAMAccountName
@@ -88,8 +73,8 @@ public class SyncUserTest extends UserTest {
         SyncToken token = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
         connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
-        assertTrue(deleted.isEmpty());
-        assertTrue(updated.isEmpty());
+        assertTrue(handler.getDeleted().isEmpty());
+        assertTrue(handler.getUpdated().isEmpty());
 
         final Map.Entry<String, String> ids11 = util.getEntryIDs("11");
         final Map.Entry<String, String> ids12 = util.getEntryIDs("12");
@@ -104,21 +89,19 @@ public class SyncUserTest extends UserTest {
             // user added sync
             uid11 = connector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(ids11), null);
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            SyncToken nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
+            assertTrue(handler.getDeleted().isEmpty());
 
             // user creation and group modification
-            assertFalse(updated.isEmpty());
+            assertFalse(handler.getUpdated().isEmpty());
 
             Boolean sddl = null;
 
-            for (SyncDelta usr : updated) {
+            for (SyncDelta usr : handler.getUpdated()) {
                 final ConnectorObject obj = usr.getObject();
                 assertEquals(ids11.getValue(), obj.getUid().getUidValue());
 
@@ -138,16 +121,14 @@ public class SyncUserTest extends UserTest {
 
             assertNotNull(sddl);
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             // check with updated token and without any modification
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
             // ----------------------------------
 
             // ----------------------------------
@@ -190,15 +171,13 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
 
             ModificationItem[] mod = new ModificationItem[] { new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
@@ -213,15 +192,13 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertEquals(2, handler.getUpdated().size());
 
             mod = new ModificationItem[] { new ModificationItem(
                 DirContext.ADD_ATTRIBUTE,
@@ -236,15 +213,13 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertEquals(1, handler.getUpdated().size());
             // ----------------------------------
 
             // ----------------------------------
@@ -264,8 +239,7 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             // sync user delete (member out is like a user delete)
             conf.setRetrieveDeletedUser(true);
@@ -279,15 +253,14 @@ public class SyncUserTest extends UserTest {
 
             final ConnectorFacade newConnector = factory.newInstance(impl);
 
-            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
-            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
-            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
-            assertEquals(2, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertEquals(1, handler.getUpdated().size());
+            assertNotNull(handler.getUpdated().get(0).getObject().getAttributeByName("memberOf"));
+            assertNotNull(handler.getUpdated().get(0).getObject().getAttributeByName("memberOf").getValue());
+            assertEquals(2, handler.getUpdated().get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             // add user to a group not involved into the filter
             mod = new ModificationItem[] {
@@ -304,18 +277,16 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
-            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf"));
-            assertNotNull(updated.get(0).getObject().getAttributeByName("memberOf").getValue());
-            assertEquals(3, updated.get(0).getObject().getAttributeByName("memberOf").getValue().size());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertEquals(1, handler.getUpdated().size());
+            assertNotNull(handler.getUpdated().get(0).getObject().getAttributeByName("memberOf"));
+            assertNotNull(handler.getUpdated().get(0).getObject().getAttributeByName("memberOf").getValue());
+            assertEquals(3, handler.getUpdated().get(0).getObject().getAttributeByName("memberOf").getValue().size());
 
             mod = new ModificationItem[] {
                 new ModificationItem(
@@ -331,15 +302,13 @@ public class SyncUserTest extends UserTest {
                 assert (false);
             }
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = newConnector.getLatestSyncToken(ObjectClass.ACCOUNT);
             newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(updated.isEmpty());
-            assertEquals(1, deleted.size());
+            assertTrue(handler.getUpdated().isEmpty());
+            assertEquals(1, handler.getDeleted().size());
             // ----------------------------------
 
             // ----------------------------------
@@ -349,27 +318,24 @@ public class SyncUserTest extends UserTest {
             uid11 = connector.update(
                     ObjectClass.ACCOUNT, uid11,
                     Collections.singleton(AttributeBuilder.build(
-                                    "givenName", Collections.singleton("changed"))),
+                            "givenName", Collections.singleton("changed"))),
                     null);
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.ACCOUNT);
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
-            assertTrue(deleted.isEmpty());
-            assertEquals(1, updated.size());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertEquals(1, handler.getUpdated().size());
 
-            updated.clear();
-            deleted.clear();
+            handler.clear();
 
             // check with updated token and without any modification
             connector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
-            assertTrue(deleted.isEmpty());
-            assertTrue(updated.isEmpty());
+            assertTrue(handler.getDeleted().isEmpty());
+            assertTrue(handler.getUpdated().isEmpty());
             // ----------------------------------
         } finally {
             if (uid12 != null) {
@@ -392,15 +358,15 @@ public class SyncUserTest extends UserTest {
 
                 newConnector.delete(ObjectClass.ACCOUNT, uid11, null);
 
-                updated.clear();
-                deleted.clear();
+                handler.clear();
 
                 newConnector.sync(ObjectClass.ACCOUNT, token, handler, oob.build());
 
-                assertFalse(deleted.isEmpty());
-                assertTrue(deleted.size() <= 2);
-                assertTrue(deleted.get(0).getUid().getUidValue().startsWith(util.getEntryIDs("1").getValue()));
-                assertNotNull(deleted.get(0).getObject().getAttributeByName("sAMAccountName"));
+                assertFalse(handler.getDeleted().isEmpty());
+                assertTrue(handler.getDeleted().size() <= 2);
+                assertTrue(handler.getDeleted().get(0).getUid().getUidValue().
+                        startsWith(util.getEntryIDs("1").getValue()));
+                assertNotNull(handler.getDeleted().get(0).getObject().getAttributeByName("sAMAccountName"));
             }
         }
     }
