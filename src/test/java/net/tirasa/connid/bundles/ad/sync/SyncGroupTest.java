@@ -71,15 +71,12 @@ public class SyncGroupTest extends GroupTest {
             // check sync with new group (token updated)
             // ----------------------------------
             // group added sync
-            SyncToken nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             uid11 = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids11), null);
-            token = nextToken;
 
             handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             // group related to uid11 memberOf (it doesn't match the filter) 
             assertEquals(1, handler.getDeleted().size());
@@ -100,9 +97,8 @@ public class SyncGroupTest extends GroupTest {
             handler.clear();
 
             // check with updated token and without any modification
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             assertTrue(handler.getDeleted().isEmpty());
             assertTrue(handler.getUpdated().isEmpty());
@@ -123,14 +119,13 @@ public class SyncGroupTest extends GroupTest {
 
             } catch (NamingException e) {
                 LOG.error(e, "Error creating user GroupTestFor11");
-                assert (false);
+                fail();
             }
 
             handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             assertFalse(handler.getDeleted().isEmpty());
             assertTrue(handler.getUpdated().isEmpty());
@@ -145,14 +140,13 @@ public class SyncGroupTest extends GroupTest {
                 ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey(), ObjectClass.GROUP), mod);
             } catch (NamingException e) {
                 LOG.error(e, "Error adding membership for newMemberFor11");
-                assert (false);
+                fail();
             }
 
             handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             // group related to uid11 memberOf (it doesn't match the filter) 
             assertEquals(1, handler.getDeleted().size());
@@ -174,14 +168,13 @@ public class SyncGroupTest extends GroupTest {
                 ctx.modifyAttributes(util.getEntryDN(util.getEntryIDs("InFilter").getKey(), ObjectClass.GROUP), mod);
             } catch (NamingException e) {
                 LOG.error(e, "Error adding membership for GroupTestFor11");
-                assert (false);
+                fail();
             }
 
             handler.clear();
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             assertEquals(2, handler.getDeleted().size());
             assertTrue(handler.getUpdated().isEmpty());
@@ -196,9 +189,8 @@ public class SyncGroupTest extends GroupTest {
             final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
             assertNotNull(uid);
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             assertFalse(handler.getDeleted().isEmpty());
             assertTrue(handler.getUpdated().isEmpty());
@@ -210,9 +202,8 @@ public class SyncGroupTest extends GroupTest {
                 fail();
             }
 
-            nextToken = connector.getLatestSyncToken(ObjectClass.GROUP);
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
-            token = nextToken;
+            token = handler.getLatestReceivedToken();
 
             // always returned
             assertFalse(handler.getDeleted().isEmpty());
@@ -221,7 +212,7 @@ public class SyncGroupTest extends GroupTest {
             // ----------------------------------
         } catch (Throwable t) {
             LOG.error(t, "Unexpected exception");
-            assert (false);
+            fail();
         } finally {
             assertNotNull(uid11);
             connector.delete(ObjectClass.GROUP, uid11, null);
