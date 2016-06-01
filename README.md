@@ -15,7 +15,7 @@ The Active Directory bundle (JNDI implementation) is part of the [ConnId](http:/
 </dependency>
 ```
 
-where `connid.ad.version` is one of [available](http://repo1.maven.org/maven2/net/tirasa/connid/bundles/org.connid.bundles.ad/).
+where `connid.ad.version` is one of [available](http://repo1.maven.org/maven2/net/tirasa/connid/bundles/net.tirasa.connid.bundles.ad/).
 
 ### Downloads
 
