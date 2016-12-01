@@ -3,6 +3,11 @@ ConnIdADBundle
 
 The Active Directory bundle (JNDI implementation) is part of the [ConnId](http://connid.tirasa.net) project.
 
+<a href="https://travis-ci.org/Tirasa/ConnIdADBundle"><img src="https://api.travis-ci.org/Tirasa/ConnIdADBundle.png"/></a> 
+<a href="https://maven-badges.herokuapp.com/maven-central/net.tirasa.connid.bundles/net.tirasa.connid.bundles.ad">
+  <img src="https://maven-badges.herokuapp.com/maven-central/net.tirasa.connid.bundles/net.tirasa.connid.bundles.ad/badge.svg"/>
+</a>
+
 ## How to get it
 
 ### Maven
@@ -25,4 +30,3 @@ Available from [releases](https://github.com/Tirasa/ConnIdADBundle/releases).
 
  * [wiki](https://connid.atlassian.net/wiki/pages/viewpage.action?pageId=360482)
  * [issues](https://connid.atlassian.net/browse/AD)
- * <a href="https://travis-ci.org/Tirasa/ConnIdADBundle"><img src="https://api.travis-ci.org/Tirasa/ConnIdADBundle.png"/></a>
