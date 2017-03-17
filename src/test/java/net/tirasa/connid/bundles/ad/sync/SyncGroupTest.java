@@ -118,7 +118,7 @@ public class SyncGroupTest extends GroupTest {
             // check sync with group 'IN' group (token updated)
             // ----------------------------------
             // created a new user without memberships specification
-            final ADConfiguration configuration = getSimpleConf(prop);
+            final ADConfiguration configuration = getSimpleConf(PROP);
 
             final ADConnection connection = new ADConnection(configuration);
             final LdapContext ctx = connection.getInitialContext();

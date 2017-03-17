@@ -33,8 +33,12 @@ import net.tirasa.adsddl.ntsd.SID;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.GroupTest;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
+import org.identityconnectors.framework.api.APIConfiguration;
+import org.identityconnectors.framework.api.ConnectorFacade;
+import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
@@ -46,6 +50,7 @@ import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.test.common.TestHelpers;
 import org.junit.Test;
 
 public class GroupCrudTest extends GroupTest {
@@ -109,7 +114,7 @@ public class GroupCrudTest extends GroupTest {
         assertEquals(11, results.size());
 
         try {
-            final ADConfiguration configuration = getSimpleConf(prop);
+            final ADConfiguration configuration = getSimpleConf(PROP);
             final ADConnection connection = new ADConnection(configuration);
             final LdapContext ctx = connection.getInitialContext();
             ctx.destroySubcontext(new LdapName(util.getEntryDN(ids.getKey(), ObjectClass.GROUP)));
@@ -223,7 +228,7 @@ public class GroupCrudTest extends GroupTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        String baseContext = prop.getProperty("baseContext");
+        String baseContext = PROP.getProperty("baseContext");
 
         final Map.Entry<String, String> ids = util.getEntryIDs("20");
 
@@ -482,7 +487,7 @@ public class GroupCrudTest extends GroupTest {
             }
         };
 
-        final String baseContext = prop.getProperty("baseContext");
+        final String baseContext = PROP.getProperty("baseContext");
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -619,6 +624,73 @@ public class GroupCrudTest extends GroupTest {
                 connector.delete(ObjectClass.ACCOUNT, uuid, null);
             }
 
+            if (guid != null) {
+                connector.delete(ObjectClass.GROUP, guid, null);
+            }
+        }
+    }
+
+    @Test
+    public void issueAD56() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        Uid guid = null;
+        try {
+            // create options for returning attributes
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet("cn", "sAMAccountName", "objectSID", "primaryGroupID", "memberOf");
+
+            final Map.Entry<String, String> gid = util.getEntryIDs("GAD56", ObjectClass.GROUP);
+
+            assertNull("Please remove group 'sAMAccountName: " + gid.getValue() + "' from AD",
+                    connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
+
+            Set<Attribute> attributes = util.getSimpleGroupProfile(gid, true);
+
+            guid = connector.create(ObjectClass.GROUP, attributes, null);
+            assertNotNull(guid);
+            assertEquals(gid.getValue(), guid.getUidValue());
+
+            ConnectorObject group = connector.getObject(ObjectClass.GROUP, guid, oob.build());
+            assertNotNull(group);
+            assertEquals(gid.getValue(), group.getAttributeByName("sAMAccountName").getValue().iterator().next());
+            assertNotEquals(gid.getValue(), group.getAttributeByName("cn").getValue().iterator().next());
+
+            ADConfiguration newConf = getSimpleConf(PROP);
+            newConf.setGidAttribute("cn");
+
+            assertNotNull(conf);
+            conf.validate();
+
+            ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+
+            APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newConf);
+            impl.getResultsHandlerConfiguration().setFilteredResultsHandlerInValidationMode(true);
+
+            ConnectorFacade newConnector = factory.newInstance(impl);
+            assertNotNull(newConnector);
+
+            group = newConnector.getObject(ObjectClass.GROUP, guid, oob.build());
+            assertNull(group);
+
+            newConf = getSimpleConf(PROP);
+            newConf.setGidAttribute("sAMAccountName");
+
+            assertNotNull(conf);
+            conf.validate();
+
+            factory = ConnectorFacadeFactory.getInstance();
+
+            impl = TestHelpers.createTestConfiguration(ADConnector.class, newConf);
+            impl.getResultsHandlerConfiguration().setFilteredResultsHandlerInValidationMode(true);
+
+            newConnector = factory.newInstance(impl);
+            assertNotNull(newConnector);
+
+            group = newConnector.getObject(ObjectClass.GROUP, guid, oob.build());
+            assertNotNull(group);
+        } finally {
             if (guid != null) {
                 connector.delete(ObjectClass.GROUP, guid, null);
             }

@@ -104,6 +104,7 @@ public class ADConfiguration extends LdapConfiguration {
         super();
 
         setUidAttribute("sAMAccountName");
+        setGidAttribute("sAMAccountName");
         setSynchronizePasswords(false);
         setAccountUserNameAttributes("sAMAccountName");
         setObjectClassesToSynchronize(new String[] { "user" });
@@ -375,6 +376,12 @@ public class ADConfiguration extends LdapConfiguration {
     public final void setUidAttribute(final String uidAttribute) {
         setAccountUserNameAttributes("sAMAccountName", uidAttribute);
         super.setUidAttribute(uidAttribute);
+    }
+
+    @Override
+    public final void setGidAttribute(final String gidAttribute) {
+        setAccountUserNameAttributes("sAMAccountName", gidAttribute);
+        super.setGidAttribute(gidAttribute);
     }
 
     public enum SearchScope {

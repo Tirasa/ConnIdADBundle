@@ -267,7 +267,7 @@ public class UserCrudTest extends UserTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        String baseContext = prop.getProperty("baseContext");
+        String baseContext = PROP.getProperty("baseContext");
 
         final Map.Entry<String, String> ids = util.getEntryIDs("20");
 
@@ -721,7 +721,7 @@ public class UserCrudTest extends UserTest {
 
     @Test
     public void issueAD24() {
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setUidAttribute("uid");
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
@@ -797,7 +797,7 @@ public class UserCrudTest extends UserTest {
 
     @Test
     public void issueAD27() {
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setDefaultGroupContainer("CN=Builtin," + BASE_CONTEXT);
         newconf.setGroupBaseContexts(newconf.getDefaultGroupContainer());
         newconf.setUserBaseContexts(newconf.getDefaultPeopleContainer());
@@ -883,7 +883,7 @@ public class UserCrudTest extends UserTest {
 
     @Test
     public void pwdUpdateOnly() {
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setPwdUpdateOnly(true);
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
@@ -1111,7 +1111,7 @@ public class UserCrudTest extends UserTest {
 
     @Test
     public void searchByObjectGUID() {
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setUidAttribute(ADConnector.OBJECTGUID);
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
@@ -1189,7 +1189,7 @@ public class UserCrudTest extends UserTest {
 
     @Test
     public void issueAD40() {
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setMemberships();
         newconf.setUserBaseContexts("ou=test1," + BASE_CONTEXT);
         newconf.setGroupBaseContexts("ou=groups,ou=test1," + BASE_CONTEXT);
@@ -1315,7 +1315,7 @@ public class UserCrudTest extends UserTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final String baseContext = prop.getProperty("baseContext");
+        final String baseContext = PROP.getProperty("baseContext");
 
         final String before = "testBeforeGroup43";
         final String after = "testAfterGroup43";
@@ -1444,10 +1444,10 @@ public class UserCrudTest extends UserTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final ADConfiguration newconf = getSimpleConf(prop);
+        final ADConfiguration newconf = getSimpleConf(PROP);
         newconf.setMembershipConservativePolicy(true);
 
-        final String baseContext = prop.getProperty("baseContext");
+        final String baseContext = PROP.getProperty("baseContext");
 
         final String first = "testFirstGroup44";
         final String second = "testSecondGroup44";

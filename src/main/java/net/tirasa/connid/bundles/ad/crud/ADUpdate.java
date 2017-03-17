@@ -107,7 +107,7 @@ public class ADUpdate extends LdapModifyOperation {
         }
 
         if (newName == null
-                && !conn.getConfiguration().getUidAttribute().equalsIgnoreCase(ADConfiguration.CN_NAME)
+                && !conn.getSchemaMapping().getLdapUidAttribute(oclass).equalsIgnoreCase(ADConfiguration.CN_NAME)
                 && cnAttr != null) {
             final String cnValue = cnAttr.getValue() == null
                     || cnAttr.getValue().isEmpty()

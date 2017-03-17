@@ -40,8 +40,6 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
-import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 
 public abstract class AbstractTest {
@@ -55,20 +53,20 @@ public abstract class AbstractTest {
 
     protected static ADConfiguration conf;
 
-    protected static final Properties prop = new Properties();
+    protected static final Properties PROP = new Properties();
 
     protected static String BASE_CONTEXT;
 
     protected static void init() {
         try {
-            prop.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
+            PROP.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
         } catch (IOException e) {
             LOG.error(e, "Error loading properties file");
         }
 
-        BASE_CONTEXT = prop.getProperty("baseContext");
+        BASE_CONTEXT = PROP.getProperty("baseContext");
 
-        conf = getSimpleConf(prop);
+        conf = getSimpleConf(PROP);
 
         assertNotNull(conf);
         conf.validate();
@@ -77,10 +75,6 @@ public abstract class AbstractTest {
 
         final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, conf);
         impl.getResultsHandlerConfiguration().setFilteredResultsHandlerInValidationMode(true);
-
-        // TODO: remove the line below when using ConnId >= 1.4.0.1
-        ((APIConfigurationImpl) impl).
-                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(conf));
 
         connector = factory.newInstance(impl);
 
@@ -93,6 +87,7 @@ public abstract class AbstractTest {
         final ADConfiguration configuration = new ADConfiguration();
 
         configuration.setUidAttribute("sAMAccountName");
+        configuration.setGidAttribute("sAMAccountName");
 
         configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
         configuration.setDefaultGroupContainer("CN=Users," + BASE_CONTEXT);

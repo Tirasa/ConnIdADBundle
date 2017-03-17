@@ -47,6 +47,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // uidAttribute
             props.add(new PropertyDescriptor("uidAttribute", LdapConfiguration.class));
 
+            // gidAttribute
+            props.add(new PropertyDescriptor("gidAttribute", LdapConfiguration.class));
+
             // credentials
             props.add(new PropertyDescriptor("credentials", LdapConfiguration.class));
 

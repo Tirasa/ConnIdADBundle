@@ -135,7 +135,7 @@ public class SyncUserTest extends UserTest {
             // check sync with user 'IN' group (token updated)
             // ----------------------------------
             // created a new user without memberships specification
-            final ADConfiguration configuration = getSimpleConf(prop);
+            final ADConfiguration configuration = getSimpleConf(PROP);
             configuration.setMemberships();
 
             if (LOG.isOk()) {
@@ -398,7 +398,7 @@ public class SyncUserTest extends UserTest {
     @Test
     public void verifyFilter() {
         // instatiate a new configuration to avoid collisions with sync test
-        final ADConfiguration configuration = getSimpleConf(prop);
+        final ADConfiguration configuration = getSimpleConf(PROP);
 
         final String DN = "CN=" + util.getEntryIDs("5").getKey() + ",CN=Users," + configuration.getUserBaseContexts()[0];
 
@@ -417,7 +417,7 @@ public class SyncUserTest extends UserTest {
     @Test
     public void verifySearchWithMemb() {
 
-        final ADConfiguration confWithMembership = getSimpleConf(prop);
+        final ADConfiguration confWithMembership = getSimpleConf(PROP);
         confWithMembership.setMemberships("CN=GroupTestInFilter,CN=Users," + BASE_CONTEXT);
 
         final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();

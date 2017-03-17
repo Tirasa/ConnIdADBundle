@@ -15,6 +15,8 @@
  */
 package net.tirasa.connid.bundles.ad.schema;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -71,6 +73,7 @@ class ADSchemaBuilder {
         final SchemaBuilder schemaBld = new SchemaBuilder(ADConnector.class);
         build(ObjectClass.ACCOUNT_NAME, schemaBld);
         build(ObjectClass.GROUP_NAME, schemaBld);
+        build(ObjectClass.ALL_NAME, schemaBld);
         schema = schemaBld.build();
     }
 
@@ -93,7 +96,10 @@ class ADSchemaBuilder {
         // Specify filter
         // -----------------------------------
         for (String oclass : oname.equalsIgnoreCase(ObjectClass.ACCOUNT_NAME)
-                ? conf.getAccountObjectClasses() : conf.getGroupObjectClasses()) {
+                ? conf.getAccountObjectClasses()
+                : oname.equalsIgnoreCase(ObjectClass.GROUP_NAME)
+                ? conf.getGroupObjectClasses()
+                : new String[] { oname }) {
             filter.append("(lDAPDisplayName=").append(oclass).append(")");
         }
 
@@ -105,7 +111,13 @@ class ADSchemaBuilder {
         final Set<String> schemaNames = new HashSet<String>();
 
         // Issue http://code.google.com/p/connid/issues/detail?id=24
-        schemaNames.add(conf.getUidAttribute());
+        if (oname.equalsIgnoreCase(ObjectClass.ACCOUNT_NAME)) {
+            schemaNames.add(conf.getUidAttribute());
+        } else if (oname.equalsIgnoreCase(ObjectClass.GROUP_NAME)) {
+            schemaNames.add(conf.getGidAttribute());
+        } else {
+            schemaNames.add(OBJECTGUID);
+        }
 
         final String schemaConfigurationPath = "CN=Schema,CN=Configuration";
 

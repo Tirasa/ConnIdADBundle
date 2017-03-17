@@ -534,8 +534,8 @@ public class ADSyncStrategy {
 
         Uid uid = null;
 
-        if (StringUtil.isNotBlank(conn.getConfiguration().getUidAttribute())) {
-            uidAttribute = profile.get(conn.getConfiguration().getUidAttribute());
+        if (StringUtil.isNotBlank(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            uidAttribute = profile.get(conn.getSchemaMapping().getLdapUidAttribute(oclass));
 
             if (uidAttribute != null) {
                 uid = new Uid(uidAttribute.get().toString());

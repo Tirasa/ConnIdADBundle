@@ -55,6 +55,8 @@ public class TestUtil {
 
     /**
      * Create a set of test etries.
+     *
+     * @param num number of entries to be created.
      */
     public void createEntry(final int num) {
         // check entries existence
@@ -142,7 +144,7 @@ public class TestUtil {
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
         }
 
-        attributes.add(AttributeBuilder.build(conf.getUidAttribute(), Collections.singletonList(ids.getValue())));
+        attributes.add(AttributeBuilder.build(conf.getGidAttribute(), Collections.singletonList(ids.getValue())));
 
         attributes.add(AttributeBuilder.build("member", Collections.singletonList(
                 getEntryDN(getEntryIDs("OfAll", ObjectClass.ACCOUNT).getKey(), ObjectClass.ACCOUNT))));

@@ -496,7 +496,7 @@ public class ADUtilities {
     }
 
     public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
-        final String filter = connection.getConfiguration().getUidAttribute() + "=" + uid.getUidValue();
+        final String filter = connection.getSchemaMapping().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
 
         final ConnectorObject obj = LdapSearches.findObject(
                 connection, oclass,
