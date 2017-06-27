@@ -33,7 +33,7 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
-public class ADConfiguration extends LdapConfiguration {
+public final class ADConfiguration extends LdapConfiguration {
 
     private final Log LOG = Log.getLog(ADConfiguration.class);
 
@@ -87,6 +87,8 @@ public class ADConfiguration extends LdapConfiguration {
 
     private boolean pwdUpdateOnly = false;
 
+    private String defaultIdAttribute = "cn";
+
     private final ObjectClassMappingConfig accountConfig = new ObjectClassMappingConfig(
             ObjectClass.ACCOUNT,
             CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
@@ -100,13 +102,22 @@ public class ADConfiguration extends LdapConfiguration {
             false,
             Collections.<String>emptyList());
 
+    private final ObjectClassMappingConfig allConfig = new ObjectClassMappingConfig(
+            ObjectClass.ALL,
+            CollectionUtil.newList("top"),
+            false,
+            Collections.<String>emptyList());
+
     public ADConfiguration() {
         super();
 
+        setAccountUserNameAttributes("sAMAccountName");
+
         setUidAttribute("sAMAccountName");
         setGidAttribute("sAMAccountName");
+        setDefaultIdAttribute("cn");
         setSynchronizePasswords(false);
-        setAccountUserNameAttributes("sAMAccountName");
+
         setObjectClassesToSynchronize(new String[] { "user" });
         setGroupMemberAttribute("member");
 
@@ -142,6 +153,9 @@ public class ADConfiguration extends LdapConfiguration {
         HashMap<ObjectClass, ObjectClassMappingConfig> result = new HashMap<ObjectClass, ObjectClassMappingConfig>();
         result.put(accountConfig.getObjectClass(), accountConfig);
         result.put(groupConfig.getObjectClass(), groupConfig);
+
+        allConfig.setShortNameLdapAttributes(CollectionUtil.newList(getDefaultIdAttribute()));
+        result.put(allConfig.getObjectClass(), allConfig);
         return result;
     }
 
@@ -270,10 +284,12 @@ public class ADConfiguration extends LdapConfiguration {
 
     @ConfigurationProperty(displayMessageKey = "groupSearchFilter.display",
             helpMessageKey = "groupSearchFilter.help", order = 11)
+    @Override
     public String getGroupSearchFilter() {
         return groupSearchFilter;
     }
 
+    @Override
     public void setGroupSearchFilter(String groupSearchFilter) {
         this.groupSearchFilter = groupSearchFilter;
     }
@@ -372,15 +388,24 @@ public class ADConfiguration extends LdapConfiguration {
         this.membershipConservativePolicy = membershipConservativePolicy;
     }
 
+    @ConfigurationProperty(order = 19,
+            displayMessageKey = "defaultIdAttribute.display",
+            helpMessageKey = "defaultIdAttribute.help")
+    public String getDefaultIdAttribute() {
+        return defaultIdAttribute;
+    }
+
+    public void setDefaultIdAttribute(final String defaultIdAttribute) {
+        this.defaultIdAttribute = defaultIdAttribute;
+    }
+
     @Override
     public final void setUidAttribute(final String uidAttribute) {
-        setAccountUserNameAttributes("sAMAccountName", uidAttribute);
         super.setUidAttribute(uidAttribute);
     }
 
     @Override
     public final void setGidAttribute(final String gidAttribute) {
-        setAccountUserNameAttributes("sAMAccountName", gidAttribute);
         super.setGidAttribute(gidAttribute);
     }
 
