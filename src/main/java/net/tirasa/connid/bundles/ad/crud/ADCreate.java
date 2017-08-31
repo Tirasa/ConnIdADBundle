@@ -39,10 +39,12 @@ import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
+import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
+import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -100,15 +102,36 @@ public class ADCreate extends LdapModifyOperation {
         final ADUtilities utils = new ADUtilities(conn);
 
         Name name;
+        Uid uid = AttributeUtil.getUidAttribute(attrs);
 
         if (ADUtilities.isDN(nameAttr.getNameValue())) {
             name = nameAttr;
         } else {
-            if (AttributeUtil.getUidAttribute(attrs) == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
-                attrs.add(new Uid(nameAttr.getNameValue()));
+            if (uid == null && StringUtil.isNotBlank(nameAttr.getNameValue())) {
+                uid = new Uid(nameAttr.getNameValue());
+                attrs.add(uid);
             }
 
             name = new Name(utils.getDN(oclass, nameAttr, cnAttr));
+        }
+        // -------------------------------------------------
+
+        // -------------------------------------------------
+        // Add gid/uidAttribute if missing and if value is available
+        // -------------------------------------------------
+        final String idAttrName;
+        if (ObjectClass.ACCOUNT.equals(oclass)) {
+            idAttrName = conn.getConfiguration().getUidAttribute();
+        } else if (ObjectClass.GROUP.equals(oclass)) {
+            idAttrName = conn.getConfiguration().getGidAttribute();
+        } else {
+            idAttrName = ADConfiguration.class.cast(conn.getConfiguration()).getDefaultIdAttribute();
+        }
+
+        final Attribute idAttr = AttributeUtil.find(idAttrName, attrs);
+
+        if ((idAttr == null || CollectionUtil.isEmpty(idAttr.getValue())) && uid != null) {
+            attrs.add(AttributeBuilder.build(idAttrName, uid.getUidValue()));
         }
         // -------------------------------------------------
 

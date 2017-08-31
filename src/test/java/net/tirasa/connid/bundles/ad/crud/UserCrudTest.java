@@ -1349,7 +1349,6 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("43");
 
-//        connector.delete(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null);
         assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
                 connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
@@ -1590,4 +1589,75 @@ public class UserCrudTest extends UserTest {
             }
         }
     }
+
+    @Test
+    public void issueAD58() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD58");
+
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+
+        // include sAMAccountName because dn in in NAME not sAMAccountName
+        final Attribute attr = AttributeUtil.find(conf.getUidAttribute(), attributes);
+        if (attr == null) {
+            attributes.add(AttributeBuilder.build(conf.getUidAttribute(), ids.getKey()));
+        }
+
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Arrays.asList("sAMAccountName"));
+
+        // retrieve created object
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: sAMAccountName, NAME and UID
+        assertEquals(ids.getValue(), object.getAttributeByName("sAMAccountName").getValue().get(0));
+
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+    }
+
+    @Test
+    public void issueAD58WithoutDN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD58NN");
+
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
+
+        // remove sAMAccountName because sAMAccountName value is embedded into NAME
+        final Attribute attr = AttributeUtil.find(conf.getUidAttribute(), attributes);
+        attributes.remove(attr);
+
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Arrays.asList("sAMAccountName"));
+
+        // retrieve created object
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        // Returned attributes: sAMAccountName, NAME and UID
+        assertEquals(ids.getValue(), object.getAttributeByName("sAMAccountName").getValue().get(0));
+
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+    }
+
 }
