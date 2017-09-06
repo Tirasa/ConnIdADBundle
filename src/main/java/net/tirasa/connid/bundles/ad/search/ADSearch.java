@@ -93,9 +93,12 @@ public class ADSearch {
             final ResultsHandler handler,
             final OperationOptions options) {
 
-        this(conn, oclass, filter, handler, options, oclass.is(ObjectClass.ACCOUNT_NAME)
+        this(conn, oclass, filter, handler, options,
+                oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()
-                : ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts());
+                : oclass.is(ObjectClass.GROUP_NAME)
+                ? ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts()
+                : ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
     }
 
     public final void executeADQuery(final ResultsHandler handler) {

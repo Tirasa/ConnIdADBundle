@@ -16,7 +16,6 @@
 package net.tirasa.connid.bundles.ad;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -332,10 +331,8 @@ public final class ADConfiguration extends LdapConfiguration {
 
     @Override
     public String[] getBaseContexts() {
-        final List<String> res = new ArrayList<String>();
-        res.addAll(Arrays.asList(getUserBaseContexts()));
-        res.addAll(Arrays.asList(getGroupBaseContexts()));
-        return res.toArray(new String[res.size()]);
+        // return root suffixes
+        return this.getBaseContextsToSynchronize();
     }
 
     @ConfigurationProperty(displayMessageKey = "groupMemberReferenceAttribute.display",
