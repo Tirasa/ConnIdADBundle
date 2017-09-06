@@ -28,7 +28,7 @@
 
   <groupId>net.tirasa.connid.bundles</groupId>
   <artifactId>net.tirasa.connid.bundles.ad</artifactId>
-  <version>1.3.4-SNAPSHOT</version>
+  <version>1.3.4</version>
 
   <name>ConnId Bundles: AD</name>
 
@@ -49,7 +49,7 @@
     <connection>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</connection>
     <url>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</url>
     <developerConnection>scm:git:git@github.com:Tirasa/ConnIdADBundle.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>net.tirasa.connid.bundles.ad-1.3.4</tag>
   </scm>
   
   <issueManagement>
