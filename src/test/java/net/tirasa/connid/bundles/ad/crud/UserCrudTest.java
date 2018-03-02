@@ -15,6 +15,7 @@
  */
 package net.tirasa.connid.bundles.ad.crud;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static org.junit.Assert.*;
 
 import java.util.AbstractMap;
@@ -1660,4 +1661,39 @@ public class UserCrudTest extends UserTest {
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
 
+    public void issueAD61() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("pne");
+        final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
+        attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
+
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+
+        // Ask just for memberOf
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(UACCONTROL_ATTR, ADConfiguration.PNE_FLAG);
+
+        // retrieve created object
+        ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+        int uac_before = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+        // remove password never expire flag
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build(ADConfiguration.PNE_FLAG, false) });
+
+        connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
+
+        object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+        int uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+        assertNotEquals(uac_before, uac_after);
+
+        // remove user
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+    }
 }

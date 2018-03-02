@@ -15,6 +15,7 @@
  */
 package net.tirasa.connid.bundles.ad.util;
 
+import static net.tirasa.connid.bundles.ad.ADConfiguration.PNE_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
@@ -23,6 +24,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.SDDL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static net.tirasa.connid.bundles.ad.ADConnector.ADDS2012_ATTRIBUTES_TO_BE_REMOVED;
+import static net.tirasa.connid.bundles.ad.ADConnector.UF_DONT_EXPIRE_PASSWD;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
@@ -311,6 +313,24 @@ public class ADUtilities {
             } else if (LdapConstants.PASSWORD.is(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 // IMPORTANT!!! Return empty guarded string
                 attribute = AttributeBuilder.build(attributeName, new GuardedString());
+            } else if (PNE_FLAG.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                try {
+
+                    final String uac = profile.get(UACCONTROL_ATTR) == null
+                            || profile.get(UACCONTROL_ATTR).get() == null
+                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
+
+                    if (LOG.isOk()) {
+                        LOG.ok("User Account Control: {0}", uac);
+                    }
+
+                    // disabled if PNE_FLAG is not included (0x10000)
+                    attribute = uac == null || (Integer.parseInt(uac) & UF_DONT_EXPIRE_PASSWD) != UF_DONT_EXPIRE_PASSWD
+                            ? AttributeBuilder.build(PNE_FLAG, false)
+                            : AttributeBuilder.build(PNE_FLAG, true);
+                } catch (NamingException e) {
+                    LOG.error(e, "While fetching " + UACCONTROL_ATTR);
+                }
             } else if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 try {
 
@@ -356,7 +376,7 @@ public class ADUtilities {
 
                 final String membAttrPrefix
                         = ADConfiguration.class.cast(connection.getConfiguration()).
-                        getGroupMemberReferenceAttribute();
+                                getGroupMemberReferenceAttribute();
 
                 // search for less than 1k memberships
                 String membAttrName = String.format("%s;range=0-*", membAttrPrefix);
