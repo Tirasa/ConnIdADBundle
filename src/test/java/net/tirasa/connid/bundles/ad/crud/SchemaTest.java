@@ -43,11 +43,17 @@ public class SchemaTest extends AbstractTest {
         assertNotNull(schema.getOperationOptionInfo());
 
         boolean sddl = false;
+        boolean pne = false;
         boolean givenname = false;
 
         for (AttributeInfo attrInfo : info.getAttributeInfo()) {
             if (ADConfiguration.UCCP_FLAG.equals(attrInfo.getName())) {
                 sddl = true;
+                assertEquals(Boolean.class, attrInfo.getType());
+            }
+
+            if (ADConfiguration.PNE_FLAG.equals(attrInfo.getName())) {
+                pne = true;
                 assertEquals(Boolean.class, attrInfo.getType());
             }
 
@@ -57,6 +63,6 @@ public class SchemaTest extends AbstractTest {
             }
         }
 
-        assertTrue(sddl && givenname);
+        assertTrue(sddl && givenname && pne);
     }
 }

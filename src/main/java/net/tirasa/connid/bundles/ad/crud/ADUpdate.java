@@ -46,6 +46,7 @@ import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
@@ -112,8 +113,8 @@ public class ADUpdate extends LdapModifyOperation {
             final String cnValue = cnAttr.getValue() == null
                     || cnAttr.getValue().isEmpty()
                     || cnAttr.getValue().get(0) == null
-                            ? null
-                            : cnAttr.getValue().get(0).toString();
+                    ? null
+                    : cnAttr.getValue().get(0).toString();
 
             try {
                 // rename if and only if Name is a DN or CN has been provided (consider that the CN can be the Name)
@@ -207,7 +208,11 @@ public class ADUpdate extends LdapModifyOperation {
 
         ADGuardedPasswordAttribute pwdAttr = null;
 
-        int uacValue = -1;
+        final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
+        int uacValue = uac == null || uac.getValue() == null || uac.getValue().isEmpty()
+                ? 0 : Integer.parseInt(uac.getValue().get(0).toString());
+
+        Boolean pne = null;
 
         for (Attribute attr : attrs) {
             javax.naming.directory.Attribute ldapAttr = null;
@@ -223,11 +228,16 @@ public class ADUpdate extends LdapModifyOperation {
             } else if (attr.is(ADConfiguration.UCCP_FLAG)) {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty()) {
-                    javax.naming.directory.Attribute ntSecurityDescriptor = utils.userCannotChangePassword(
-                            obj, (Boolean) value.get(0));
+                    javax.naming.directory.Attribute ntSecurityDescriptor
+                            = utils.userCannotChangePassword(obj, (Boolean) value.get(0));
                     if (ntSecurityDescriptor != null) {
                         ldapAttrs.put(ntSecurityDescriptor);
                     }
+                }
+            } else if (attr.is(ADConfiguration.PNE_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    pne = (Boolean) value.get(0);
                 }
             } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
                 final List<Object> value = attr.getValue();
@@ -251,14 +261,7 @@ public class ADUpdate extends LdapModifyOperation {
                 uacValue = attr.getValue() == null || attr.getValue().isEmpty()
                         ? -1
                         : Integer.parseInt(attr.getValue().get(0).toString());
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME)
-                    && oclass.is(ObjectClass.ACCOUNT_NAME)
-                    && uacValue == -1) {
-                final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
-
-                uacValue = uac != null && uac.getValue() != null && !uac.getValue().isEmpty()
-                        ? Integer.parseInt(uac.getValue().get(0).toString()) : 0;
-
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 boolean enabled = attr.getValue() == null
                         || attr.getValue().isEmpty() || Boolean.parseBoolean(attr.getValue().get(0).toString());
 
@@ -282,7 +285,15 @@ public class ADUpdate extends LdapModifyOperation {
             addAttribute(ldapAttr, ldapAttrs);
         }
 
-        if (uacValue != -1) {
+        if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
+            if (pne != null) {
+                if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) == ADConnector.UF_DONT_EXPIRE_PASSWD && !pne) {
+                    uacValue -= ADConnector.UF_DONT_EXPIRE_PASSWD;
+                } else if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) != ADConnector.UF_DONT_EXPIRE_PASSWD && pne) {
+                    uacValue += ADConnector.UF_DONT_EXPIRE_PASSWD;
+                }
+            }
+
             addAttribute(conn.getSchemaMapping().encodeAttribute(
                     oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(uacValue))),
                     ldapAttrs);

@@ -34,6 +34,7 @@ import javax.naming.directory.ModificationItem;
 import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
@@ -123,6 +124,7 @@ public class ADCreate extends LdapModifyOperation {
         int uacValue = -1;
 
         Boolean uccp = null;
+        Boolean pne = null;
 
         for (Attribute attr : attrs) {
 
@@ -132,6 +134,11 @@ public class ADCreate extends LdapModifyOperation {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty()) {
                     uccp = (Boolean) value.get(0);
+                }
+            } else if (attr.is(ADConfiguration.PNE_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    pne = (Boolean) value.get(0);
                 }
             } else if (attr.is(ADConfiguration.PRIMARY_GROUP_DN_NAME)) {
                 final List<Object> value = attr.getValue();
@@ -186,6 +193,16 @@ public class ADCreate extends LdapModifyOperation {
         final String pwdAttrName = conn.getConfiguration().getPasswordAttribute();
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
+            if (pne != null) {
+                if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) == ADConnector.UF_DONT_EXPIRE_PASSWD && !pne) {
+                    uacValue -= ADConnector.UF_DONT_EXPIRE_PASSWD;
+                } else if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) != ADConnector.UF_DONT_EXPIRE_PASSWD && pne) {
+                    uacValue = uacValue == -1
+                            ? ADConnector.UF_DONT_EXPIRE_PASSWD
+                            : uacValue + ADConnector.UF_DONT_EXPIRE_PASSWD;
+                }
+            }
+
             if (pwdAttr != null) {
                 pwdAttr.access(new Accessor() {
 
