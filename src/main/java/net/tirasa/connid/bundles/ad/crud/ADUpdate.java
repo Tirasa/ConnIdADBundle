@@ -21,6 +21,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
+import static net.tirasa.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
 import static net.tirasa.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
@@ -213,6 +214,7 @@ public class ADUpdate extends LdapModifyOperation {
                 ? 0 : Integer.parseInt(uac.getValue().get(0).toString());
 
         Boolean pne = null;
+        Boolean status = null;
 
         for (Attribute attr : attrs) {
             javax.naming.directory.Attribute ldapAttr = null;
@@ -262,20 +264,8 @@ public class ADUpdate extends LdapModifyOperation {
                         ? -1
                         : Integer.parseInt(attr.getValue().get(0).toString());
             } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                boolean enabled = attr.getValue() == null
+                status = attr.getValue() == null
                         || attr.getValue().isEmpty() || Boolean.parseBoolean(attr.getValue().get(0).toString());
-
-                if (enabled) {
-                    // if not enabled yet --> enable removing 0x00002
-                    if (uacValue % 16 == UF_ACCOUNTDISABLE) {
-                        uacValue -= UF_ACCOUNTDISABLE;
-                    }
-                } else {
-                    // if not disabled yet --> disable adding 0x00002
-                    if (uacValue % 16 != UF_ACCOUNTDISABLE) {
-                        uacValue += UF_ACCOUNTDISABLE;
-                    }
-                }
             } else if (attr.is(OBJECTGUID)) {
                 // ignore info
             } else {
@@ -291,6 +281,14 @@ public class ADUpdate extends LdapModifyOperation {
                     uacValue -= ADConnector.UF_DONT_EXPIRE_PASSWD;
                 } else if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) != ADConnector.UF_DONT_EXPIRE_PASSWD && pne) {
                     uacValue += ADConnector.UF_DONT_EXPIRE_PASSWD;
+                }
+            }
+
+            if (status != null) {
+                if ((uacValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
+                    uacValue -= UF_ACCOUNTDISABLE;
+                } else if ((uacValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE && !status) {
+                    uacValue += UF_ACCOUNTDISABLE;
                 }
             }
 
