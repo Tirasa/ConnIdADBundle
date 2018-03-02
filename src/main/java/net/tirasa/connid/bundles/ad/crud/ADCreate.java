@@ -121,10 +121,11 @@ public class ADCreate extends LdapModifyOperation {
 
         final BasicAttributes adAttrs = new BasicAttributes(true);
 
-        int uacValue = -1;
+        int uacValue = UF_NORMAL_ACCOUNT;
 
         Boolean uccp = null;
         Boolean pne = null;
+        Boolean status = null;
 
         for (Attribute attr : attrs) {
 
@@ -165,19 +166,12 @@ public class ADCreate extends LdapModifyOperation {
 
             } else if (attr.is(UACCONTROL_ATTR) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 uacValue = attr.getValue() == null || attr.getValue().isEmpty()
-                        ? -1
+                        ? UF_NORMAL_ACCOUNT
                         : Integer.parseInt(attr.getValue().get(0).toString());
-            } else if (attr.is(OperationalAttributes.ENABLE_NAME)
-                    && oclass.is(ObjectClass.ACCOUNT_NAME)
-                    && uacValue == -1) {
-
-                if (attr.getValue() == null
+            } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                status = attr.getValue() == null
                         || attr.getValue().isEmpty()
-                        || Boolean.parseBoolean(attr.getValue().get(0).toString())) {
-                    uacValue = UF_NORMAL_ACCOUNT;
-                } else {
-                    uacValue = UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE;
-                }
+                        || Boolean.parseBoolean(attr.getValue().get(0).toString());
             } else if (attr.is(OBJECTGUID)) {
                 // ignore info
             } else {
@@ -203,6 +197,16 @@ public class ADCreate extends LdapModifyOperation {
                 }
             }
 
+            if (status != null) {
+                if ((uacValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
+                    uacValue -= UF_ACCOUNTDISABLE;
+                } else if ((uacValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE && !status) {
+                    uacValue = uacValue == -1
+                            ? UF_ACCOUNTDISABLE
+                            : uacValue + UF_ACCOUNTDISABLE;
+                }
+            }
+
             if (pwdAttr != null) {
                 pwdAttr.access(new Accessor() {
 
@@ -219,11 +223,13 @@ public class ADCreate extends LdapModifyOperation {
                 });
             }
 
-            if (adAttrs.get(pwdAttrName) != null) {
-                adAttrs.put("userAccountControl", Integer.toString(uacValue));
-            } else {
-                adAttrs.put("userAccountControl", Integer.toString(UF_NORMAL_ACCOUNT + UF_ACCOUNTDISABLE));
+            if (adAttrs.get(pwdAttrName) == null) {
+                if ((uacValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE) {
+                    uacValue += UF_ACCOUNTDISABLE;
+                }
             }
+
+            adAttrs.put(UACCONTROL_ATTR, Integer.toString(uacValue));
         }
 
         final String entryDN = conn.getSchemaMapping().create(oclass, name, adAttrs);
