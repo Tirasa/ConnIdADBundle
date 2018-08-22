@@ -50,6 +50,7 @@ import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.spi.SyncTokenResultsHandler;
 
 /**
  * An implementation of the sync operation based on the DirSync protocol, for Active Directory.
@@ -57,6 +58,11 @@ import org.identityconnectors.framework.common.objects.Uid;
 public class ADSyncStrategy {
 
     private static final Log LOG = Log.getLog(ADSyncStrategy.class);
+
+    /**
+     * Empty cookie.
+     */
+    private static final byte[] EMPTY_COOKIE = new byte[0];
 
     private final transient ADConnection conn;
 
@@ -151,12 +157,6 @@ public class ADSyncStrategy {
                 }
 
                 ctx = conn.getSyncContext(new Control[] { new DirSyncControl() });
-
-                if (((ADConfiguration) conn.getConfiguration()).isStartSyncFromToday()) {
-                    search(ctx, "(cn=__CONNID-NORES__)", searchCtls, true);
-                    return;
-                }
-
             } else {
                 if (LOG.isOk()) {
                     LOG.ok("Synchronization with token.");
@@ -189,6 +189,9 @@ public class ADSyncStrategy {
         final Set<SearchResult> changes = search(ctx, filter, searchCtls, true);
 
         int count = changes.size();
+        if (LOG.isOk()) {
+            LOG.ok("Found {0} changes", count);
+        }
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             for (SearchResult sr : changes) {
@@ -208,6 +211,10 @@ public class ADSyncStrategy {
                     LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                 }
             }
+        }
+
+        if (handler instanceof SyncTokenResultsHandler) {
+            SyncTokenResultsHandler.class.cast(handler).handleResult(latestSyncToken);
         }
     }
 
@@ -525,7 +532,7 @@ public class ADSyncStrategy {
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
 
         // Set token
-        sdb.setToken(token);
+        sdb.setToken(token == null ? new SyncToken(EMPTY_COOKIE) : token);
 
         // Set Delta Type
         sdb.setDeltaType(syncDeltaType);

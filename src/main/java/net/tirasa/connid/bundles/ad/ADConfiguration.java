@@ -66,8 +66,6 @@ public final class ADConfiguration extends LdapConfiguration {
 
     private boolean membershipsInOr = false;
 
-    private boolean startSyncFromToday = true;
-
     private String defaultPeopleContainer;
 
     private String defaultGroupContainer;
@@ -355,16 +353,6 @@ public final class ADConfiguration extends LdapConfiguration {
 
     public void setGroupOwnerReferenceAttribute(String groupOwnerReferenceAttribute) {
         this.groupOwnerReferenceAttribute = groupOwnerReferenceAttribute;
-    }
-
-    @ConfigurationProperty(displayMessageKey = "startSyncFromToday.display",
-            helpMessageKey = "startSyncFromToday.help", order = 16)
-    public boolean isStartSyncFromToday() {
-        return startSyncFromToday;
-    }
-
-    public void setStartSyncFromToday(boolean startSyncFromToday) {
-        this.startSyncFromToday = startSyncFromToday;
     }
 
     public boolean isPwdUpdateOnly() {

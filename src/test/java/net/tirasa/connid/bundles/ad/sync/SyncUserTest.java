@@ -55,6 +55,33 @@ import org.junit.Test;
 public class SyncUserTest extends UserTest {
 
     @Test
+    public void syncFromTheBeginningWithNullToken() {
+        // ----------------------------------
+        // Handler specification
+        // ----------------------------------
+        final TestSyncResultsHandler handler = new TestSyncResultsHandler();
+        // ----------------------------------
+
+        // Ask just for sAMAccountName
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Arrays.asList(new String[] {
+            "sAMAccountName", "givenName", "memberOf", ADConfiguration.UCCP_FLAG }));
+
+        SyncToken previous = connector.sync(ObjectClass.ACCOUNT, null, handler, oob.build());
+
+        assertNotNull(previous);
+        assertNotNull(previous.getValue());
+        assertTrue(((byte[]) previous.getValue()).length > 0);
+
+        SyncToken newly = connector.sync(ObjectClass.ACCOUNT, previous, handler, oob.build());
+        assertNotNull(newly);
+        assertNotNull(newly.getValue());
+        assertTrue(((byte[]) newly.getValue()).length > 0);
+
+        assertFalse(Arrays.equals((byte[]) previous.getValue(), (byte[]) newly.getValue()));
+    }
+
+    @Test
     public void sync() {
         // We need to have several operation in the right sequence in order
         // to verify synchronization ...
@@ -75,7 +102,7 @@ public class SyncUserTest extends UserTest {
 
         assertTrue(handler.getDeleted().isEmpty());
         assertTrue(handler.getUpdated().isEmpty());
-        
+
         handler.clear();
 
         final Map.Entry<String, String> ids11 = util.getEntryIDs("11");

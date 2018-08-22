@@ -121,8 +121,6 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
             // groupMemberReferenceAttribute
             props.add(new PropertyDescriptor("groupMemberReferenceAttribute", ADConfiguration.class));
-            // startSyncFromToday
-            props.add(new PropertyDescriptor("startSyncFromToday", ADConfiguration.class));
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();

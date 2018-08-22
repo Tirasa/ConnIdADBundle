@@ -52,9 +52,6 @@ import org.identityconnectors.framework.spi.ConnectorClass;
  */
 @ConnectorClass(configurationClass = ADConfiguration.class, displayNameKey = "ADConnector")
 public class ADConnector extends LdapConnector {
-
-    private static final Log LOG = Log.getLog(ADConnector.class);
-
     public static final String OBJECTGUID = "objectGUID";
 
     public static final String OBJECTSID = "objectSID";

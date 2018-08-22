@@ -143,7 +143,7 @@ public class ADConnection extends LdapConnection {
 
         try {
             initCtx.setRequestControls(new Control[] { new SDFlagsControl(0x00000004) });
-        } catch (Exception e) {
+        } catch (NamingException e) {
             LOG.error(e, "Error initializing request controls");
         }
 
