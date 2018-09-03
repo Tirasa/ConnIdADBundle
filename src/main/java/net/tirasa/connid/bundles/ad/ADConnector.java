@@ -29,7 +29,6 @@ import net.tirasa.connid.bundles.ad.sync.ADSyncStrategy;
 import net.tirasa.connid.bundles.ldap.LdapConnector;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
-import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -48,7 +47,7 @@ import org.identityconnectors.framework.spi.ConnectorClass;
 /**
  * All-java, agent-less Active Directory connector, extending LDAP connector.
  *
- * @see org.identityconnectors.ldap.LdapConnector
+ * @see LdapConnector
  */
 @ConnectorClass(configurationClass = ADConfiguration.class, displayNameKey = "ADConnector")
 public class ADConnector extends LdapConnector {
