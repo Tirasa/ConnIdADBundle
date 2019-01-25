@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.4.2.0</version>
+    <version>1.4.5.1</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
@@ -76,8 +76,8 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.4.2.0</connid.version>
-    <connid.ldap.version>1.5.2</connid.ldap.version>
+    <connid.version>1.4.5.1</connid.version>
+    <connid.ldap.version>1.5.3</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -125,20 +125,10 @@
 
   <build>
     <plugins>
-      <plugin>        
-        <groupId>com.mycila.maven-license-plugin</groupId>
-        <artifactId>maven-license-plugin</artifactId>
-        <version>1.10.b1</version>
-        <inherited>false</inherited>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.7</version>
+        <inherited>true</inherited>        
         <executions>
           <execution>
             <id>copy-javadoc-legal-files</id>
@@ -165,38 +155,49 @@
       <plugin>
         <groupId>com.mycila</groupId>
         <artifactId>license-maven-plugin</artifactId>
-        <version>2.11</version>
         <inherited>false</inherited>
         <configuration>
-          <header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</header>
-          <properties>
-            <owner>ConnId</owner>
-            <email>connid-dev@googlegroups.com</email>
-          </properties>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <version>0.13</version>
+        <configuration>
           <excludes>
-            <exclude>**/LICENSE*</exclude>
-            <exclude>**/NOTICE*</exclude>
-            <exclude>**/*.pfx</exclude>
-            <exclude>**/*.dll</exclude>
-            <exclude>**/*.so</exclude>
-            <exclude>**/*.jnilib</exclude>
-            <exclude>nbactions.xml</exclude>
-            <exclude>nb-configuration.xml</exclude>
+            <exclude>**/nbactions.xml</exclude>
+            <exclude>**/nb-configuration.xml</exclude>
+            <exclude>**/META-INF/cxf/**</exclude>
             <exclude>**/META-INF/services/**</exclude>
-            <exclude>**/*.css</exclude>
-            <exclude>**/*.js</exclude>
+            <exclude>**/META-INF/MANIFEST.MF</exclude>            
             <exclude>**/*.csv</exclude>
+            <exclude>**/archetype-resources/**</exclude>
+            <exclude>**/AdminLTE*/**</exclude>
+            <exclude>**/goal.txt</exclude>
+            <exclude>**/rat.txt</exclude>
+            <exclude>**/build-copy-javadoc-files.xml</exclude>
             <exclude>**/maven-eclipse.xml</exclude>
             <exclude>**/*.iml</exclude>
             <exclude>**/*.log</exclude>
-            <exclude>.externalToolBuilders/**</exclude>
+            <exclude>**/.externalToolBuilders/**</exclude>
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
+            <exclude>**/.settings/**</exclude>
             <exclude>**/.*</exclude>
+            <exclude>**/deb/control/conffiles</exclude>
+            <exclude>**/deb/control/control</exclude>
+            <exclude>**/*.lst</exclude>
+            <exclude>**/*.json</exclude>
+            <exclude>**/banner.txt</exclude>
+            <exclude>**/target/**</exclude>
           </excludes>
         </configuration>
         <executions>
           <execution>
+            <id>rat-check</id>
+            <phase>verify</phase>
             <goals>
               <goal>check</goal>
             </goals>
