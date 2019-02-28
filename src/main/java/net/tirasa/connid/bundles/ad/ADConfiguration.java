@@ -46,6 +46,8 @@ public final class ADConfiguration extends LdapConfiguration {
 
     public static final String PROMPT_USER_VALUE = "0";
 
+    public static final String NOT_PROMPT_USER_VALUE = "-1";
+
     public static final String LOCK_OUT_FLAG = "lockoutTime";
 
     public static final String LOCK_OUT_DEFAULT_VALUE = "0";
