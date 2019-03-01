@@ -21,7 +21,6 @@ import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
-import static net.tirasa.connid.bundles.ad.ADConnector.UF_NORMAL_ACCOUNT;
 import static net.tirasa.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
@@ -243,9 +242,16 @@ public class ADUpdate extends LdapModifyOperation {
                 }
             } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
                 final List<Object> value = attr.getValue();
-                if (value != null && !value.isEmpty() && (Boolean) value.get(0)) {
-                    ldapAttrs.put(
-                            new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
+                if (value != null && !value.isEmpty()) {
+                    Boolean enabled = (Boolean) value.get(0);
+                    if (enabled) {
+                        ldapAttrs.put(
+                                new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
+                    } else {
+                        ldapAttrs.put(
+                                new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.NOT_PROMPT_USER_VALUE));
+                    }
+
                 }
             } else if (attr.is(ADConfiguration.LOCK_OUT_FLAG)) {
                 final List<Object> value = attr.getValue();
