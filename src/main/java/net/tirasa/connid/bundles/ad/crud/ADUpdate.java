@@ -209,8 +209,11 @@ public class ADUpdate extends LdapModifyOperation {
         ADGuardedPasswordAttribute pwdAttr = null;
 
         final Attribute uac = obj.getAttributeByName(UACCONTROL_ATTR);
-        int uacValue = uac == null || uac.getValue() == null || uac.getValue().isEmpty()
+
+        int currentUACValue = uac == null || uac.getValue() == null || uac.getValue().isEmpty()
                 ? 0 : Integer.parseInt(uac.getValue().get(0).toString());
+
+        int newUACValue = -1;
 
         Boolean pne = null;
         Boolean status = null;
@@ -245,11 +248,11 @@ public class ADUpdate extends LdapModifyOperation {
                 if (value != null && !value.isEmpty()) {
                     Boolean enabled = (Boolean) value.get(0);
                     if (enabled) {
-                        ldapAttrs.put(
-                                new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
+                        ldapAttrs.put(new BasicAttribute(
+                                ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.PROMPT_USER_VALUE));
                     } else {
-                        ldapAttrs.put(
-                                new BasicAttribute(ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.NOT_PROMPT_USER_VALUE));
+                        ldapAttrs.put(new BasicAttribute(
+                                ADConfiguration.PROMPT_USER_FLAG, ADConfiguration.NOT_PROMPT_USER_VALUE));
                     }
 
                 }
@@ -266,7 +269,7 @@ public class ADUpdate extends LdapModifyOperation {
                 pwdAttr = ADGuardedPasswordAttribute.create(conn.getConfiguration().getPasswordAttribute(), attr);
 
             } else if (attr.is(UACCONTROL_ATTR) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                uacValue = attr.getValue() == null || attr.getValue().isEmpty()
+                newUACValue = attr.getValue() == null || attr.getValue().isEmpty()
                         ? -1
                         : Integer.parseInt(attr.getValue().get(0).toString());
             } else if (attr.is(OperationalAttributes.ENABLE_NAME) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
@@ -283,24 +286,27 @@ public class ADUpdate extends LdapModifyOperation {
 
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             if (pne != null) {
-                if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) == ADConnector.UF_DONT_EXPIRE_PASSWD && !pne) {
-                    uacValue -= ADConnector.UF_DONT_EXPIRE_PASSWD;
-                } else if ((uacValue & ADConnector.UF_DONT_EXPIRE_PASSWD) != ADConnector.UF_DONT_EXPIRE_PASSWD && pne) {
-                    uacValue += ADConnector.UF_DONT_EXPIRE_PASSWD;
+                if ((currentUACValue & ADConnector.UF_DONT_EXPIRE_PASSWD)
+                        == ADConnector.UF_DONT_EXPIRE_PASSWD && !pne) {
+                    newUACValue = currentUACValue - ADConnector.UF_DONT_EXPIRE_PASSWD;
+                } else if ((currentUACValue & ADConnector.UF_DONT_EXPIRE_PASSWD)
+                        != ADConnector.UF_DONT_EXPIRE_PASSWD && pne) {
+                    newUACValue = currentUACValue + ADConnector.UF_DONT_EXPIRE_PASSWD;
                 }
             }
 
             if (status != null) {
-                if ((uacValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
-                    uacValue -= UF_ACCOUNTDISABLE;
-                } else if ((uacValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE && !status) {
-                    uacValue += UF_ACCOUNTDISABLE;
+                if ((currentUACValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
+                    newUACValue = currentUACValue - UF_ACCOUNTDISABLE;
+                } else if ((currentUACValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE && !status) {
+                    newUACValue = currentUACValue + UF_ACCOUNTDISABLE;
                 }
             }
 
-            addAttribute(conn.getSchemaMapping().encodeAttribute(
-                    oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(uacValue))),
-                    ldapAttrs);
+            if (newUACValue >= 0) {
+                addAttribute(conn.getSchemaMapping().encodeAttribute(
+                        oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(newUACValue))), ldapAttrs);
+            }
         }
 
         return new Pair<Attributes, ADGuardedPasswordAttribute>(ldapAttrs, pwdAttr);
