@@ -150,9 +150,20 @@ public class ADUpdate extends LdapModifyOperation {
         // ---------------------------------
         final Set<Attribute> attrsToBeUpdated = newSet(attrs);
         final Name newName = getNewName(entryDN, attrsToBeUpdated);
-        // ---------------------------------
 
-        if (!ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
+        // Rename the entry if needed.
+        if (newName != null && !newName.equals(obj.getName())) {
+            if (ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
+                LOG.error("Rename operation not permitted: '{0}' to '{1}'", entryDN, newName);
+                throw new ConnectorException("Rename operation not permitted");
+            } else {
+                entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
+            }
+        }
+
+        if (ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
+            LOG.ok("Modify attributes not permitted, excludeAttributeChangesOnUpdate is enabled");
+        } else {
             // ---------------------------------
             // Perform modify/rename
             // ---------------------------------
@@ -160,18 +171,6 @@ public class ADUpdate extends LdapModifyOperation {
                     attrsToBeUpdated);
             // Update the attributes.
             modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
-        } else {
-            LOG.ok("Modify attributes not permitted, excludeAttributeChangesOnUpdate is enabled");
-        }
-
-        // Rename the entry if needed.
-        if (newName != null && !newName.equals(obj.getName())) {
-            if (!ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
-                entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
-            } else {
-                LOG.error("Rename operation not permitted: '{0}' to '{1}'", entryDN, newName);
-                throw new ConnectorException("Rename operation not permitted");
-            }
         }
         // ---------------------------------
 

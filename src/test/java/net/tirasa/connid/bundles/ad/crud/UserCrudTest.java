@@ -1721,7 +1721,7 @@ public class UserCrudTest extends UserTest {
                 new Uid(ids.getValue()),
                 new HashSet<Attribute>(attrToReplace),
                 null);
-        assertNotEquals(ids.getValue(), uid.getUidValue());
+        assertEquals(ids.getValue(), uid.getUidValue());
 
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet("givenName");
