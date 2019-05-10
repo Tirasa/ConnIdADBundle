@@ -152,17 +152,26 @@ public class ADUpdate extends LdapModifyOperation {
         final Name newName = getNewName(entryDN, attrsToBeUpdated);
         // ---------------------------------
 
-        // ---------------------------------
-        // Perform modify/rename
-        // ---------------------------------
-        final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj, attrsToBeUpdated);
-
-        // Update the attributes.
-        modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
+        if (!ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
+            // ---------------------------------
+            // Perform modify/rename
+            // ---------------------------------
+            final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj,
+                    attrsToBeUpdated);
+            // Update the attributes.
+            modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
+        } else {
+            LOG.ok("Modify attributes not permitted, excludeAttributeChangesOnUpdate is enabled");
+        }
 
         // Rename the entry if needed.
         if (newName != null && !newName.equals(obj.getName())) {
-            entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
+            if (!ADConfiguration.class.cast(conn.getConfiguration()).isExcludeAttributeChangesOnUpdate()) {
+                entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
+            } else {
+                LOG.error("Rename operation not permitted: '{0}' to '{1}'", entryDN, newName);
+                throw new ConnectorException("Rename operation not permitted");
+            }
         }
         // ---------------------------------
 

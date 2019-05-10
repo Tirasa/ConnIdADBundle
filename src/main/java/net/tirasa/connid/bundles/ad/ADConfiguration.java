@@ -53,7 +53,7 @@ public final class ADConfiguration extends LdapConfiguration {
     public static final String LOCK_OUT_DEFAULT_VALUE = "0";
 
     public static final String UCCP_FLAG = "userCannotChangePassword";
-    
+
     public static final String PNE_FLAG = "passwordNeverExpires";
 
     public static final String CN_NAME = "CN";
@@ -87,6 +87,8 @@ public final class ADConfiguration extends LdapConfiguration {
     private String groupOwnerReferenceAttribute = "managedBy";
 
     private boolean pwdUpdateOnly = false;
+
+    private boolean excludeAttributeChangesOnUpdate = false;
 
     private String defaultIdAttribute = "cn";
 
@@ -386,6 +388,16 @@ public final class ADConfiguration extends LdapConfiguration {
 
     public void setDefaultIdAttribute(final String defaultIdAttribute) {
         this.defaultIdAttribute = defaultIdAttribute;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "excludeAttributeChangesOnUpdate.display",
+            helpMessageKey = "excludeAttributeChangesOnUpdate.help", order = 20)
+    public boolean isExcludeAttributeChangesOnUpdate() {
+        return excludeAttributeChangesOnUpdate;
+    }
+
+    public void setExcludeAttributeChangesOnUpdate(boolean excludeAttributeChangesOnUpdate) {
+        this.excludeAttributeChangesOnUpdate = excludeAttributeChangesOnUpdate;
     }
 
     @Override

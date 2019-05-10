@@ -1696,4 +1696,50 @@ public class UserCrudTest extends UserTest {
         connector.delete(ObjectClass.ACCOUNT, uid, null);
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
+
+    @Test
+    public void excludeAttributeChangesOnUpdate() {
+        final ADConfiguration newconf = getSimpleConf(PROP);
+        newconf.setExcludeAttributeChangesOnUpdate(true);
+
+        final ConnectorFacadeFactory factory = ConnectorFacadeFactory.getInstance();
+        final APIConfiguration impl = TestHelpers.createTestConfiguration(ADConnector.class, newconf);
+        // TODO: remove the line below when using ConnId >= 1.4.0.1
+        ((APIConfigurationImpl) impl).
+                setConfigurationProperties(JavaClassProperties.createConfigurationProperties(newconf));
+
+        final ConnectorFacade newConnector = factory.newInstance(impl);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("9");
+
+        // 2. Update without pwd ....
+        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+            AttributeBuilder.build("givenName", "excludeAttributeChangesOnUpdate") });
+
+        Uid uid = newConnector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()),
+                new HashSet<Attribute>(attrToReplace),
+                null);
+        assertNotEquals(ids.getValue(), uid.getUidValue());
+
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet("givenName");
+
+        ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+        List<Object> gn = object.getAttributeByName("givenName").getValue();
+        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("excludeAttributeChangesOnUpdate"));
+
+        attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
+
+        // 0. rename should be denied
+        try {
+            newConnector.update(
+                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+            fail();
+        } catch (Exception e) {
+            // ignore
+        }
+    }
 }

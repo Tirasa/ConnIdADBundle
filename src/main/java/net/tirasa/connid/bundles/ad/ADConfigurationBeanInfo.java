@@ -65,6 +65,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // pwdUpdateOnly
             props.add(new PropertyDescriptor("pwdUpdateOnly", ADConfiguration.class));
 
+            // excludeAttributeChangesOnUpdate
+            props.add(new PropertyDescriptor("excludeAttributeChangesOnUpdate", ADConfiguration.class));
+
             // failover
             props.add(new PropertyDescriptor("failover", LdapConfiguration.class));
 
