@@ -96,7 +96,7 @@ public final class ADConfiguration extends LdapConfiguration {
             ObjectClass.ACCOUNT,
             CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
             false,
-            CollectionUtil.newList("sAMAccountName", "cn", "member"),
+            CollectionUtil.newList("sAMAccountName", "cn", "member", "userPrincipalName"),
             LdapConstants.PASSWORD);
 
     private final ObjectClassMappingConfig groupConfig = new ObjectClassMappingConfig(

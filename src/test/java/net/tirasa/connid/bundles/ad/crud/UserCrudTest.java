@@ -1742,4 +1742,53 @@ public class UserCrudTest extends UserTest {
             // ignore
         }
     }
+
+    @Test
+    public void authenticateByUPN() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("15");
+
+        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
+                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+
+        String upn = ids.getValue() + "@tirasa.net";
+        
+        final Set<Attribute> attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build("userPrincipalName",
+                Collections.singletonList(upn)));
+        
+        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+        assertNotNull(uid);
+        assertEquals(ids.getValue(), uid.getUidValue());
+
+        // Ask just for upn
+        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+        oob.setAttributesToGet(Arrays.asList("userPrincipalName"));
+
+        // retrieve created object
+        final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+        
+        assertNotNull(object);
+        assertNotNull(object.getAttributes());
+        assertNotNull(object.getAttributeByName("userPrincipalName"));
+        
+        assertEquals(ids.getValue(), object.getUid().getUidValue());
+        assertEquals(
+                util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).toLowerCase(),
+                object.getName().getNameValue().toLowerCase());
+
+        final Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                upn, // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        // remove user
+        connector.delete(ObjectClass.ACCOUNT, authUid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, authUid, null));
+    }
 }
