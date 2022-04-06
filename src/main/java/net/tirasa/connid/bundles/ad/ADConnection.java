@@ -32,13 +32,12 @@ import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 import net.tirasa.connid.bundles.ad.schema.ADSchema;
 import net.tirasa.connid.bundles.ad.util.TrustAllSocketFactory;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
-import net.tirasa.connid.bundles.ldap.LdapConnection.AuthenticationResult;
-import net.tirasa.connid.bundles.ldap.LdapConnection.AuthenticationResultType;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.common.security.GuardedString.Accessor;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.exceptions.InvalidCredentialException;
 
 public class ADConnection extends LdapConnection {
 
@@ -207,7 +206,7 @@ public class ADConnection extends LdapConnection {
                     @Override
                     public void access(char[] clearChars) {
                         if(clearChars == null || clearChars.length == 0){
-                            throw new IllegalArgumentException("Password is blank");
+                            throw new InvalidCredentialException("Password is blank");
                         }
                         env.put(Context.SECURITY_CREDENTIALS, new String(clearChars));
                     }
