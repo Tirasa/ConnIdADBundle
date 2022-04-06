@@ -1,12 +1,12 @@
 /**
  * Copyright (C) 2011 ConnId (connid-dev@googlegroups.com)
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ldap.LdapConnection.AuthenticationResult;
@@ -66,7 +65,7 @@ public class ADAuthenticate {
 
         AuthenticationResult authnResult = null;
 
-        if (authnObject != null && isNotBlankCredentials(password)) {
+        if (authnObject != null) {
             final String entryDN = authnObject.getName().getNameValue();
             authnResult = conn.authenticate(entryDN, password);
         }
@@ -90,9 +89,11 @@ public class ADAuthenticate {
 
     private static boolean isSuccess(final AuthenticationResult authResult) {
         // PASSWORD_EXPIRED considered success: credentials were right.
+        final AuthenticationResultType type = authResult.getType();
+
         return authResult != null
-                && (authResult.getType().equals(AuthenticationResultType.SUCCESS)
-                || authResult.getType().equals(AuthenticationResultType.PASSWORD_EXPIRED));
+                && (type.equals(AuthenticationResultType.SUCCESS)
+                || type.equals(AuthenticationResultType.PASSWORD_EXPIRED));
     }
 
     private ConnectorObject getObjectToAuthenticate() {
@@ -138,19 +139,5 @@ public class ADAuthenticate {
                     "cannotResolveUsername", null, username));
         }
         return authnObject.getUid();
-    }
-
-    private static boolean isNotBlankCredentials(final GuardedString credentials) {
-        final AtomicBoolean isNotBlank = new AtomicBoolean(false);
-        if (credentials != null) {
-            credentials.access(new GuardedString.Accessor() {
-
-                @Override
-                public void access(char[] clearChars) {
-                    isNotBlank.set(clearChars.length > 0);
-                }
-            });
-        }
-        return isNotBlank.get();
     }
 }

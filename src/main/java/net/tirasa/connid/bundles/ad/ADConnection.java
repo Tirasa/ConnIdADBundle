@@ -206,6 +206,9 @@ public class ADConnection extends LdapConnection {
 
                     @Override
                     public void access(char[] clearChars) {
+                        if(clearChars == null || clearChars.length == 0){
+                            throw new IllegalArgumentException("Password is blank");
+                        }
                         env.put(Context.SECURITY_CREDENTIALS, new String(clearChars));
                     }
                 });
