@@ -89,11 +89,9 @@ public class ADAuthenticate {
 
     private static boolean isSuccess(final AuthenticationResult authResult) {
         // PASSWORD_EXPIRED considered success: credentials were right.
-        final AuthenticationResultType type = authResult.getType();
-
         return authResult != null
-                && (type.equals(AuthenticationResultType.SUCCESS)
-                || type.equals(AuthenticationResultType.PASSWORD_EXPIRED));
+                && (authResult.getType().equals(AuthenticationResultType.SUCCESS)
+                || authResult.getType().equals(AuthenticationResultType.PASSWORD_EXPIRED));
     }
 
     private ConnectorObject getObjectToAuthenticate() {
