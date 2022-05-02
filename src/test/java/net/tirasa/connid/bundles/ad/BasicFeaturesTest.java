@@ -15,26 +15,22 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
-import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class BasicFeaturesTest {
 
-    /**
-     * Setup logging for the {@link DatabaseTableConnector}.
-     */
-    private static final Log LOG = Log.getLog(BasicFeaturesTest.class);
-
     private static ADConnector connector;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
-
         final ADConfiguration conf = new ADConfiguration();
         conf.setObjectClassesToSynchronize("user");
         conf.setAccountSearchFilter("");

@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.4.5.1</version>
+    <version>1.5.1.0</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
@@ -76,8 +76,8 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.4.5.1</connid.version>
-    <connid.ldap.version>1.5.4</connid.ldap.version>
+    <connid.version>1.5.1.0</connid.version>
+    <connid.ldap.version>1.5.5</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -117,8 +117,9 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -230,9 +231,11 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
+        <inherited>true</inherited>
         <configuration>
-          <appendAssemblyId>false</appendAssemblyId>
+          <appendAssemblyId>true</appendAssemblyId>
           <descriptors>
             <descriptor>src/assemble/connector.xml</descriptor>
           </descriptors>
@@ -243,8 +246,8 @@
               <ConnectorBundle-Name>${project.artifactId}</ConnectorBundle-Name>
               <ConnectorBundle-Version>${project.version}</ConnectorBundle-Version>
             </manifestEntries>
-          </archive>                    
-        </configuration>                
+          </archive>
+        </configuration>
         <executions>
           <execution>
             <id>make-assembly</id>

@@ -17,6 +17,7 @@ package net.tirasa.connid.bundles.ad.search;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -31,7 +32,6 @@ import javax.naming.ldap.PagedResultsResponseControl;
 import javax.naming.ldap.SortControl;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.PagedSearchStrategy;
-import org.identityconnectors.common.Base64;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -107,7 +107,7 @@ public class ADPagedSearchStrategy extends PagedSearchStrategy {
             // bit of sanity check...
             if (split.length == 2) {
                 try {
-                    cookie = Base64.decode(split[0]);
+                    cookie = Base64.getDecoder().decode(split[0]);
                 } catch (RuntimeException e) {
                     throw new ConnectorException("PagedResultsCookie is not properly encoded", e);
                 }
@@ -187,7 +187,7 @@ public class ADPagedSearchStrategy extends PagedSearchStrategy {
 
         String returnedCookie = null;
         if (cookie != null) {
-            returnedCookie = Base64.encode(cookie).concat(":" + context);
+            returnedCookie = Base64.getEncoder().encodeToString(cookie).concat(":" + context);
         }
 
         if (searchResultHandler != null) {

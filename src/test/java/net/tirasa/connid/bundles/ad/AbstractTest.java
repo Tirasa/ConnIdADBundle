@@ -15,7 +15,9 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -188,9 +190,9 @@ public abstract class AbstractTest {
 
         SyncToken latestReceivedToken = null;
 
-        final List<SyncDelta> updated = new ArrayList<SyncDelta>();
+        final List<SyncDelta> updated = new ArrayList<>();
 
-        final List<SyncDelta> deleted = new ArrayList<SyncDelta>();
+        final List<SyncDelta> deleted = new ArrayList<>();
 
         @Override
         public boolean handle(final SyncDelta sd) {

@@ -15,7 +15,11 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.AbstractMap;
 import java.util.Arrays;
@@ -35,7 +39,7 @@ import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.SyncDelta;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SyncGroupTest extends GroupTest {
 
@@ -208,7 +212,7 @@ public class SyncGroupTest extends GroupTest {
             // ----------------------------------
             handler.clear();
 
-            Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
+            Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<>("grptmp", "grptmp");
             final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
             assertNotNull(uid);
 

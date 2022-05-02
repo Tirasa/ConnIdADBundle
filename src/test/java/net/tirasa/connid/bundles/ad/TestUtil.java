@@ -15,7 +15,9 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.AbstractMap;
 import java.util.Collections;
@@ -63,8 +65,7 @@ public class TestUtil {
         for (int i = 1; i <= num; i++) {
             final Map.Entry<String, String> ids = getEntryIDs(String.valueOf(i));
 
-            assertNull("Please remove etry 'sAMAccountName: " + ids.getValue() + "'",
-                    connector.getObject(oclass, new Uid(ids.getValue()), null));
+            assertNull(connector.getObject(oclass, new Uid(ids.getValue()), null));
         }
 
         Set<Attribute> attributes;
@@ -107,7 +108,7 @@ public class TestUtil {
     public Set<Attribute> getSimpleUserProfile(
             final Map.Entry<String, String> ids, final ADConfiguration conf, final boolean withDN) {
 
-        final Set<Attribute> attributes = new HashSet<Attribute>();
+        final Set<Attribute> attributes = new HashSet<>();
 
         if (withDN) {
             attributes.add(new Name(getEntryDN(ids.getKey(), ObjectClass.ACCOUNT)));
@@ -135,7 +136,7 @@ public class TestUtil {
 
     public Set<Attribute> getSimpleGroupProfile(final Map.Entry<String, String> ids, final boolean withDN) {
 
-        final Set<Attribute> attributes = new HashSet<Attribute>();
+        final Set<Attribute> attributes = new HashSet<>();
 
         if (withDN) {
             attributes.add(new Name(getEntryDN(ids.getKey(), ObjectClass.GROUP)));
@@ -172,7 +173,7 @@ public class TestUtil {
 
     public Map.Entry<String, String> getEntryIDs(final String suffix, final ObjectClass oclass) {
         final String prefix = oclass.equals(ObjectClass.ACCOUNT) ? "UserTest" : "GroupTest";
-        return new AbstractMap.SimpleEntry<String, String>(prefix + suffix, "SAAN_" + prefix + suffix);
+        return new AbstractMap.SimpleEntry<>(prefix + suffix, "SAAN_" + prefix + suffix);
     }
 
     public Map.Entry<String, String> getEntryIDs(final String suffix) {

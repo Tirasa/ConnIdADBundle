@@ -15,7 +15,10 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +53,7 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
 import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SyncUserTest extends UserTest {
 
@@ -460,20 +463,14 @@ public class SyncUserTest extends UserTest {
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(util.getEntryIDs("4").getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
 
-        final List<Attribute> results = new ArrayList<Attribute>();
+        final List<Attribute> results = new ArrayList<>();
 
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(ConnectorObject co) {
-                return results.add(co.getAttributeByName("sAMAccountName"));
-            }
-        };
+        final ResultsHandler handler = co -> results.add(co.getAttributeByName("sAMAccountName"));
 
         // Ask just for sAMAccountName
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -482,6 +479,6 @@ public class SyncUserTest extends UserTest {
         newConnector.search(ObjectClass.ACCOUNT, null, handler, oob.build());
 
         assertNotNull(results);
-        assertTrue(results.size() == 1);
+        assertEquals(1, results.size());
     }
 }

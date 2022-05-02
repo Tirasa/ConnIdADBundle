@@ -17,7 +17,13 @@ package net.tirasa.connid.bundles.ad.crud;
 
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
 import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -51,27 +57,20 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.test.common.TestHelpers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class GroupCrudTest extends GroupTest {
 
     @Test
     public void search() {
-
         final Map.Entry<String, String> ids = util.getEntryIDs("1");
 
         // create filter
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
         // create results handler
-        final List<Attribute> results = new ArrayList<Attribute>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(ConnectorObject co) {
-                return results.add(co.getAttributeByName("sAMAccountName"));
-            }
-        };
+        final List<Attribute> results = new ArrayList<>();
+        final ResultsHandler handler = co -> results.add(co.getAttributeByName("sAMAccountName"));
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -85,16 +84,9 @@ public class GroupCrudTest extends GroupTest {
 
     @Test
     public void searchByDefaultCustomFilter() {
-
         // create results handler
-        final List<Attribute> results = new ArrayList<Attribute>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(ConnectorObject co) {
-                return results.add(co.getAttributeByName("sAMAccountName"));
-            }
-        };
+        final List<Attribute> results = new ArrayList<>();
+        final ResultsHandler handler = co -> results.add(co.getAttributeByName("sAMAccountName"));
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -104,7 +96,7 @@ public class GroupCrudTest extends GroupTest {
 
         assertEquals(11, results.size());
 
-        final Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<String, String>("grptmp", "grptmp");
+        final Map.Entry<String, String> ids = new AbstractMap.SimpleEntry<>("grptmp", "grptmp");
         final Uid uid = connector.create(ObjectClass.GROUP, util.getSimpleProfile(ids), null);
         assertNotNull(uid);
 
@@ -149,8 +141,7 @@ public class GroupCrudTest extends GroupTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("11");
 
-        assertNull("Please remove group 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
 
@@ -189,8 +180,7 @@ public class GroupCrudTest extends GroupTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("nodn11");
 
-        assertNull("Please remove group 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
@@ -232,15 +222,14 @@ public class GroupCrudTest extends GroupTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("20");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.GROUP, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
         final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
 
-        final List<String> groupsToBeAdded = new ArrayList<String>();
+        final List<String> groupsToBeAdded = new ArrayList<>();
 
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             for (Object obj : ldapGroups.getValue()) {
@@ -283,7 +272,7 @@ public class GroupCrudTest extends GroupTest {
         uid = connector.update(
                 ObjectClass.GROUP,
                 uid,
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -304,7 +293,7 @@ public class GroupCrudTest extends GroupTest {
         uid = connector.update(
                 ObjectClass.GROUP,
                 uid,
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -341,7 +330,7 @@ public class GroupCrudTest extends GroupTest {
         Uid uid = connector.update(
                 ObjectClass.GROUP,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -370,7 +359,7 @@ public class GroupCrudTest extends GroupTest {
         final List<Attribute> attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(Name.NAME, DN) });
 
         Uid uid = connector.update(
-                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -398,7 +387,7 @@ public class GroupCrudTest extends GroupTest {
             AttributeBuilder.build(Name.NAME, ids.getKey()) });
 
         Uid uid = connector.update(
-                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -427,7 +416,7 @@ public class GroupCrudTest extends GroupTest {
             AttributeBuilder.build(Name.NAME, util.getEntryDN(ids.getKey(), ObjectClass.GROUP)) });
 
         Uid uid = connector.update(
-                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -456,7 +445,7 @@ public class GroupCrudTest extends GroupTest {
             + "_new") });
 
         Uid uid = connector.update(
-                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.GROUP, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -478,14 +467,8 @@ public class GroupCrudTest extends GroupTest {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(final ConnectorObject co) {
-                return results.add(co);
-            }
-        };
+        final List<ConnectorObject> results = new ArrayList<>();
+        final ResultsHandler handler = results::add;
 
         final String baseContext = PROP.getProperty("baseContext");
 
@@ -502,8 +485,7 @@ public class GroupCrudTest extends GroupTest {
             // -------------------------------------------------
             final Map.Entry<String, String> gid = util.getEntryIDs("GAD29", ObjectClass.GROUP);
 
-            assertNull("Please remove group 'sAMAccountName: " + gid.getValue() + "' from AD",
-                    connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
+            assertNull(connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
 
             Set<Attribute> attributes = util.getSimpleGroupProfile(gid, true);
 
@@ -525,8 +507,7 @@ public class GroupCrudTest extends GroupTest {
             // -------------------------------------------------
             final Map.Entry<String, String> ids = util.getEntryIDs("UAD29", ObjectClass.ACCOUNT);
 
-            assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                    connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
             attributes = util.getSimpleUserProfile(ids, conf, false);
 
@@ -534,7 +515,7 @@ public class GroupCrudTest extends GroupTest {
             Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
             attributes.remove(ldapGroups);
 
-            final List<String> groupsToBeAdded = new ArrayList<String>();
+            final List<String> groupsToBeAdded = new ArrayList<>();
 
             if (ldapGroups != null && ldapGroups.getValue() != null) {
                 for (Object obj : ldapGroups.getValue()) {
@@ -566,7 +547,7 @@ public class GroupCrudTest extends GroupTest {
             uuid = connector.update(
                     ObjectClass.ACCOUNT,
                     new Uid(ids.getValue()),
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             user = connector.getObject(ObjectClass.ACCOUNT, uuid, oob.build());
@@ -607,7 +588,7 @@ public class GroupCrudTest extends GroupTest {
             attrToReplace = Arrays.asList(new Attribute[] {
                 AttributeBuilder.build("description", "a new description") });
 
-            connector.update(ObjectClass.GROUP, guid, new HashSet<Attribute>(attrToReplace), null);
+            connector.update(ObjectClass.GROUP, guid, new HashSet<>(attrToReplace), null);
             // -------------------------------------------------
 
             // -------------------------------------------------
@@ -616,7 +597,7 @@ public class GroupCrudTest extends GroupTest {
             attrToReplace = Arrays.asList(new Attribute[] {
                 AttributeBuilder.build("ldapGroups", Collections.singleton(group.getName().getNameValue())) });
 
-            connector.update(ObjectClass.ACCOUNT, uuid, new HashSet<Attribute>(attrToReplace), null);
+            connector.update(ObjectClass.ACCOUNT, uuid, new HashSet<>(attrToReplace), null);
             // -------------------------------------------------
 
         } finally {
@@ -643,8 +624,7 @@ public class GroupCrudTest extends GroupTest {
 
             final Map.Entry<String, String> gid = util.getEntryIDs("GAD56", ObjectClass.GROUP);
 
-            assertNull("Please remove group 'sAMAccountName: " + gid.getValue() + "' from AD",
-                    connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
+            assertNull(connector.getObject(ObjectClass.GROUP, new Uid(gid.getValue()), null));
 
             Set<Attribute> attributes = util.getSimpleGroupProfile(gid, true);
 

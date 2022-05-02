@@ -16,7 +16,13 @@
 package net.tirasa.connid.bundles.ad.crud;
 
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -62,20 +68,14 @@ import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
 import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class UserCrudTest extends UserTest {
 
     @Test
     public void pagedSearch() {
-        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(final ConnectorObject co) {
-                return results.add(co);
-            }
-        };
+        final List<ConnectorObject> results = new ArrayList<>();
+        final ResultsHandler handler = results::add;
 
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
         oob.setAttributesToGet("sAMAccountName");
@@ -107,14 +107,8 @@ public class UserCrudTest extends UserTest {
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
         // create results handler
-        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(final ConnectorObject co) {
-                return results.add(co);
-            }
-        };
+        final List<ConnectorObject> results = new ArrayList<>();
+        final ResultsHandler handler = results::add;
 
         // create options for returning attributes
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -156,8 +150,7 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("11");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
 
@@ -181,10 +174,10 @@ public class UserCrudTest extends UserTest {
         assertNotNull(object.getAttributeByName("memberOf"));
         assertNotNull(object.getAttributeByName("userAccountControl"));
 
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -214,8 +207,7 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("nodn11");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
@@ -238,10 +230,10 @@ public class UserCrudTest extends UserTest {
         assertEquals(3, object.getAttributes().size());
         assertNotNull(object.getAttributeByName("memberOf"));
 
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -272,15 +264,14 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("20");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
         final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
 
-        final List<String> groupsToBeAdded = new ArrayList<String>();
+        final List<String> groupsToBeAdded = new ArrayList<>();
 
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             for (Object obj : ldapGroups.getValue()) {
@@ -322,7 +313,7 @@ public class UserCrudTest extends UserTest {
         uid = connector.update(
                 ObjectClass.ACCOUNT,
                 uid,
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -393,7 +384,7 @@ public class UserCrudTest extends UserTest {
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -441,7 +432,7 @@ public class UserCrudTest extends UserTest {
         connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         try {
@@ -471,7 +462,7 @@ public class UserCrudTest extends UserTest {
             AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
-                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -491,10 +482,10 @@ public class UserCrudTest extends UserTest {
         assertNotNull(object.getAttributeByName("memberOf"));
         assertTrue(DN.equalsIgnoreCase(object.getName().getNameValue()));
 
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -536,10 +527,10 @@ public class UserCrudTest extends UserTest {
         assertTrue(
                 util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).equalsIgnoreCase(object.getName().getNameValue()));
 
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -559,7 +550,7 @@ public class UserCrudTest extends UserTest {
             AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
-                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -581,10 +572,10 @@ public class UserCrudTest extends UserTest {
         assertTrue(
                 util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).equalsIgnoreCase(object.getName().getNameValue()));
 
-        final Set<String> expected = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.addAll(Arrays.asList(conf.getMemberships()));
 
-        final Set<String> actual = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> actual = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object dn : object.getAttributeByName("memberOf").getValue()) {
             actual.add(dn.toString());
         }
@@ -603,7 +594,7 @@ public class UserCrudTest extends UserTest {
             + "_new") });
 
         Uid uid = connector.update(
-                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -641,7 +632,7 @@ public class UserCrudTest extends UserTest {
         Uid uid = connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -663,7 +654,7 @@ public class UserCrudTest extends UserTest {
         uid = connector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -682,8 +673,7 @@ public class UserCrudTest extends UserTest {
     public void issueAD22() {
         final Map.Entry<String, String> ids = util.getEntryIDs("AD22");
 
-        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         int uacValue = 0x0200;
 
@@ -708,7 +698,7 @@ public class UserCrudTest extends UserTest {
             connector.update(
                     ObjectClass.ACCOUNT,
                     new Uid(ids.getValue()),
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     options);
 
             connectorObject = connector.getObject(ObjectClass.ACCOUNT, uid, options);
@@ -735,8 +725,7 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("AD24");
 
-        assertNull("Please remove user 'uid: " + ids.getValue() + "' from AD",
-                newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT).
                 getSimpleProfile(ids);
@@ -773,7 +762,7 @@ public class UserCrudTest extends UserTest {
 
         try {
             connector.update(
-                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
             fail();
         } catch (org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException e) {
             // ignore
@@ -783,7 +772,7 @@ public class UserCrudTest extends UserTest {
             AttributeBuilder.build(conf.getUidAttribute(), ids.getValue() + "_new") });
 
         Uid uid = connector.update(
-                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertEquals(ids.getValue() + "_new", uid.getUidValue());
 
@@ -791,7 +780,7 @@ public class UserCrudTest extends UserTest {
         attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(conf.getUidAttribute(), ids.getValue()) });
 
-        uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
+        uid = connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
 
         assertEquals(ids.getValue(), uid.getUidValue());
     }
@@ -814,18 +803,17 @@ public class UserCrudTest extends UserTest {
         final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT);
 
         // 1. create a new group
-        Map.Entry<String, String> groupIDs = new AbstractMap.SimpleEntry<String, String>("GroupTestAD27",
+        Map.Entry<String, String> groupIDs = new AbstractMap.SimpleEntry<>("GroupTestAD27",
                 "SAAN_GroupTestAD27");
 
-        assertNull("Please remove group 'sAMAccountName: " + groupIDs.getValue() + "' from AD",
-                newConnector.getObject(ObjectClass.GROUP, new Uid(groupIDs.getValue()), null));
+        assertNull(newConnector.getObject(ObjectClass.GROUP, new Uid(groupIDs.getValue()), null));
 
         Set<Attribute> attributes = newutil.getSimpleGroupProfile(groupIDs, true);
 
         final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
 
-        final List<String> groupsToBeAdded = new ArrayList<String>();
+        final List<String> groupsToBeAdded = new ArrayList<>();
 
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             groupsToBeAdded.add(
@@ -844,7 +832,7 @@ public class UserCrudTest extends UserTest {
             // 2. create a new user
             Map.Entry<String, String> userIDs = newutil.getEntryIDs("AD27");
 
-            assertNull("Please remove user 'sAMAccountName: " + userIDs.getValue() + "' from AD",
+            assertNull(
                     newConnector.getObject(ObjectClass.ACCOUNT, new Uid(userIDs.getValue()), null));
 
             attributes = newutil.getSimpleProfile(userIDs, false);
@@ -860,7 +848,7 @@ public class UserCrudTest extends UserTest {
             newConnector.update(
                     ObjectClass.ACCOUNT,
                     userUID,
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -941,10 +929,9 @@ public class UserCrudTest extends UserTest {
         ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         List<Object> gn = object.getAttributeByName("givenName").getValue();
-        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+        assertTrue(gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
 
-        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
-                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+        assertTrue(Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
 
         authUid = newConnector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -963,17 +950,16 @@ public class UserCrudTest extends UserTest {
         uid = newConnector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
         assertEquals(ids.getValue(), uid.getUidValue());
 
         object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         gn = object.getAttributeByName("givenName").getValue();
-        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
+        assertTrue(gn.size() == 1 && !gn.contains("pwdUpdateOnlyName"));
 
-        assertTrue("Actual status " + object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue(),
-                Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
+        assertTrue(Boolean.class.cast(object.getAttributeByName(OperationalAttributes.ENABLE_NAME).getValue().get(0)));
 
         authUid = newConnector.authenticate(
                 ObjectClass.ACCOUNT, // object class
@@ -989,14 +975,8 @@ public class UserCrudTest extends UserTest {
         assertNotNull(conf);
 
         // create results handler
-        final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
-        final ResultsHandler handler = new ResultsHandler() {
-
-            @Override
-            public boolean handle(final ConnectorObject co) {
-                return results.add(co);
-            }
-        };
+        final List<ConnectorObject> results = new ArrayList<>();
+        final ResultsHandler handler = results::add;
 
         // create options for returning attributes
         OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -1010,8 +990,7 @@ public class UserCrudTest extends UserTest {
         // create filter 
         final Filter filter = FilterBuilder.equalTo(AttributeBuilder.build("sAMAccountName", ids.getValue()));
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         Set<Attribute> attributes = util.getSimpleProfile(ids);
         attributes.add(AttributeBuilder.build(ADConfiguration.UCCP_FLAG, true));
@@ -1040,8 +1019,7 @@ public class UserCrudTest extends UserTest {
         // -----------------------------------------------------
         // Create Can Change Password
         // -----------------------------------------------------
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         attributes = util.getSimpleProfile(ids);
         attributes.add(AttributeBuilder.build(ADConfiguration.UCCP_FLAG, false));
@@ -1072,7 +1050,7 @@ public class UserCrudTest extends UserTest {
             uid = connector.update(
                     ObjectClass.ACCOUNT,
                     new Uid(ids.getValue()),
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             assertNotNull(uid);
@@ -1091,7 +1069,7 @@ public class UserCrudTest extends UserTest {
             uid = connector.update(
                     ObjectClass.ACCOUNT,
                     new Uid(ids.getValue()),
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             assertNotNull(uid);
@@ -1133,7 +1111,7 @@ public class UserCrudTest extends UserTest {
         final String sAMAccountName = "SAAN_AD33";
         final String cn = "AD33";
 
-        final Set<Attribute> attributes = new HashSet<Attribute>();
+        final Set<Attribute> attributes = new HashSet<>();
 
         attributes.add(new Name(null));
         attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
@@ -1160,14 +1138,8 @@ public class UserCrudTest extends UserTest {
             assertEquals(objectguid.getValue(), uid.getValue());
 
             // create results handler
-            final List<ConnectorObject> results = new ArrayList<ConnectorObject>();
-            final ResultsHandler handler = new ResultsHandler() {
-
-                @Override
-                public boolean handle(final ConnectorObject co) {
-                    return results.add(co);
-                }
-            };
+            final List<ConnectorObject> results = new ArrayList<>();
+            final ResultsHandler handler = results::add;
 
             // -----------------------------------------------------
             // Search by ObjectGUID
@@ -1350,15 +1322,14 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("43");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
         final Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
 
-        final List<String> groupsToBeAdded = new ArrayList<String>();
+        final List<String> groupsToBeAdded = new ArrayList<>();
 
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             for (Object obj : ldapGroups.getValue()) {
@@ -1489,15 +1460,14 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("44");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
         Attribute ldapGroups = AttributeUtil.find("ldapGroups", attributes);
         attributes.remove(ldapGroups);
 
-        final List<String> groupsToBeAdded = new ArrayList<String>();
+        final List<String> groupsToBeAdded = new ArrayList<>();
 
         if (ldapGroups != null && ldapGroups.getValue() != null) {
             for (Object obj : ldapGroups.getValue()) {
@@ -1598,8 +1568,7 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("AD58");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
 
@@ -1634,8 +1603,7 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("AD58NN");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
 
@@ -1729,14 +1697,14 @@ public class UserCrudTest extends UserTest {
         ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
 
         List<Object> gn = object.getAttributeByName("givenName").getValue();
-        assertTrue("Actual givenName " + gn, gn.size() == 1 && !gn.contains("excludeAttributeChangesOnUpdate"));
+        assertTrue(gn.size() == 1 && !gn.contains("excludeAttributeChangesOnUpdate"));
 
         attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build("cn", ids.getKey() + "_new") });
 
         // 0. rename should be denied
         try {
             newConnector.update(
-                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                    ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
             fail();
         } catch (Exception e) {
             // ignore
@@ -1750,15 +1718,14 @@ public class UserCrudTest extends UserTest {
 
         final Map.Entry<String, String> ids = util.getEntryIDs("15");
 
-        assertNull("Please remove user 'sAMAccountName: " + ids.getValue() + "' from AD",
-                connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         String upn = ids.getValue() + "@tirasa.net";
-        
+
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
         attributes.add(AttributeBuilder.build("userPrincipalName",
                 Collections.singletonList(upn)));
-        
+
         final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -1769,11 +1736,11 @@ public class UserCrudTest extends UserTest {
 
         // retrieve created object
         final ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-        
+
         assertNotNull(object);
         assertNotNull(object.getAttributes());
         assertNotNull(object.getAttributeByName("userPrincipalName"));
-        
+
         assertEquals(ids.getValue(), object.getUid().getUidValue());
         assertEquals(
                 util.getEntryDN(ids.getKey(), ObjectClass.ACCOUNT).toLowerCase(),

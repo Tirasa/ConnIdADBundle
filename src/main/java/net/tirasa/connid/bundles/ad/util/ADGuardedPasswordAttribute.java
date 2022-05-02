@@ -16,6 +16,7 @@
 package net.tirasa.connid.bundles.ad.util;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 import java.util.List;
 import javax.naming.directory.BasicAttribute;
@@ -73,25 +74,12 @@ public abstract class ADGuardedPasswordAttribute {
 
         @Override
         public void access(final Accessor accessor) {
-            password.access(new GuardedString.Accessor() {
+            password.access(clearChars -> {
+                final String quotedPwd = "\"" + new String(clearChars) + "\"";
 
-                @Override
-                public void access(char[] clearChars) {
-                    final String quotedPwd = "\"" + new String(clearChars) + "\"";
-
-                    try {
-
-                        byte[] unicodePwd = quotedPwd.getBytes("UTF-16LE");
-
-                        final BasicAttribute attr =
-                                new BasicAttribute(attrName, unicodePwd);
-
-                        accessor.access(attr);
-
-                    } catch (UnsupportedEncodingException e) {
-                        LOG.error(e, "Error encoding password");
-                    }
-                }
+                byte[] unicodePwd = quotedPwd.getBytes(Charset.forName("UTF-16LE"));
+                final BasicAttribute attr = new BasicAttribute(attrName, unicodePwd);
+                accessor.access(attr);
             });
         }
     }

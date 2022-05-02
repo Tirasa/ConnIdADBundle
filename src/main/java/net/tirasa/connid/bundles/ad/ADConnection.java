@@ -20,6 +20,7 @@ import static org.identityconnectors.common.StringUtil.isNotBlank;
 
 import com.sun.jndi.ldap.ctl.PasswordExpiredResponseControl;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
@@ -65,7 +66,6 @@ public class ADConnection extends LdapConnection {
 
     @Override
     public AuthenticationResult authenticate(final String entryDN, final GuardedString password) {
-
         assert entryDN != null;
 
         if (LOG.isOk()) {
@@ -109,12 +109,11 @@ public class ADConnection extends LdapConnection {
         LdapContext ctx = null;
 
         try {
-            @SuppressWarnings({ "UseOfObsoleteCollectionType", "rawtypes", "unchecked" })
-            final java.util.Hashtable env = new java.util.Hashtable(getInitialContext().getEnvironment());
+            @SuppressWarnings("UseOfObsoleteCollectionType")
+            final Hashtable<Object, Object> env = new Hashtable<>();
 
             ctx = new InitialLdapContext(env, null);
             ctx.setRequestControls(control);
-
         } catch (NamingException e) {
             LOG.error(e, "Context initialization failed");
         }
@@ -167,11 +166,10 @@ public class ADConnection extends LdapConnection {
     private Pair<AuthenticationResult, LdapContext> createContext(
             final String principal, final GuardedString credentials) {
 
-        final List<Pair<AuthenticationResult, LdapContext>> result
-                = new ArrayList<Pair<AuthenticationResult, LdapContext>>(1);
+        final List<Pair<AuthenticationResult, LdapContext>> result = new ArrayList<>(1);
 
         @SuppressWarnings("UseOfObsoleteCollectionType")
-        final java.util.Hashtable<Object, Object> env = new java.util.Hashtable<Object, Object>();
+        final Hashtable<Object, Object> env = new Hashtable<>();
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CTX_FACTORY);
         env.put(Context.PROVIDER_URL, getLdapUrls());
@@ -201,15 +199,11 @@ public class ADConnection extends LdapConnection {
             env.put(Context.SECURITY_PRINCIPAL, principal);
 
             if (credentials != null) {
-                credentials.access(new Accessor() {
-
-                    @Override
-                    public void access(char[] clearChars) {
-                        if(clearChars == null || clearChars.length == 0){
-                            throw new InvalidCredentialException("Password is blank");
-                        }
-                        env.put(Context.SECURITY_CREDENTIALS, new String(clearChars));
+                credentials.access(clearChars -> {
+                    if (clearChars == null || clearChars.length == 0) {
+                        throw new InvalidCredentialException("Password is blank");
                     }
+                    env.put(Context.SECURITY_CREDENTIALS, new String(clearChars));
                 });
             }
         }
@@ -221,7 +215,7 @@ public class ADConnection extends LdapConnection {
 
     private Pair<AuthenticationResult, LdapContext> createContext(
             @SuppressWarnings("UseOfObsoleteCollectionType")
-            final java.util.Hashtable<?, ?> env) {
+            final Hashtable<?, ?> env) {
 
         AuthenticationResult authnResult = null;
         InitialLdapContext context = null;
@@ -235,34 +229,28 @@ public class ADConnection extends LdapConnection {
                             AuthenticationResultType.PASSWORD_EXPIRED);
                 }
             }
-
         } catch (AuthenticationException e) {
             // TODO: check AD response
             String message = e.getMessage().toLowerCase();
             if (message.contains("password expired")) { // Sun DS.
-                authnResult = new AuthenticationResult(
-                        AuthenticationResultType.PASSWORD_EXPIRED, e);
+                authnResult = new AuthenticationResult(AuthenticationResultType.PASSWORD_EXPIRED, e);
             } else if (message.contains("password has expired")) { // RACF.
-                authnResult = new AuthenticationResult(
-                        AuthenticationResultType.PASSWORD_EXPIRED, e);
+                authnResult = new AuthenticationResult(AuthenticationResultType.PASSWORD_EXPIRED, e);
             } else {
-                authnResult = new AuthenticationResult(
-                        AuthenticationResultType.FAILED, e);
+                authnResult = new AuthenticationResult(AuthenticationResultType.FAILED, e);
             }
 
         } catch (NamingException e) {
-            authnResult = new AuthenticationResult(
-                    AuthenticationResultType.FAILED, e);
+            authnResult = new AuthenticationResult(AuthenticationResultType.FAILED, e);
         }
 
         if (authnResult == null) {
             assert context != null;
 
-            authnResult = new AuthenticationResult(
-                    AuthenticationResultType.SUCCESS);
+            authnResult = new AuthenticationResult(AuthenticationResultType.SUCCESS);
         }
 
-        return new Pair<AuthenticationResult, LdapContext>(authnResult, context);
+        return new Pair<>(authnResult, context);
     }
 
     private static boolean hasPasswordExpiredControl(final Control[] controls) {

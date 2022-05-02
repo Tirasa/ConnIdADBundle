@@ -16,21 +16,21 @@
 package net.tirasa.connid.bundles.ad;
 
 import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public class GroupTest extends AbstractTest {
 
     protected static TestUtil util;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         AbstractTest.init();
         util = new TestUtil(connector, conf, ObjectClass.GROUP, BASE_CONTEXT);
         AbstractTest.baseSetup(util);
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         AbstractTest.cleanup(util);
     }
