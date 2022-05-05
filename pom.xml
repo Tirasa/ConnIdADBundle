@@ -106,6 +106,12 @@
       <groupId>net.tirasa</groupId>
       <artifactId>adsddl</artifactId>
       <version>${adsddl.verson}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- TEST -->
