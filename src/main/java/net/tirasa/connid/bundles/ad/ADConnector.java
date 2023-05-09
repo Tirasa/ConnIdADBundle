@@ -25,10 +25,12 @@ import net.tirasa.connid.bundles.ad.crud.ADCreate;
 import net.tirasa.connid.bundles.ad.crud.ADDelete;
 import net.tirasa.connid.bundles.ad.crud.ADUpdate;
 import net.tirasa.connid.bundles.ad.search.ADSearch;
+import net.tirasa.connid.bundles.ad.sync.USNSyncStrategy;
 import net.tirasa.connid.bundles.ad.sync.ADSyncStrategy;
 import net.tirasa.connid.bundles.ldap.LdapConnector;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
+import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -108,7 +110,18 @@ public class ADConnector extends LdapConnector {
         // TODO: easier and more efficient if conn was protected in superclass
         conn = new ADConnection(config);
 
-        syncStrategy = new ADSyncStrategy(conn);
+        String syncStrategyClassName = config.getSyncStrategy();
+        if (StringUtil.isNotEmpty(syncStrategyClassName)) {
+            try {
+                syncStrategy = (USNSyncStrategy) Class.forName(syncStrategyClassName).
+                        getConstructor(ADConnection.class).newInstance(conn);
+            } catch (Exception ex) {
+                syncStrategy = new ADSyncStrategy(conn);
+            }
+        } else {
+            syncStrategy = new ADSyncStrategy(conn);
+        }
+
         super.init(cfg);
     }
 
@@ -196,9 +209,9 @@ public class ADConnector extends LdapConnector {
 
                 final Set<String> ldapGroupsToBeAdded = new HashSet<String>(
                         ldapGroups.getValue() == null
-                                ? Collections.<String>emptyList()
-                                : Arrays.asList(ldapGroups.getValue().toArray(
-                                                new String[ldapGroups.getValue().size()])));
+                        ? Collections.<String>emptyList()
+                        : Arrays.asList(ldapGroups.getValue().toArray(
+                                new String[ldapGroups.getValue().size()])));
 
                 ldapGroupsToBeAdded.addAll(config.getMemberships() == null
                         ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));

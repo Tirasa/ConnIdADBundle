@@ -92,6 +92,8 @@ public final class ADConfiguration extends LdapConfiguration {
 
     private String defaultIdAttribute = "cn";
 
+    private String syncStrategy = "net.tirasa.connid.bundles.ad.sync.ADSyncStrategy";
+
     private final ObjectClassMappingConfig accountConfig = new ObjectClassMappingConfig(
             ObjectClass.ACCOUNT,
             CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
@@ -127,7 +129,7 @@ public final class ADConfiguration extends LdapConfiguration {
         setPasswordAttribute("unicodePwd");
         setPort(636);
 
-        memberships = new ArrayList<String>();
+        memberships = new ArrayList<>();
 
         userSearchScope = SearchScope.subtree;
         groupSearchScope = SearchScope.subtree;
@@ -153,7 +155,7 @@ public final class ADConfiguration extends LdapConfiguration {
 
     @Override
     public Map<ObjectClass, ObjectClassMappingConfig> getObjectClassMappingConfigs() {
-        HashMap<ObjectClass, ObjectClassMappingConfig> result = new HashMap<ObjectClass, ObjectClassMappingConfig>();
+        HashMap<ObjectClass, ObjectClassMappingConfig> result = new HashMap<>();
         result.put(accountConfig.getObjectClass(), accountConfig);
         result.put(groupConfig.getObjectClass(), groupConfig);
 
@@ -165,11 +167,11 @@ public final class ADConfiguration extends LdapConfiguration {
     @ConfigurationProperty(displayMessageKey = "memberships.display",
             helpMessageKey = "memberships.help", order = 1)
     public String[] getMemberships() {
-        return memberships.toArray(new String[memberships.size()]);
+        return memberships.toArray(new String[0]);
     }
 
     public void setMemberships(final String... memberships) {
-        this.memberships = new ArrayList<String>();
+        this.memberships = new ArrayList<>();
 
         if (memberships != null) {
             for (String membership : memberships) {
@@ -408,6 +410,16 @@ public final class ADConfiguration extends LdapConfiguration {
     @Override
     public final void setGidAttribute(final String gidAttribute) {
         super.setGidAttribute(gidAttribute);
+    }
+
+    @ConfigurationProperty(displayMessageKey = "syncStrategy.display",
+            helpMessageKey = "syncStrategy.help", order = 21)
+    public String getSyncStrategy() {
+        return syncStrategy;
+    }
+
+    public void setSyncStrategy(String syncStrategy) {
+        this.syncStrategy = syncStrategy;
     }
 
     public enum SearchScope {

@@ -75,7 +75,7 @@ public class ADSyncStrategy {
         this.utils = new ADUtilities(conn);
     }
 
-    private Set<SearchResult> search(
+    protected Set<SearchResult> search(
             final LdapContext ctx,
             final String filter,
             final SearchControls searchCtls,
@@ -257,7 +257,7 @@ public class ADSyncStrategy {
     }
 
     @SuppressWarnings("unchecked")
-    private void handleSyncUDelta(
+    protected void handleSyncUDelta(
             final LdapContext ctx,
             final SearchResult result,
             final Collection<String> attrsToGet,
@@ -396,7 +396,7 @@ public class ADSyncStrategy {
     }
 
     @SuppressWarnings("unchecked")
-    private void handleSyncGDelta(
+    protected void handleSyncGDelta(
             final LdapContext ctx,
             final SearchResult sr,
             final Collection<String> attrsToGet,
@@ -520,7 +520,7 @@ public class ADSyncStrategy {
         }
     }
 
-    private SyncDelta getSyncDelta(
+    protected SyncDelta getSyncDelta(
             final ObjectClass oclass,
             final String entryDN,
             final SyncDeltaType syncDeltaType,
@@ -562,7 +562,7 @@ public class ADSyncStrategy {
         return sdb.build();
     }
 
-    private void handleInOutEntries(
+    protected void handleInOutEntries(
             final LdapContext ctx,
             final ObjectClass oclass,
             final NamingEnumeration<String> dns,
@@ -579,7 +579,7 @@ public class ADSyncStrategy {
         }
     }
 
-    private void handleEntry(
+    protected void handleEntry(
             final LdapContext ctx,
             final ObjectClass oclass,
             final String dn,

@@ -30,7 +30,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
     @Override
     public PropertyDescriptor[] getPropertyDescriptors() {
-        final List<PropertyDescriptor> props = new ArrayList<PropertyDescriptor>();
+        final List<PropertyDescriptor> props = new ArrayList<>();
         try {
             // ssl
             props.add(new PropertyDescriptor("ssl", ADConfiguration.class));
@@ -124,6 +124,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
             // groupMemberReferenceAttribute
             props.add(new PropertyDescriptor("groupMemberReferenceAttribute", ADConfiguration.class));
+
+            // syncStrategy
+            props.add(new PropertyDescriptor("syncStrategy", ADConfiguration.class));
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();
