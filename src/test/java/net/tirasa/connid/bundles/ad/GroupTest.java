@@ -26,7 +26,7 @@ public class GroupTest extends AbstractTest {
     @BeforeAll
     public static void init() {
         AbstractTest.init();
-        util = new TestUtil(connector, conf, ObjectClass.GROUP, BASE_CONTEXT);
+        util = new TestUtil(connector, conf, ObjectClass.GROUP);
         AbstractTest.baseSetup(util);
     }
 

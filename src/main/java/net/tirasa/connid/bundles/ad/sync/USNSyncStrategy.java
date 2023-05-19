@@ -15,9 +15,14 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
+import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -28,10 +33,13 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.SortControl;
 import net.tirasa.adsddl.ntsd.controls.ShowDeletedControl;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
+import net.tirasa.connid.bundles.ad.util.DeletedControl;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -39,11 +47,9 @@ import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.SyncDelta;
-import org.identityconnectors.framework.common.objects.SyncDeltaBuilder;
 import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
-import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.SyncTokenResultsHandler;
 
 /**
@@ -53,31 +59,46 @@ public class USNSyncStrategy extends ADSyncStrategy {
 
     private static final Log LOG = Log.getLog(USNSyncStrategy.class);
 
-    private final transient ADConnection conn;
+    private static String USN = "uSNChanged";
 
-    private transient SyncToken latestSyncToken;
+    private String deleteTokenValue;
 
-    private final ADUtilities utils;
+    private String createOrUpdateTokenValue;
 
     public USNSyncStrategy(final ADConnection conn) {
         super(conn);
-        this.conn = conn;
-        this.utils = new ADUtilities(conn);
     }
 
-    protected Set<SearchResult> searchForDeletedObjects(
+    protected List<SearchResult> search(
             final LdapContext ctx,
             final String filter,
-            final SearchControls searchCtls) throws NamingException {
+            final SearchControls searchCtls) throws Exception {
 
-        final Set<SearchResult> result = new HashSet<>();
+        ctx.setRequestControls(new Control[] {
+            new SortControl(USN, Control.CRITICAL)
+        });
+
+        return super.search(ctx, filter, searchCtls, false);
+    }
+
+    protected List<SearchResult> searchForDeletedObjects(
+            final LdapContext ctx,
+            final String filter,
+            final SearchControls searchCtls) throws Exception {
+
+        ctx.setRequestControls(new Control[] {
+            new SortControl(USN, Control.CRITICAL),
+            new ShowDeletedControl()
+        });
+
+        final List<SearchResult> result = new ArrayList<>();
 
         Set<String> namingContexts = getNamingContexts(ctx);
 
         if (namingContexts.isEmpty()) {
             LOG.warn("No root context found about {0}",
                     Arrays.asList(conn.getConfiguration().getBaseContextsToSynchronize()));
-            return new HashSet<>();
+            return new ArrayList<>();
         }
 
         String baseContextDn = namingContexts.iterator().next();
@@ -108,7 +129,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
             final ObjectClass oclass) {
 
         // get lastest sync token before start pulling objects
-        getLatestSyncToken();
+        latestSyncToken = token;
 
         if ((oclass.is(ObjectClass.ACCOUNT_NAME)
                 && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
@@ -155,13 +176,20 @@ public class USNSyncStrategy extends ADSyncStrategy {
                 filter = givenFilter;
             } else {
                 if (LOG.isOk()) {
-                    LOG.ok("Synchronization with token.");
+                    LOG.ok("Synchronization with token {0}", token.getValue());
                 }
 
-                filter = String.format("(&(uSNChanged>=%s)(%s))", token.getValue().toString(), givenFilter);
+                String[] tokenValues = token.getValue().toString().split(",");
+                deleteTokenValue = tokenValues[0];
+                createOrUpdateTokenValue = tokenValues.length == 1 ? tokenValues[0] : tokenValues[1];
+
+                filter = String.format("(&(!(%s<=%s))%s)",
+                        USN,
+                        deleted ? deleteTokenValue : createOrUpdateTokenValue,
+                        givenFilter);
             }
         } catch (Exception e) {
-            throw new ConnectorException("Could not set DirSync request controls", e);
+            throw new ConnectorException("Could not set Sync request controls", e);
         }
 
         if (LOG.isOk()) {
@@ -176,27 +204,24 @@ public class USNSyncStrategy extends ADSyncStrategy {
         // Get Synchronization Context and perform
         // -----------------------------------
         try {
-            LdapContext ctx = conn.getInitialContext().newInstance(new Control[] {
-                new ShowDeletedControl()
-            });
+            LdapContext ctx = conn.getInitialContext().newInstance(new Control[] {});
 
-            final Set<SearchResult> changes = deleted
+            final List<SearchResult> changes = deleted
                     ? searchForDeletedObjects(ctx, filter, searchCtls)
-                    : search(ctx, filter, searchCtls, false);
+                    : search(ctx, filter, searchCtls);
 
             int count = changes.size();
-            if (LOG.isOk()) {
-                LOG.ok("Found {0} changes", count);
-            }
+            LOG.ok("Found {0} changes", count);
 
             if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
                 for (SearchResult sr : changes) {
+                    LOG.ok("Remaining {0} users to be processed", count);
                     try {
                         handleSyncUDelta(
                                 ctx,
                                 sr,
                                 attrsToGet,
-                                count == 1 ? latestSyncToken : token,
+                                token,
                                 handler);
                         count--;
                     } catch (NamingException e) {
@@ -205,12 +230,13 @@ public class USNSyncStrategy extends ADSyncStrategy {
                 }
             } else {
                 for (SearchResult sr : changes) {
+                    LOG.ok("Remaining {0} groups to be processed", count);
                     try {
                         handleSyncGDelta(
                                 ctx,
                                 sr,
                                 attrsToGet,
-                                count == 1 ? latestSyncToken : token,
+                                token,
                                 handler);
                         count--;
                     } catch (NamingException e) {
@@ -218,7 +244,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
                     }
                 }
             }
-        } catch (NamingException e) {
+        } catch (Exception e) {
             throw new ConnectorException("While looking for changes", e);
         }
         // -----------------------------------
@@ -339,40 +365,124 @@ public class USNSyncStrategy extends ADSyncStrategy {
             final SyncDeltaType syncDeltaType,
             final SyncToken token,
             final Attributes profile,
-            final Collection<String> attrsToGet)
+            final Collection<String> attrsToGet,
+            final boolean effectiveDelete)
             throws NamingException {
 
-        final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
-
-        // Set token
-        sdb.setToken(token == null ? new SyncToken(StringUtil.EMPTY) : token);
-
-        // Set Delta Type
-        sdb.setDeltaType(syncDeltaType);
-
-        javax.naming.directory.Attribute uidAttribute;
-
-        Uid uid = null;
-
-        if (StringUtil.isNotBlank(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
-            uidAttribute = profile.get(conn.getSchemaMapping().getLdapUidAttribute(oclass));
-
-            if (uidAttribute != null) {
-                uid = new Uid(uidAttribute.get().toString());
+        Attribute usn = profile.get(USN);
+        if (usn != null) {
+            if (effectiveDelete) {
+                deleteTokenValue = usn.get().toString();
+            } else {
+                createOrUpdateTokenValue = usn.get().toString();
             }
+
+            StringBuilder tokenBuilder = new StringBuilder();
+            if (StringUtil.isNotBlank(deleteTokenValue)) {
+                tokenBuilder.append(deleteTokenValue);
+            }
+
+            if (StringUtil.isNotBlank(createOrUpdateTokenValue)) {
+                if (tokenBuilder.length() > 0) {
+                    tokenBuilder.append(",");
+                }
+                tokenBuilder.append(createOrUpdateTokenValue);
+            }
+
+            latestSyncToken = new SyncToken(tokenBuilder.toString());
         }
 
-        if (uid == null) {
-            throw new ConnectorException("UID attribute not found");
+        LOG.ok("Latest processing token {0}", latestSyncToken.getValue());
+        return super.getSyncDelta(
+                oclass, entryDN, syncDeltaType, latestSyncToken, profile, attrsToGet, effectiveDelete);
+    }
+
+    @Override
+    protected void handleSyncGDelta(
+            final LdapContext ctx,
+            final SearchResult sr,
+            final Collection<String> attrsToGet,
+            final SyncToken token,
+            final SyncResultsHandler handler)
+            throws NamingException {
+
+        if (ctx == null || sr == null) {
+            throw new ConnectorException("Invalid context or search result.");
         }
 
-        // Set UID
-        sdb.setUid(uid);
+        ctx.setRequestControls(new Control[] { new DeletedControl() });
 
-        // Set Connector Object
-        sdb.setObject(utils.createConnectorObject(entryDN, profile, attrsToGet, oclass));
+        // Just used to retrieve object classes and to pass to getSyncDelta
+        Attributes profile = sr.getAttributes();
 
-        return sdb.build();
+        if (LOG.isOk()) {
+            LOG.ok("Object profile: {0}", profile);
+        }
+
+        String guid = GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
+
+        boolean isDeleted = false;
+
+        try {
+
+            javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
+
+            isDeleted = attributeIsDeleted != null
+                    && attributeIsDeleted.get() != null
+                    && Boolean.parseBoolean(
+                            attributeIsDeleted.get().toString());
+
+        } catch (NoSuchElementException e) {
+            if (LOG.isOk()) {
+                LOG.ok("Cannot find the isDeleted element for group.");
+            }
+        } catch (Throwable t) {
+            LOG.error(t, "Error retrieving isDeleted attribute");
+        }
+
+        // We need for this beacause DirSync can return an uncomplete profile.
+        profile = ctx.getAttributes("<GUID=" + guid + ">");
+
+        final Attribute objectClasses = profile.get("objectClass");
+
+        if (objectClasses.contains("group")) {
+            final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
+
+            if (LOG.isOk()) {
+                LOG.ok("Created/Updated/Deleted group {0}", sr.getNameInNamespace());
+            }
+
+            if (isDeleted) {
+
+                if (LOG.isOk()) {
+                    LOG.ok("Deleted group {0}", sr.getNameInNamespace());
+                }
+
+                if (conf.isRetrieveDeletedGroup()) {
+                    handler.handle(getSyncDelta(
+                            ObjectClass.GROUP,
+                            sr.getNameInNamespace(),
+                            SyncDeltaType.DELETE,
+                            token,
+                            profile,
+                            attrsToGet,
+                            true));
+                }
+
+            } else {
+                // user to be created/updated
+                if (LOG.isOk()) {
+                    LOG.ok("Created/Updated group {0}", sr.getNameInNamespace());
+                }
+
+                String userDN = sr.getNameInNamespace();
+
+                handleEntry(
+                        ctx, ObjectClass.GROUP, userDN, conf.getGroupSearchFilter(), handler, token, conf, attrsToGet);
+            }
+        } else {
+            LOG.warn("Invalid object type {0}", objectClasses);
+        }
     }
 
     private static String createDirSyncUFilter(final ADConfiguration conf, final ADUtilities utils) {

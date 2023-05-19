@@ -104,20 +104,27 @@ public class ADConnection extends LdapConnection {
         }
     }
 
-    private LdapContext cloneContext(final Control[] control) {
-        LdapContext ctx = null;
-
+    private LdapContext cloneContext(final Control[] controls) {
         try {
-            @SuppressWarnings("UseOfObsoleteCollectionType")
-            final Hashtable<Object, Object> env = new Hashtable<>();
-
-            ctx = new InitialLdapContext(env, null);
-            ctx.setRequestControls(control);
+            return getInitialContext().newInstance(controls);
         } catch (NamingException e) {
             LOG.error(e, "Context initialization failed");
+            return null;
         }
 
-        return ctx;
+//        LdapContext ctx = null;
+//
+//        try {
+//            @SuppressWarnings("UseOfObsoleteCollectionType")
+//            final Hashtable<Object, Object> env = new Hashtable<>();
+//
+//            ctx = new InitialLdapContext(env, null);
+//            ctx.setRequestControls(controls);
+//        } catch (NamingException e) {
+//            LOG.error(e, "Context initialization failed");
+//        }
+//
+//        return ctx;
     }
 
     private static void quietClose(final LdapContext ctx) {

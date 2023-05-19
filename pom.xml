@@ -116,6 +116,12 @@
 
     <!-- TEST -->
     <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
       <groupId>net.tirasa.connid</groupId>
       <artifactId>connector-test-common</artifactId>
       <version>${connid.version}</version>

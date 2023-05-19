@@ -48,8 +48,7 @@ public class TestUtil {
     public TestUtil(
             final ConnectorFacade connector,
             final ADConfiguration conf,
-            final ObjectClass oclass,
-            final String basecontext) {
+            final ObjectClass oclass) {
         this.oclass = oclass;
         this.connector = connector;
         this.conf = conf;
