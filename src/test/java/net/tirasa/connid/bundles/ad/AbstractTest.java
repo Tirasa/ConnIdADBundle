@@ -28,6 +28,8 @@ import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
+import net.tirasa.connid.bundles.ad.sync.ADSyncStrategy;
+import net.tirasa.connid.bundles.ad.sync.USNSyncStrategy;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -59,17 +61,16 @@ public abstract class AbstractTest {
 
     protected static String BASE_CONTEXT;
 
-    protected static void init() {
+    static {
         try {
             PROP.load(AbstractTest.class.getResourceAsStream("/ad.properties"));
+            BASE_CONTEXT = PROP.getProperty("baseContext");
         } catch (IOException e) {
             LOG.error(e, "Error loading properties file");
         }
+    }
 
-        BASE_CONTEXT = PROP.getProperty("baseContext");
-
-        conf = getSimpleConf(PROP);
-
+    private static void initialize() {
         assertNotNull(conf);
         conf.validate();
 
@@ -82,6 +83,19 @@ public abstract class AbstractTest {
 
         assertNotNull(connector);
         connector.test();
+    }
+
+    protected static void usnSyncInit() {
+        conf = getSimpleConf(PROP);
+        conf.setSyncStrategy(USNSyncStrategy.class.getName());
+        conf.setBaseContextsToSynchronize("CN=Users," + BASE_CONTEXT);
+        initialize();
+    }
+
+    protected static void init() {
+        conf = getSimpleConf(PROP);
+        conf.setSyncStrategy(ADSyncStrategy.class.getName());
+        initialize();
     }
 
     protected static ADConfiguration getSimpleConf(final Properties prop) {
@@ -160,7 +174,7 @@ public abstract class AbstractTest {
     }
 
     public static void cleanup(final TestUtil util) {
-        util.cleanup(10);
+        util.cleanup(12);
 
         Uid uid = new Uid(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT).getValue());
         connector.delete(ObjectClass.ACCOUNT, uid, null);

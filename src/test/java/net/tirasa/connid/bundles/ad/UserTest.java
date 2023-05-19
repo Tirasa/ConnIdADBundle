@@ -26,7 +26,7 @@ public class UserTest extends AbstractTest {
     @BeforeAll
     public static void init() {
         AbstractTest.init();
-        util = new TestUtil(connector, conf, ObjectClass.ACCOUNT, BASE_CONTEXT);
+        util = new TestUtil(connector, conf, ObjectClass.ACCOUNT);
         AbstractTest.baseSetup(util);
     }
 

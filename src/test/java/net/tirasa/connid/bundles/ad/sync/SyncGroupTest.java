@@ -247,7 +247,8 @@ public class SyncGroupTest extends GroupTest {
             connector.sync(ObjectClass.GROUP, token, handler, oob.build());
 
             assertEquals(2, handler.getDeleted().size());
-            assertTrue(handler.getUpdated().isEmpty());
+            // removing member -> change on group is catched
+            assertEquals(1, handler.getUpdated().size());
         }
     }
 }

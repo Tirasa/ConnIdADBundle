@@ -333,7 +333,7 @@ public class UserCrudTest extends UserTest {
         uid = connector.update(
                 ObjectClass.ACCOUNT,
                 uid,
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
 
         assertNotNull(uid);
@@ -505,7 +505,7 @@ public class UserCrudTest extends UserTest {
             AttributeBuilder.buildPassword(new GuardedString("Password321".toCharArray())) });
 
         Uid uid = connector.update(
-                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<Attribute>(attrToReplace), null);
+                ObjectClass.ACCOUNT, new Uid(ids.getValue()), new HashSet<>(attrToReplace), null);
 
         assertNotNull(uid);
         assertEquals(ids.getValue(), uid.getUidValue());
@@ -727,7 +727,7 @@ public class UserCrudTest extends UserTest {
 
         assertNull(newConnector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
-        final Set<Attribute> attributes = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT).
+        final Set<Attribute> attributes = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT).
                 getSimpleProfile(ids);
 
         final OperationOptionsBuilder oob = new OperationOptionsBuilder();
@@ -800,7 +800,7 @@ public class UserCrudTest extends UserTest {
 
         final ConnectorFacade newConnector = factory.newInstance(impl);
 
-        final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT, BASE_CONTEXT);
+        final TestUtil newutil = new TestUtil(newConnector, newconf, ObjectClass.ACCOUNT);
 
         // 1. create a new group
         Map.Entry<String, String> groupIDs = new AbstractMap.SimpleEntry<>("GroupTestAD27",
@@ -918,7 +918,7 @@ public class UserCrudTest extends UserTest {
         Uid uid = newConnector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
         assertEquals(ids.getValue(), uid.getUidValue());
 
@@ -1223,7 +1223,7 @@ public class UserCrudTest extends UserTest {
             final String sAMAccountName = "SAAN_AD40";
             final String cn = "AD40";
 
-            final Set<Attribute> attributes = new HashSet<Attribute>();
+            final Set<Attribute> attributes = new HashSet<>();
 
             attributes.add(new Name(null));
             attributes.add(AttributeBuilder.build("cn", Collections.singletonList(cn)));
@@ -1381,7 +1381,7 @@ public class UserCrudTest extends UserTest {
             uid = connector.update(
                     ObjectClass.ACCOUNT,
                     uid,
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             assertNotNull(uid);
@@ -1513,9 +1513,9 @@ public class UserCrudTest extends UserTest {
             assertNotNull(primaryGroupId);
             assertEquals(firstDN, object.getAttributeByName(ADConfiguration.PRIMARY_GROUP_DN_NAME).getValue().get(0));
 
-            final List<Attribute> attrToReplace = new ArrayList<Attribute>();
+            final List<Attribute> attrToReplace = new ArrayList<>();
 
-            final List<String> groupsToBeUpdated = new ArrayList<String>();
+            final List<String> groupsToBeUpdated = new ArrayList<>();
 
             groupsToBeUpdated.add(secondDN);
             groupsToBeUpdated.add(thirdDN);
@@ -1526,7 +1526,7 @@ public class UserCrudTest extends UserTest {
             uid = connector.update(
                     ObjectClass.ACCOUNT,
                     uid,
-                    new HashSet<Attribute>(attrToReplace),
+                    new HashSet<>(attrToReplace),
                     null);
 
             assertNotNull(uid);
@@ -1652,7 +1652,7 @@ public class UserCrudTest extends UserTest {
         List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
             AttributeBuilder.build(ADConfiguration.PNE_FLAG, false) });
 
-        connector.update(ObjectClass.ACCOUNT, uid, new HashSet<Attribute>(attrToReplace), null);
+        connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
 
         object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
         assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
@@ -1687,7 +1687,7 @@ public class UserCrudTest extends UserTest {
         Uid uid = newConnector.update(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),
-                new HashSet<Attribute>(attrToReplace),
+                new HashSet<>(attrToReplace),
                 null);
         assertEquals(ids.getValue(), uid.getUidValue());
 

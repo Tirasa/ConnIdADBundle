@@ -15,13 +15,13 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
-
 import com.sun.jndi.ldap.ctl.DirSyncResponseControl;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -35,6 +35,7 @@ import net.tirasa.adsddl.ntsd.controls.DirSyncControl;
 import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
 import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
@@ -64,24 +65,24 @@ public class ADSyncStrategy {
      */
     private static final byte[] EMPTY_COOKIE = new byte[0];
 
-    private final transient ADConnection conn;
+    protected final transient ADConnection conn;
 
-    private transient SyncToken latestSyncToken;
+    protected transient SyncToken latestSyncToken;
 
-    private final ADUtilities utils;
+    protected final ADUtilities utils;
 
     public ADSyncStrategy(final ADConnection conn) {
         this.conn = conn;
         this.utils = new ADUtilities(conn);
     }
 
-    protected Set<SearchResult> search(
+    protected List<SearchResult> search(
             final LdapContext ctx,
             final String filter,
             final SearchControls searchCtls,
             final boolean updateLastSyncToken) {
 
-        final Set<SearchResult> result = new HashSet<SearchResult>();
+        final List<SearchResult> result = new ArrayList<>();
 
         for (String baseContextDn : conn.getConfiguration().getBaseContextsToSynchronize()) {
 
@@ -186,7 +187,7 @@ public class ADSyncStrategy {
         final String[] attrsToGetOption = options.getAttributesToGet();
         final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
 
-        final Set<SearchResult> changes = search(ctx, filter, searchCtls, true);
+        final List<SearchResult> changes = search(ctx, filter, searchCtls, true);
 
         int count = changes.size();
         if (LOG.isOk()) {
@@ -199,7 +200,7 @@ public class ADSyncStrategy {
                     handleSyncUDelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
                     count--;
                 } catch (NamingException e) {
-                    LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                    LOG.error(e, "SyncDelta handling for {0} failed", sr.getName());
                 }
             }
         } else {
@@ -208,7 +209,7 @@ public class ADSyncStrategy {
                     handleSyncGDelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
                     count--;
                 } catch (NamingException e) {
-                    LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                    LOG.error(e, "SyncDelta handling for {0} failed", sr.getName());
                 }
             }
         }
@@ -371,7 +372,8 @@ public class ADSyncStrategy {
                             SyncDeltaType.DELETE,
                             token,
                             profile,
-                            attrsToGet));
+                            attrsToGet,
+                            true));
                 }
 
             } else {
@@ -417,7 +419,7 @@ public class ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        String guid = GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
+        String guid = GUID.getGuidAsString((byte[]) profile.get(ADConnector.OBJECTGUID).get());
 
         boolean isDeleted = false;
 
@@ -463,7 +465,8 @@ public class ADSyncStrategy {
                             SyncDeltaType.DELETE,
                             token,
                             profile,
-                            attrsToGet));
+                            attrsToGet,
+                            true));
                 }
 
             } else {
@@ -526,7 +529,8 @@ public class ADSyncStrategy {
             final SyncDeltaType syncDeltaType,
             final SyncToken token,
             final Attributes profile,
-            final Collection<String> attrsToGet)
+            final Collection<String> attrsToGet,
+            final boolean effectiveDelete)
             throws NamingException {
 
         final SyncDeltaBuilder sdb = new SyncDeltaBuilder();
@@ -590,7 +594,14 @@ public class ADSyncStrategy {
             final Collection<String> attrsToGet)
             throws NamingException {
 
-        final Attributes profile = ctx.getAttributes(dn);
+        Attributes profile;
+        try {
+            profile = ctx.getAttributes(dn);
+        } catch (NameNotFoundException nnfe) {
+            // do nothing: maybe it is referring to a deleted object coming out from a group
+            LOG.info("Entry {0} not found. Maybe removed before ... skip handle", dn);
+            return;
+        }
 
         final Attribute objectClasses = profile.get("objectClass");
 
@@ -628,7 +639,8 @@ public class ADSyncStrategy {
                     deltaType,
                     token,
                     profile,
-                    attrsToGet));
+                    attrsToGet,
+                    false));
         }
     }
 }
