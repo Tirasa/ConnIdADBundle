@@ -15,8 +15,6 @@
  */
 package net.tirasa.connid.bundles.ad.sync;
 
-import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,6 +36,7 @@ import net.tirasa.adsddl.ntsd.controls.ShowDeletedControl;
 import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
@@ -419,7 +418,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
             LOG.ok("Object profile: {0}", profile);
         }
 
-        String guid = GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get());
+        String guid = GUID.getGuidAsString((byte[]) profile.get(ADConnector.OBJECTGUID).get());
 
         boolean isDeleted = false;
 

@@ -111,20 +111,6 @@ public class ADConnection extends LdapConnection {
             LOG.error(e, "Context initialization failed");
             return null;
         }
-
-//        LdapContext ctx = null;
-//
-//        try {
-//            @SuppressWarnings("UseOfObsoleteCollectionType")
-//            final Hashtable<Object, Object> env = new Hashtable<>();
-//
-//            ctx = new InitialLdapContext(env, null);
-//            ctx.setRequestControls(controls);
-//        } catch (NamingException e) {
-//            LOG.error(e, "Context initialization failed");
-//        }
-//
-//        return ctx;
     }
 
     private static void quietClose(final LdapContext ctx) {
