@@ -19,11 +19,10 @@ import static java.util.Collections.singletonList;
 import static org.identityconnectors.common.StringUtil.isBlank;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.SearchControls;
@@ -209,28 +208,27 @@ public class ADSearch {
      * @return base context filter.
      */
     private List<String> buildBaseContextFilter(final String filterEntryDN) throws InvalidNameException {
-        final List<String> res = new ArrayList<String>();
-
-        LdapName prefix;
-
         try {
-            prefix = new LdapName(filterEntryDN);
+            final LdapName prefix = new LdapName(filterEntryDN);
+            return getBaseDNs().stream().anyMatch(bdn -> {
+                try {
+                    return prefix.startsWith(new LdapName(bdn));
+                } catch (InvalidNameException e) {
+                    return false;
+                }
+            }) ? List.of(prefix.toString()) : List.of();
         } catch (InvalidNameException ine) {
             LOG.info(ine, "'{0}' is not am entry DN. Let's try derive it", filterEntryDN);
-            prefix = new LdapName(String.format("CN=%s", filterEntryDN));
+            final LdapName prefix = new LdapName(String.format("CN=%s", filterEntryDN));
+            return getBaseDNs().stream().
+                    map(bdn -> {
+                        try {
+                            return new LdapName(bdn).addAll(prefix).toString();
+                        } catch (InvalidNameException e) {
+                            return bdn;
+                        }
+                    }).collect(Collectors.toList());
         }
-
-        for (String dn : getBaseDNs()) {
-            final LdapName suffix = new LdapName(dn);
-
-            if (prefix.startsWith(suffix)) {
-                return Collections.singletonList(prefix.toString());
-            }
-
-            res.add(suffix.addAll(prefix).toString());
-        }
-
-        return res;
     }
 
     private String getSearchFilter(final String... optionalFilters) {
@@ -357,14 +355,19 @@ public class ADSearch {
             }
         }
 
-        if (OperationOptions.SCOPE_OBJECT.equals(scope)) {
-            return SearchControls.OBJECT_SCOPE;
-        } else if (OperationOptions.SCOPE_ONE_LEVEL.equals(scope)) {
-            return SearchControls.ONELEVEL_SCOPE;
-        } else if (OperationOptions.SCOPE_SUBTREE.equals(scope) || scope == null) {
+        if (null == scope) {
             return SearchControls.SUBTREE_SCOPE;
         } else {
-            throw new IllegalArgumentException("Invalid search scope " + scope);
+            switch (scope) {
+                case OperationOptions.SCOPE_OBJECT:
+                    return SearchControls.OBJECT_SCOPE;
+                case OperationOptions.SCOPE_ONE_LEVEL:
+                    return SearchControls.ONELEVEL_SCOPE;
+                case OperationOptions.SCOPE_SUBTREE:
+                    return SearchControls.SUBTREE_SCOPE;
+                default:
+                    throw new IllegalArgumentException("Invalid search scope " + scope);
+            }
         }
     }
 }
