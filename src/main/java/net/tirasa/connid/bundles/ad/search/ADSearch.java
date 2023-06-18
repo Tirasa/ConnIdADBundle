@@ -20,6 +20,7 @@ import static org.identityconnectors.common.StringUtil.isBlank;
 
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -216,7 +217,7 @@ public class ADSearch {
                 } catch (InvalidNameException e) {
                     return false;
                 }
-            }) ? List.of(prefix.toString()) : List.of();
+            }) ? Collections.<String>singletonList(prefix.toString()) : Collections.emptyList();
         } catch (InvalidNameException ine) {
             LOG.info(ine, "'{0}' is not am entry DN. Let's try derive it", filterEntryDN);
             final LdapName prefix = new LdapName(String.format("CN=%s", filterEntryDN));
