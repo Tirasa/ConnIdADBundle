@@ -76,11 +76,13 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.5.1.0</connid.version>
-    <connid.ldap.version>1.5.6</connid.ldap.version>
+    <connid.version>1.5.2.0</connid.version>
+    <connid.ldap.version>1.5.7</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    
+    <exec.skip>false</exec.skip>
   </properties>
 
   <dependencies>
@@ -205,6 +207,7 @@
             <exclude>**/*.json</exclude>
             <exclude>**/banner.txt</exclude>
             <exclude>**/target/**</exclude>
+            <exclude>**/*.ldif</exclude>
           </excludes>
         </configuration>
         <executions>
@@ -214,30 +217,6 @@
             <goals>
               <goal>check</goal>
             </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <inherited>true</inherited>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-        <executions>
-          <execution>
-            <id>test-phase-execution</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <skip>false</skip>
-              <includes>
-                <include>**/ad/*Test.java</include>
-              </includes>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -270,6 +249,98 @@
           </execution>
         </executions>
       </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <inherited>true</inherited>
+        <configuration>
+          <skipTests>${exec.skip}</skipTests>
+        </configuration>
+        <executions>
+          <execution>
+            <id>test-phase-execution</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skip>false</skip>
+              <includes>
+                <include>**/*Test.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <configuration>
+          <skip>${exec.skip}</skip>
+          <images>
+            <image>
+              <alias>tirasaad</alias>
+              <name>tirasaad</name>
+              <build>
+                <dockerFileDir>${basedir}/src/test/resources/docker/tirasaad</dockerFileDir>
+              </build>
+              <run>
+                <privileged>true</privileged>
+                <hostname>tirasa.net</hostname>
+                <ports>
+                  <port>636:636</port>
+                </ports>
+                <env>
+                  <SMB_ADMIN_PASSWORD>Password321!</SMB_ADMIN_PASSWORD>
+                </env>
+                <log>
+                  <date>default</date>
+                  <color>yellow</color>
+                  <enabled>false</enabled>
+                </log>
+                <containerNamePattern>%a</containerNamePattern>
+                <volumes>
+                  <bind>
+                    <volume>${basedir}/src/test/resources/docker/tirasaad:/opt/ad-scripts</volume>
+                  </bind>
+                </volumes>
+                <wait>
+                  <log>samba version 4.15.13-Ubuntu started</log>
+                  <time>60000</time>
+                </wait>
+              </run>
+            </image>
+          </images>
+        </configuration>
+        <executions>
+          <execution>
+            <id>build-docker</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>stop</goal>
+              <goal>remove</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>start-docker</id>
+            <phase>test-compile</phase>
+            <goals>
+              <goal>build</goal>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>remove-containers-post-integration</id>
+            <phase>test</phase>
+            <goals>
+              <goal>stop</goal>
+              <goal>remove</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
 
     <resources>
@@ -286,45 +357,21 @@
       </resource>
     </resources>
   </build>
-
+  
   <profiles>
     <profile>
-      <id>it</id>
+      <id>skipTests</id>
+      
       <properties>
+        <exec.skip>true</exec.skip>
       </properties>
-      <dependencies>
-      </dependencies>
+      
       <build>
-        <defaultGoal>clean package</defaultGoal>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-            <executions>
-              <execution>
-                <id>test-phase-execution</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-                <configuration>
-                  <skip>false</skip>
-                  <includes>
-                    <include>**/*Test.java</include>
-                  </includes>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
+        <defaultGoal>clean install</defaultGoal>
       </build>
     </profile>
   </profiles>
-
+  
   <repositories>
     <repository>
       <id>sonatype</id>

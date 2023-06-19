@@ -1,0 +1,8 @@
+dn: CN=crist cc. capo,OU=PERIFERIA UMC,DC=tirasa,DC=net
+changetype: modify
+replace: userPrincipalName
+userPrincipalName: capoz@tirasa.net
+-
+replace: mail
+mail: capoz@tirasa.net
+

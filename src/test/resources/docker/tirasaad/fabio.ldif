@@ -1,0 +1,5 @@
+dn: CN=fabio martelli,OU=TIROCINANTI,OU=SERVIZIO,DC=tirasa,DC=net
+changetype: modify
+replace: userPrincipalName
+userPrincipalName: fmartelli@tirasa.net
+

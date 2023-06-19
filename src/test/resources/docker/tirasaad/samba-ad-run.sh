@@ -14,12 +14,14 @@
 # limitations under the License.
 #
 
-host = localhost
-port = 636
-principal =cn=Administrator,cn=Users,dc=tirasa,dc=net
-credentials = Password321!
-baseContext = DC=tirasa,DC=net
-baseContextToSynchronize = DC=tirasa,DC=net
-#Please provide two groups for the test (memberships in OR) and do not use HelpServicesGroup group
-memberships = CN=Domain Guests,CN=Users,DC=tirasa,DC=net ; CN=Domain Computers,CN=Users,DC=tirasa,DC=net
+#!/bin/bash
+ 
+set -e
+ 
+[ -f /var/lib/samba/.setup ] || {
+    >&2 echo "[ERROR] Samba is not setup yet, which should happen automatically. Look for errors!"
+    exit 127
+}
+ 
+samba -i -s /var/lib/samba/private/smb.conf
 
