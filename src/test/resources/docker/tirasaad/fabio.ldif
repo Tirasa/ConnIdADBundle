@@ -1,4 +1,4 @@
-dn: CN=fabio martelli,OU=TIROCINANTI,OU=SERVIZIO,DC=tirasa,DC=net
+dn: CN=fabio martelli,OU=TIROCINANTI,OU=SERVIZIO,DC=localhost
 changetype: modify
 replace: userPrincipalName
 userPrincipalName: fmartelli@tirasa.net

@@ -256,7 +256,7 @@
         <version>3.1.2</version>
         <configuration>
           <skipTests>${exec.skip}</skipTests>
-          <redirectTestOutputToFile>false</redirectTestOutputToFile>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <runOrder>alphabetical</runOrder>
         </configuration>
         <executions>
@@ -309,7 +309,6 @@
               </build>
               <run>
                 <privileged>true</privileged>
-                <hostname>tirasa.net</hostname>
                 <ports>
                   <port>636:636</port>
                 </ports>

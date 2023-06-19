@@ -1,4 +1,4 @@
-dn: CN=gigi finizzo,OU=PERIFERIA OOPP,DC=tirasa,DC=net
+dn: CN=gigi finizzo,OU=PERIFERIA OOPP,DC=localhost
 changetype: modify
 replace: userPrincipalName
 userPrincipalName: gigi.finizzo@tirasa.net

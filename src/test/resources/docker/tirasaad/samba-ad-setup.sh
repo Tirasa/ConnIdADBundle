@@ -37,23 +37,23 @@ samba-tool domain provision\
  --server-role=dc\
  --use-rfc2307\
  --dns-backend=SAMBA_INTERNAL\
- --realm=`hostname`\
+ --realm=localhost\
  --domain=IAM\
  --adminpass=${SMB_ADMIN_PASSWORD}
 
-samba-tool ou create "OU=ARTE,DC=tirasa,DC=net"
-samba-tool ou create "OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=tirasa,DC=net"
-samba-tool ou create "OU=Utenti,OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=tirasa,DC=net"
-samba-tool ou create "OU=NOMENTANA,DC=tirasa,DC=net"
-samba-tool ou create "OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=NOMENTANA,DC=tirasa,DC=net"
-samba-tool ou create "OU=Utenti,OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=NOMENTANA,DC=tirasa,DC=net"
-samba-tool ou create "OU=CARACI,DC=tirasa,DC=net"
-samba-tool ou create "OU=POLICLINICO,DC=tirasa,DC=net"
-samba-tool ou create "OU=PERIFERIA OOPP,DC=tirasa,DC=net"
-samba-tool ou create "OU=PERIFERIA UMC,DC=tirasa,DC=net"
-samba-tool ou create "OU=SERVIZIO,DC=tirasa,DC=net"
-samba-tool ou create "OU=TIROCINANTI,OU=SERVIZIO,DC=tirasa,DC=net"
-samba-tool ou create "OU=COMANDATI - DISTACCATI CP,OU=SERVIZIO,DC=tirasa,DC=net"
+samba-tool ou create "OU=ARTE,DC=localhost"
+samba-tool ou create "OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=localhost"
+samba-tool ou create "OU=Utenti,OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=localhost"
+samba-tool ou create "OU=NOMENTANA,DC=localhost"
+samba-tool ou create "OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=NOMENTANA,DC=localhost"
+samba-tool ou create "OU=Utenti,OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=NOMENTANA,DC=localhost"
+samba-tool ou create "OU=CARACI,DC=localhost"
+samba-tool ou create "OU=POLICLINICO,DC=localhost"
+samba-tool ou create "OU=PERIFERIA OOPP,DC=localhost"
+samba-tool ou create "OU=PERIFERIA UMC,DC=localhost"
+samba-tool ou create "OU=SERVIZIO,DC=localhost"
+samba-tool ou create "OU=TIROCINANTI,OU=SERVIZIO,DC=localhost"
+samba-tool ou create "OU=COMANDATI - DISTACCATI CP,OU=SERVIZIO,DC=localhost"
 
 samba-tool group add GROUP1
 samba-tool group add GROUP2
@@ -72,7 +72,7 @@ samba-tool user create capoz P@ssword! \
  --surname capo \
  --initials cc
 
-ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=TIRASA,DC=NET.ldb capoz.ldif
+ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=LOCALHOST.ldb capoz.ldif
 
 ## Gigi Finizzo
 samba-tool user create gfinizzo P@ssword123 \
@@ -80,7 +80,7 @@ samba-tool user create gfinizzo P@ssword123 \
  --given-name gigi \
  --surname finizzo
 
-ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=TIRASA,DC=NET.ldb gigi.ldif
+ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=LOCALHOST.ldb gigi.ldif
 
 ## Fabio Martelli
 samba-tool user create fmartelli Password123 \
@@ -88,7 +88,7 @@ samba-tool user create fmartelli Password123 \
  --given-name fabio \
  --surname martelli
 
-ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=TIRASA,DC=NET.ldb fabio.ldif
+ldbmodify -H /var/lib/samba/private/sam.ldb.d/DC=LOCALHOST.ldb fabio.ldif
 
 ## Test sincronizzazione 1
 samba-tool user create test.1 Password123 \

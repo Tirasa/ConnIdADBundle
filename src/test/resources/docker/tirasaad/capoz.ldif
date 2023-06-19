@@ -1,4 +1,4 @@
-dn: CN=crist cc. capo,OU=PERIFERIA UMC,DC=tirasa,DC=net
+dn: CN=crist cc. capo,OU=PERIFERIA UMC,DC=localhost
 changetype: modify
 replace: userPrincipalName
 userPrincipalName: capoz@tirasa.net
