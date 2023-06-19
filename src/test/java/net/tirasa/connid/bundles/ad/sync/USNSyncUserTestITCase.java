@@ -58,7 +58,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public class USNSyncUserTest extends AbstractTest {
+public class USNSyncUserTestITCase extends AbstractTest {
 
     protected static TestUtil util;
 

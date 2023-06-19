@@ -18,6 +18,7 @@ package net.tirasa.connid.bundles.ad.sync;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.jupiter.api.Test;
 
-public class SyncUserTest extends UserTest {
+public class SyncUserTestITCase extends UserTest {
 
     @Test
     public void syncFromTheBeginningWithNullToken() {
@@ -75,6 +76,10 @@ public class SyncUserTest extends UserTest {
         assertNotNull(previous);
         assertNotNull(previous.getValue());
         assertTrue(((byte[]) previous.getValue()).length > 0);
+
+        Uid uid = connector.create(ObjectClass.ACCOUNT, util.getSimpleProfile(util.getEntryIDs("123")), null);
+        connector.delete(ObjectClass.ACCOUNT, uid, null);
+        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
 
         SyncToken newly = connector.sync(ObjectClass.ACCOUNT, previous, handler, oob.build());
         assertNotNull(newly);

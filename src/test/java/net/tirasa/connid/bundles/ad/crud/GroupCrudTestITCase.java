@@ -59,7 +59,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.jupiter.api.Test;
 
-public class GroupCrudTest extends GroupTest {
+public class GroupCrudTestITCase extends GroupTest {
 
     @Test
     public void search() {

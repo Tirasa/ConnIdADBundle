@@ -41,7 +41,7 @@ import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.junit.jupiter.api.Test;
 
-public class SyncGroupTest extends GroupTest {
+public class SyncGroupTestITCase extends GroupTest {
 
     @Test
     public void sync() {

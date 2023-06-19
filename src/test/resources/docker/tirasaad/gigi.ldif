@@ -1,0 +1,8 @@
+dn: CN=gigi finizzo,OU=PERIFERIA OOPP,DC=localhost
+changetype: modify
+replace: userPrincipalName
+userPrincipalName: gigi.finizzo@tirasa.net
+-
+replace: mail
+mail: gigi.finizzo@tirasa.net
+
