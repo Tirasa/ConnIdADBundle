@@ -119,4 +119,5 @@ touch /var/lib/samba/.setup
 
 cp -r tls/* /var/lib/samba/private/tls/.
 chown -R 0 /var/lib/samba/private/tls
+chmod 600 /var/lib/samba/private/tls/key.pem
 

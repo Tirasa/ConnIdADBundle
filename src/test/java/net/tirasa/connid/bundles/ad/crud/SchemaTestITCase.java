@@ -28,7 +28,7 @@ import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.junit.jupiter.api.Test;
 
-public class SchemaTest extends AbstractTest {
+public class SchemaTestITCase extends AbstractTest {
 
     @Test
     public void schema() {

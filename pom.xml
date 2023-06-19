@@ -252,6 +252,26 @@
       
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.1.2</version>
+        <configuration>
+          <skipTests>${exec.skip}</skipTests>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <runOrder>alphabetical</runOrder>
+        </configuration>
+        <executions>
+          <execution>
+            <id>verify</id>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <inherited>true</inherited>
         <configuration>
@@ -265,7 +285,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <skip>false</skip>
+              <skip>${exec.skip}</skip>
               <includes>
                 <include>**/*Test.java</include>
               </includes>
@@ -273,10 +293,11 @@
           </execution>
         </executions>
       </plugin>
-
+      
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
+        <version>0.43.0</version>
         <configuration>
           <skip>${exec.skip}</skip>
           <images>
@@ -325,15 +346,15 @@
           </execution>
           <execution>
             <id>start-docker</id>
-            <phase>test-compile</phase>
+            <phase>pre-integration-test</phase>
             <goals>
               <goal>build</goal>
               <goal>start</goal>
             </goals>
           </execution>
           <execution>
-            <id>remove-containers-post-integration</id>
-            <phase>test</phase>
+            <id>remove-containers-post-test</id>
+            <phase>post-integration-test</phase>
             <goals>
               <goal>stop</goal>
               <goal>remove</goal>

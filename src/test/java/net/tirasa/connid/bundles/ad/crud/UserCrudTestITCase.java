@@ -70,7 +70,7 @@ import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
 import org.junit.jupiter.api.Test;
 
-public class UserCrudTest extends UserTest {
+public class UserCrudTestITCase extends UserTest {
 
     @Test
     public void pagedSearch() {
