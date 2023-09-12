@@ -127,6 +127,9 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
 
             // syncStrategy
             props.add(new PropertyDescriptor("syncStrategy", ADConfiguration.class));
+            
+            // userAuthenticationAttributes
+            props.add(new PropertyDescriptor("userAuthenticationAttributes", ADConfiguration.class));
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();

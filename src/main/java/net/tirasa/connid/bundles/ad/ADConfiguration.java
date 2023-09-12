@@ -94,6 +94,8 @@ public final class ADConfiguration extends LdapConfiguration {
 
     private String syncStrategy = "net.tirasa.connid.bundles.ad.sync.ADSyncStrategy";
 
+    private String[] userAuthenticationAttributes = {};
+
     private final ObjectClassMappingConfig accountConfig = new ObjectClassMappingConfig(
             ObjectClass.ACCOUNT,
             CollectionUtil.newList("top", "person", "organizationalPerson", "user"),
@@ -420,6 +422,24 @@ public final class ADConfiguration extends LdapConfiguration {
 
     public void setSyncStrategy(String syncStrategy) {
         this.syncStrategy = syncStrategy;
+    }
+
+    @ConfigurationProperty(displayMessageKey = "userAuthenticationAttributes.display",
+            helpMessageKey = "userAuthenticationAttributes.help", order = 22)
+    public String[] getUserAuthenticationAttributes() {
+        if (userAuthenticationAttributes != null && userAuthenticationAttributes.length > 0) {
+            return userAuthenticationAttributes.clone();
+        } else {
+            return new String[0];
+        }
+    }
+
+    public void setUserAuthenticationAttributes(final String... userAuthenticationAttributes) {
+        if (userAuthenticationAttributes == null || userAuthenticationAttributes.length == 0) {
+            this.userAuthenticationAttributes = new String[0];
+        } else {
+            this.userAuthenticationAttributes = userAuthenticationAttributes.clone();
+        }
     }
 
     public enum SearchScope {

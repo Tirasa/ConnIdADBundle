@@ -96,7 +96,7 @@ public class ADAuthenticate {
 
     private ConnectorObject getObjectToAuthenticate() {
         List<String> userNameAttrs = getUserNameAttributes();
-        Map<String, ConnectorObject> entryDN2Object = new HashMap<String, ConnectorObject>();
+        Map<String, ConnectorObject> entryDN2Object = new HashMap<>();
 
         for (String baseContext : ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()) {
             for (String userNameAttr : userNameAttrs) {
@@ -123,7 +123,12 @@ public class ADAuthenticate {
     }
 
     private List<String> getUserNameAttributes() {
-        String[] result = LdapConstants.getLdapUidAttributes(options);
+        String[] result = ADConfiguration.class.cast(conn.getConfiguration()).getUserAuthenticationAttributes();
+        if (result != null && result.length > 0) {
+            return Arrays.asList(result);
+        }
+
+        result = LdapConstants.getLdapUidAttributes(options);
         if (result != null && result.length > 0) {
             return Arrays.asList(result);
         }
