@@ -15,7 +15,6 @@
  */
 package net.tirasa.connid.bundles.ad.util;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 
 import java.util.List;
@@ -26,7 +25,9 @@ import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 
-public abstract class ADGuardedPasswordAttribute {
+import net.tirasa.connid.bundles.ldap.schema.GuardedPasswordAttribute;
+
+public abstract class ADGuardedPasswordAttribute extends GuardedPasswordAttribute {
 
     private static final Log LOG = Log.getLog(ADGuardedPasswordAttribute.class);
 
@@ -54,13 +55,6 @@ public abstract class ADGuardedPasswordAttribute {
         return new Empty(attrName);
     }
 
-    public abstract void access(final Accessor accessor);
-
-    public interface Accessor {
-
-        void access(BasicAttribute passwordAttribute);
-    }
-
     private static final class Simple extends ADGuardedPasswordAttribute {
 
         private final String attrName;
@@ -72,7 +66,6 @@ public abstract class ADGuardedPasswordAttribute {
             this.password = password;
         }
 
-        @Override
         public void access(final Accessor accessor) {
             password.access(clearChars -> {
                 final String quotedPwd = "\"" + new String(clearChars) + "\"";
@@ -92,7 +85,6 @@ public abstract class ADGuardedPasswordAttribute {
             this.attrName = attrName;
         }
 
-        @Override
         public void access(Accessor accessor) {
             accessor.access(new BasicAttribute(attrName));
         }

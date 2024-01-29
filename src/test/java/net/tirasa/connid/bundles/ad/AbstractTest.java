@@ -30,6 +30,7 @@ import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import net.tirasa.connid.bundles.ad.sync.ADSyncStrategy;
 import net.tirasa.connid.bundles.ad.sync.USNSyncStrategy;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -104,9 +105,11 @@ public abstract class AbstractTest {
 
         configuration.setUidAttribute("sAMAccountName");
         configuration.setGidAttribute("sAMAccountName");
+        configuration.setAoidAttribute("uid");
 
         configuration.setDefaultPeopleContainer("CN=Users," + BASE_CONTEXT);
         configuration.setDefaultGroupContainer("CN=Users," + BASE_CONTEXT);
+        configuration.setDefaultAnyObjectContainer("CN=Computers," + BASE_CONTEXT);
 
         configuration.setObjectClassesToSynchronize("user");
 
@@ -114,13 +117,15 @@ public abstract class AbstractTest {
         configuration.setPort(Integer.parseInt(prop.getProperty("port")));
 
         configuration.setAccountObjectClasses("top", "person", "organizationalPerson", "user");
+        configuration.setAnyObjectClasses("top", "device");
 
         configuration.setBaseContextsToSynchronize(prop.getProperty("baseContextToSynchronize"));
 
         configuration.setUserBaseContexts(BASE_CONTEXT);
-
+        
         // set default group container as Fgroup search context
         configuration.setGroupBaseContexts(configuration.getDefaultGroupContainer());
+        configuration.setAnyObjectBaseContexts(configuration.getDefaultAnyObjectContainer());
 
         configuration.setPrincipal(prop.getProperty("principal"));
 
@@ -136,6 +141,7 @@ public abstract class AbstractTest {
 
         configuration.setUserSearchScope("subtree");
         configuration.setGroupSearchScope("subtree");
+        configuration.setAnyObjectSearchScope("subtree");
 
         configuration.setGroupSearchFilter(
                 "(&(cn=GroupTest*)"
@@ -151,6 +157,11 @@ public abstract class AbstractTest {
                 conf, true);
         final Uid user = connector.create(ObjectClass.ACCOUNT, uMemberOfAll, null);
         assertNotNull(user);
+
+        final Set<Attribute> aoMemberOfAll = util.getSimpleAnyObjectProfile(util.getEntryIDs("OfAll", LdapSchema.ANY_OBJECT_CLASS),
+                conf, true);
+        final Uid anyObject = connector.create(LdapSchema.ANY_OBJECT_CLASS, aoMemberOfAll, null);
+        assertNotNull(anyObject);
 
         final Set<Attribute> gMemberInFilter = util.getSimpleGroupProfile(util.
                 getEntryIDs("InFilter", ObjectClass.GROUP), true);
@@ -179,6 +190,11 @@ public abstract class AbstractTest {
         Uid uid = new Uid(util.getEntryIDs("OfAll", ObjectClass.ACCOUNT).getValue());
         connector.delete(ObjectClass.ACCOUNT, uid, null);
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+        uid = new Uid(util.getEntryIDs("OfAll", LdapSchema.ANY_OBJECT_CLASS).getValue());
+        connector.delete(LdapSchema.ANY_OBJECT_CLASS, uid, null);
+        assertNull(connector.getObject(LdapSchema.ANY_OBJECT_CLASS, uid, null));
+        
 
         uid = new Uid(util.getEntryIDs("InFilter", ObjectClass.GROUP).getValue());
         connector.delete(ObjectClass.GROUP, uid, null);

@@ -40,6 +40,8 @@ import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
 import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
+import net.tirasa.connid.bundles.ldap.sync.LdapSyncStrategy;
+
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -56,7 +58,7 @@ import org.identityconnectors.framework.spi.SyncTokenResultsHandler;
 /**
  * An implementation of the sync operation based on the DirSync protocol, for Active Directory.
  */
-public class ADSyncStrategy {
+public class ADSyncStrategy implements LdapSyncStrategy {
 
     private static final Log LOG = Log.getLog(ADSyncStrategy.class);
 
@@ -219,7 +221,7 @@ public class ADSyncStrategy {
         }
     }
 
-    public SyncToken getLatestSyncToken() {
+    public SyncToken getLatestSyncToken(ObjectClass oclass) {
         // -----------------------------------
         // Create basicLdapSearch control
         // -----------------------------------
@@ -545,8 +547,8 @@ public class ADSyncStrategy {
 
         Uid uid = null;
 
-        if (StringUtil.isNotBlank(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
-            uidAttribute = profile.get(conn.getSchemaMapping().getLdapUidAttribute(oclass));
+        if (StringUtil.isNotBlank(conn.getSchema().getLdapUidAttribute(oclass))) {
+            uidAttribute = profile.get(conn.getSchema().getLdapUidAttribute(oclass));
 
             if (uidAttribute != null) {
                 uid = new Uid(uidAttribute.get().toString());

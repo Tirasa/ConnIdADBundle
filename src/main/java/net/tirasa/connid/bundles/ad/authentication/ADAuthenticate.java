@@ -21,9 +21,8 @@ import java.util.List;
 import java.util.Map;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ldap.LdapAuthenticate;
 import net.tirasa.connid.bundles.ldap.LdapConnection.AuthenticationResult;
-import net.tirasa.connid.bundles.ldap.LdapConnection.AuthenticationResultType;
-import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
@@ -37,27 +36,16 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.Uid;
 
-public class ADAuthenticate {
+public class ADAuthenticate extends LdapAuthenticate {
 
     private static final Log LOG = Log.getLog(ADAuthenticate.class);
-
-    private final ADConnection conn;
-
-    private final ObjectClass oclass;
-
-    private final String username;
-
-    private final OperationOptions options;
 
     public ADAuthenticate(
             final ADConnection conn,
             final ObjectClass oclass,
             final String username,
             final OperationOptions options) {
-        this.conn = conn;
-        this.oclass = oclass;
-        this.username = username;
-        this.options = options;
+        super(conn, oclass, username, options);
     }
 
     public Uid authenticate(GuardedString password) {
@@ -87,23 +75,18 @@ public class ADAuthenticate {
         return authnObject.getUid();
     }
 
-    private static boolean isSuccess(final AuthenticationResult authResult) {
-        // PASSWORD_EXPIRED considered success: credentials were right.
-        return authResult != null
-                && (authResult.getType().equals(AuthenticationResultType.SUCCESS)
-                || authResult.getType().equals(AuthenticationResultType.PASSWORD_EXPIRED));
-    }
-
-    private ConnectorObject getObjectToAuthenticate() {
+    @Override
+    protected ConnectorObject getObjectToAuthenticate() {
         List<String> userNameAttrs = getUserNameAttributes();
         Map<String, ConnectorObject> entryDN2Object = new HashMap<>();
-
+        final String dnAttributeName = conn.getConfiguration().getDnAttribute();
         for (String baseContext : ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()) {
             for (String userNameAttr : userNameAttrs) {
                 Attribute attr = AttributeBuilder.build(userNameAttr, username);
 
-                for (ConnectorObject object : LdapSearches.findObjects(conn, oclass, baseContext, attr, "entryDN")) {
-                    String entryDN = object.getAttributeByName("entryDN").getValue().get(0).toString();
+                for (ConnectorObject object : LdapSearches.findObjects(conn, oclass, baseContext, attr,
+                        dnAttributeName)) {
+                    String entryDN = object.getAttributeByName(dnAttributeName).getValue().get(0).toString();
                     entryDN2Object.put(entryDN, object);
                 }
 
@@ -122,25 +105,13 @@ public class ADAuthenticate {
         return null;
     }
 
-    private List<String> getUserNameAttributes() {
+    @Override
+    protected List<String> getUserNameAttributes() {
         String[] result = ADConfiguration.class.cast(conn.getConfiguration()).getUserAuthenticationAttributes();
         if (result != null && result.length > 0) {
             return Arrays.asList(result);
         }
 
-        result = LdapConstants.getLdapUidAttributes(options);
-        if (result != null && result.length > 0) {
-            return Arrays.asList(result);
-        }
-        return conn.getSchemaMapping().getUserNameLdapAttributes(oclass);
-    }
-
-    public Uid resolveUsername() {
-        ConnectorObject authnObject = getObjectToAuthenticate();
-        if (authnObject == null) {
-            throw new InvalidCredentialException(conn.format(
-                    "cannotResolveUsername", null, username));
-        }
-        return authnObject.getUid();
+        return super.getUserNameAttributes();
     }
 }

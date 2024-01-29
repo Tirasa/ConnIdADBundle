@@ -31,6 +31,7 @@ import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 
 public class TestUtil {
 
@@ -84,23 +85,33 @@ public class TestUtil {
     }
 
     public String getEntryDN(final String cn, final ObjectClass oclass) {
-        return String.format("cn=%s,%s", cn, oclass.equals(ObjectClass.ACCOUNT)
-                ? conf.getDefaultPeopleContainer() : conf.getDefaultGroupContainer());
+        return String.format("cn=%s,%s", cn,
+                oclass.equals(ObjectClass.ACCOUNT)
+                ? conf.getDefaultPeopleContainer()
+                : oclass.equals(ObjectClass.GROUP)
+                ? conf.getDefaultGroupContainer()
+                : oclass.equals(LdapSchema.ANY_OBJECT_CLASS)
+                ? conf.getDefaultAnyObjectContainer()
+                : conf.getBaseContexts()[0]);
     }
 
     public Set<Attribute> getSimpleProfile(final Map.Entry<String, String> ids, final boolean withDN) {
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, withDN);
-        } else {
+        } else if (oclass.is(ObjectClass.GROUP_NAME)) {
             return getSimpleGroupProfile(ids, withDN);
+        } else {
+            return getSimpleAnyObjectProfile(ids, conf, withDN);
         }
     }
 
     public Set<Attribute> getSimpleProfile(final Map.Entry<String, String> ids) {
         if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
             return getSimpleUserProfile(ids, conf, true);
-        } else {
+        } else if (oclass.is(ObjectClass.GROUP_NAME)) {
             return getSimpleGroupProfile(ids, true);
+        } else {
+            return getSimpleAnyObjectProfile(ids, conf, true);
         }
     }
 
@@ -151,6 +162,29 @@ public class TestUtil {
 
         attributes.add(AttributeBuilder.build("ldapGroups", Collections.singletonList(
                 getEntryDN(getEntryIDs("InFilter", ObjectClass.GROUP).getKey(), ObjectClass.GROUP))));
+
+        return attributes;
+    }
+
+    public Set<Attribute> getSimpleAnyObjectProfile(
+            final Map.Entry<String, String> ids, final ADConfiguration conf, final boolean withDN) {
+
+        final Set<Attribute> attributes = new HashSet<>();
+
+        if (withDN) {
+            attributes.add(new Name(getEntryDN(ids.getKey(), LdapSchema.ANY_OBJECT_CLASS)));
+        } else {
+            attributes.add(new Name(ids.getValue()));
+            attributes.add(AttributeBuilder.build("cn", Collections.singletonList(ids.getKey())));
+        }
+
+        attributes.add(AttributeBuilder.build(conf.getAoidAttribute(), Collections.singletonList(ids.getValue())));
+
+        attributes.add(AttributeBuilder.build("serialNumber", Collections.singletonList("serialnumbertest")));
+
+        attributes.add(AttributeBuilder.build("description", Collections.singletonList("descriptiontest")));
+
+        attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
 
         return attributes;
     }

@@ -13,23 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.tirasa.connid.bundles.ad.schema;
+package net.tirasa.connid.bundles.ad;
 
-import net.tirasa.connid.bundles.ad.ADConnection;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
-import org.identityconnectors.framework.common.objects.Schema;
 
-public class ADSchema extends LdapSchema {
+public class AnyObjectTest extends AbstractTest {
 
-    public ADSchema(final ADConnection connection) {
-        super(connection);
+    protected static TestUtil util;
+
+    @BeforeAll
+    public static void init() {
+        AbstractTest.init();
+        util = new TestUtil(connector, conf, LdapSchema.ANY_OBJECT_CLASS);
+        AbstractTest.baseSetup(util);
     }
 
-    public Schema schema() {
-        if (schema == null) {
-            schema = new ADSchemaBuilder((ADConnection) conn).getSchema();
-        }
-
-        return schema;
+    @AfterAll
+    public static void cleanup() {
+        AbstractTest.cleanup(util);
     }
 }

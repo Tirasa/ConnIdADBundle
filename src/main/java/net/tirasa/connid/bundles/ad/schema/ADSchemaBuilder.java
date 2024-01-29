@@ -32,6 +32,8 @@ import javax.naming.ldap.LdapContext;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchemaBuilder;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -41,16 +43,11 @@ import org.identityconnectors.framework.common.objects.AttributeInfoBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.ObjectClassInfoBuilder;
-import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SchemaBuilder;
 
-class ADSchemaBuilder {
+class ADSchemaBuilder extends LdapSchemaBuilder {
 
     private static final Log LOG = Log.getLog(ADSchemaBuilder.class);
-
-    private final ADConnection connection;
-
-    private Schema schema;
 
     private static final String[] ATTRIBUTES_TO_GET = {
         "maycontain",
@@ -58,27 +55,22 @@ class ADSchemaBuilder {
         "mustcontain",
         "systemmustcontain" };
 
-    public ADSchemaBuilder(final ADConnection connection) {
-        this.connection = connection;
+    public ADSchemaBuilder(final ADConnection conn) {
+        super(conn);
     }
 
-    public Schema getSchema() {
-        if (schema == null) {
-            buildSchema();
-        }
-        return schema;
-    }
-
-    private void buildSchema() {
+    @Override
+    protected void buildSchema() {
         final SchemaBuilder schemaBld = new SchemaBuilder(ADConnector.class);
         build(ObjectClass.ACCOUNT_NAME, schemaBld);
         build(ObjectClass.GROUP_NAME, schemaBld);
         build(ObjectClass.ALL_NAME, schemaBld);
+        build(LdapSchema.ANY_OBJECT_NAME, schemaBld);
         schema = schemaBld.build();
     }
 
     private void build(final String oname, final SchemaBuilder schemaBld) {
-        final ADConfiguration conf = (ADConfiguration) connection.getConfiguration();
+        final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
 
         final StringBuilder filter = new StringBuilder();
 
@@ -99,6 +91,8 @@ class ADSchemaBuilder {
                 ? conf.getAccountObjectClasses()
                 : oname.equalsIgnoreCase(ObjectClass.GROUP_NAME)
                 ? conf.getGroupObjectClasses()
+                : oname.equalsIgnoreCase(LdapSchema.ANY_OBJECT_NAME)
+                ? conf.getAnyObjectClasses()
                 : new String[] { oname }) {
             filter.append("(lDAPDisplayName=").append(oclass).append(")");
         }
@@ -106,7 +100,7 @@ class ADSchemaBuilder {
         filter.insert(0, "(&(|").append(")(objectClass=classSchema))");
         // -----------------------------------
 
-        final LdapContext ctx = connection.getInitialContext();
+        final LdapContext ctx = conn.getInitialContext();
 
         final Set<String> schemaNames = new HashSet<String>();
 
@@ -115,6 +109,8 @@ class ADSchemaBuilder {
             schemaNames.add(conf.getUidAttribute());
         } else if (oname.equalsIgnoreCase(ObjectClass.GROUP_NAME)) {
             schemaNames.add(conf.getGidAttribute());
+        } else if (oname.equalsIgnoreCase(LdapSchema.ANY_OBJECT_NAME)) {
+            schemaNames.add(conf.getAoidAttribute());
         } else {
             schemaNames.add(OBJECTGUID);
         }
@@ -200,13 +196,13 @@ class ADSchemaBuilder {
 
         final Set<Flags> flags = EnumSet.noneOf(Flags.class);
 
-        boolean binary = connection.isBinarySyntax(displayName);
+        boolean binary = conn.isBinarySyntax(displayName);
 
         boolean objectClass = displayName == null || "objectClass".equalsIgnoreCase(displayName);
 
-        final LdapContext ctx = connection.getInitialContext();
+        final LdapContext ctx = conn.getInitialContext();
 
-        final String[] baseContexts = connection.getConfiguration().getBaseContextsToSynchronize();
+        final String[] baseContexts = conn.getConfiguration().getBaseContextsToSynchronize();
 
         // ------------------------------
         // Search control

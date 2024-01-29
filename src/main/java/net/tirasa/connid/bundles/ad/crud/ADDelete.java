@@ -21,31 +21,22 @@ import java.util.Set;
 import java.util.TreeSet;
 import javax.naming.NamingException;
 import net.tirasa.connid.bundles.ad.ADConnection;
-import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
+import net.tirasa.connid.bundles.ldap.modify.LdapDelete;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.Uid;
 
-public class ADDelete extends LdapModifyOperation {
-
-    private final ObjectClass oclass;
-
-    private final Uid uid;
-
-    @SuppressWarnings("FieldNameHidesFieldInSuperclass")
-    private final ADConnection conn;
+public class ADDelete extends LdapDelete {
 
     public ADDelete(final ADConnection conn, final ObjectClass oclass, final Uid uid) {
-        super(conn);
-        this.oclass = oclass;
-        this.uid = uid;
-        this.conn = conn;
+        super(conn, oclass, uid);
     }
 
-    public void delete() {
+    @Override
+    public void execute() {
         final String entryDN;
-        if (OBJECTGUID.equals(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+        if (OBJECTGUID.equals(conn.getSchema().getLdapUidAttribute(oclass))) {
             entryDN = String.format("<GUID=%s>", uid.getUidValue());
         } else {
             entryDN = LdapSearches.getEntryDN(conn, oclass, uid);

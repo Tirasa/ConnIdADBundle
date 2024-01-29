@@ -39,6 +39,7 @@ import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -130,10 +131,9 @@ public class USNSyncStrategy extends ADSyncStrategy {
         // get lastest sync token before start pulling objects
         latestSyncToken = token;
 
-        if ((oclass.is(ObjectClass.ACCOUNT_NAME)
-                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
-                || (oclass.is(ObjectClass.GROUP_NAME)
-                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())) {
+        if ((oclass.is(ObjectClass.ACCOUNT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
+                || (oclass.is(ObjectClass.GROUP_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())
+                || (oclass.is(LdapSchema.ANY_OBJECT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedAnyObject())) {
             syncDeletedObjects(token, handler, options, oclass);
         }
 
@@ -290,7 +290,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
     }
 
     @Override
-    public SyncToken getLatestSyncToken() {
+    public SyncToken getLatestSyncToken(ObjectClass oclass) {
         // -----------------------------------
         // Create basicLdapSearch control
         // -----------------------------------
