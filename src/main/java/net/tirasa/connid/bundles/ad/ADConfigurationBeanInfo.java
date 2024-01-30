@@ -96,7 +96,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             props.add(new PropertyDescriptor("passwordDecryptionInitializationVector", LdapConfiguration.class));
 
             // passwordDecryptionKey
-            props.add(new PropertyDescriptor("passwordDecryptionkey", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("passwordDecryptionKey", LdapConfiguration.class));
 
             // passwordHashAlgorithm
             props.add(new PropertyDescriptor("passwordHashAlgorithm", LdapConfiguration.class));
@@ -231,7 +231,7 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             props.add(new PropertyDescriptor("changeLogBlockSize", LdapConfiguration.class));
 
             // changeNumberAttribute
-            props.add(new PropertyDescriptor("changeNumberAttibute", LdapConfiguration.class));
+            props.add(new PropertyDescriptor("changeNumberAttribute", LdapConfiguration.class));
 
             // accountSynchronizationFilter
             props.add(new PropertyDescriptor("accountSynchronizationFilter", LdapConfiguration.class));
