@@ -89,7 +89,7 @@ public final class ADConfiguration extends LdapConfiguration {
 
         
         setAccountObjectClasses("top", "person", "organizationalPerson", "user");
-        setAccountUserNameAttributes("sAMAccountName");
+        setAccountUserNameAttributes("sAMAccountName", "cn", "member", "userPrincipalName");
         setUidAttribute("sAMAccountName");
 
         setGroupObjectClasses("top", "group");
