@@ -117,7 +117,7 @@ class ADSchemaBuilder extends LdapSchemaBuilder {
 
         final String schemaConfigurationPath = "CN=Schema,CN=Configuration";
 
-        for (String suffix : conf.getBaseContextsToSynchronize()) {
+        for (String suffix : conf.getBaseContexts()) {
             try {
                 final NamingEnumeration<SearchResult> oclasses = ctx.search(
                         schemaConfigurationPath + "," + suffix,
@@ -202,7 +202,7 @@ class ADSchemaBuilder extends LdapSchemaBuilder {
 
         final LdapContext ctx = conn.getInitialContext();
 
-        final String[] baseContexts = conn.getConfiguration().getBaseContextsToSynchronize();
+        final String[] baseContexts = conn.getConfiguration().getBaseContexts();
 
         // ------------------------------
         // Search control

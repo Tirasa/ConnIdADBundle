@@ -196,8 +196,8 @@ public final class ADConfiguration extends LdapConfiguration {
             helpMessageKey = "defaultPeopleContainer.help", order = 7)
     public String getDefaultPeopleContainer() {
         if (StringUtil.isBlank(defaultPeopleContainer)) {
-            return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
-                    ? null : getBaseContextsToSynchronize()[0];
+            return getBaseContexts() == null || getBaseContexts().length < 1
+                    ? null : getBaseContexts()[0];
         } else {
             return defaultPeopleContainer;
         }
@@ -211,8 +211,8 @@ public final class ADConfiguration extends LdapConfiguration {
             helpMessageKey = "defaultGroupContainer.help", order = 8)
     public String getDefaultGroupContainer() {
         if (StringUtil.isBlank(defaultGroupContainer)) {
-            return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
-                    ? null : getBaseContextsToSynchronize()[0];
+            return getBaseContexts() == null || getBaseContexts().length < 1
+                    ? null : getBaseContexts()[0];
         } else {
             return defaultGroupContainer;
         }
@@ -226,8 +226,8 @@ public final class ADConfiguration extends LdapConfiguration {
             helpMessageKey = "defaultAnyObjectContainer.help", order = 9)
     public String getDefaultAnyObjectContainer() {
         if (StringUtil.isBlank(defaultAnyObjectContainer)) {
-            return getBaseContextsToSynchronize() == null || getBaseContextsToSynchronize().length < 1
-                    ? null : getBaseContextsToSynchronize()[0];
+            return getBaseContexts() == null || getBaseContexts().length < 1
+                    ? null : getBaseContexts()[0];
         } else {
             return defaultAnyObjectContainer;
         }
@@ -245,7 +245,7 @@ public final class ADConfiguration extends LdapConfiguration {
             return groupBaseContexts.clone();
         } else {
             // return root suffixes
-            return getBaseContextsToSynchronize();
+            return getBaseContexts();
         }
     }
 
@@ -263,7 +263,7 @@ public final class ADConfiguration extends LdapConfiguration {
             return userBaseContexts.clone();
         } else {
             // return root suffixes
-            return getBaseContextsToSynchronize();
+            return getBaseContexts();
         }
     }
 
@@ -281,7 +281,7 @@ public final class ADConfiguration extends LdapConfiguration {
             return anyObjectBaseContexts.clone();
         } else {
             // return root suffixes
-            return getBaseContextsToSynchronize();
+            return getBaseContexts();
         }
     }
 

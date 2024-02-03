@@ -413,7 +413,7 @@ public class ADUpdate extends LdapUpdate {
         if (ldapGroups != null) {
             // All current roles ....
             final Set<String> currents = utils.getGroups(entryDN,
-                    ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                    ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
 
             // Current role into the managed group base contexts
             final Set<String> oldMemberships = utils.getGroups(entryDN);
@@ -434,7 +434,7 @@ public class ADUpdate extends LdapUpdate {
 
                     final Set<SearchResult> res = utils.basicLdapSearch(String.format(
                             "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
-                            ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                            ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
 
                     if (res == null || res.isEmpty()) {
                         LOG.warn("Error retrieving primary group for {0}", entryDN);
