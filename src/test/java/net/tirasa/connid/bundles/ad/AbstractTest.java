@@ -126,7 +126,7 @@ public abstract class AbstractTest {
         // set default group container as Fgroup search context
         configuration.setGroupBaseContexts(configuration.getDefaultGroupContainer());
         configuration.setAnyObjectBaseContexts(configuration.getDefaultAnyObjectContainer());
-
+        configuration.setBaseContexts(BASE_CONTEXT);
         configuration.setPrincipal(prop.getProperty("principal"));
 
         configuration.setCredentials(new GuardedString(prop.getProperty("credentials").toCharArray()));

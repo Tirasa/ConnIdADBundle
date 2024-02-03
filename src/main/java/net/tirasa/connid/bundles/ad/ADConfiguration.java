@@ -291,12 +291,6 @@ public final class ADConfiguration extends LdapConfiguration {
         super.setBaseContexts(this.getBaseContexts());
     }
 
-    @Override
-    public String[] getBaseContexts() {
-        // return root suffixes
-        return this.getBaseContextsToSynchronize();
-    }
-
     @ConfigurationProperty(displayMessageKey = "groupOwnerReferenceAttribute.display",
             helpMessageKey = "groupOwnerReferenceAttribute.help", order = 13)
     public String getGroupOwnerReferenceAttribute() {

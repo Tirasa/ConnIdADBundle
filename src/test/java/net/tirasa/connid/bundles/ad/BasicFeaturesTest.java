@@ -47,6 +47,7 @@ public class BasicFeaturesTest {
         conf.setCredentials(new GuardedString("password".toCharArray()));
         conf.setUserBaseContexts("cn=users,o=isp");
         conf.setReadSchema(false);
+        conf.setBaseContexts("o=isp");
 
         conf.setMemberships(
                 "cn=groupA,cn=group,o=isp",
