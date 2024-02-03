@@ -205,7 +205,11 @@ public class TestUtil {
     }
 
     public Map.Entry<String, String> getEntryIDs(final String suffix, final ObjectClass oclass) {
-        final String prefix = oclass.equals(ObjectClass.ACCOUNT) ? "UserTest" : "GroupTest";
+        final String prefix = oclass.equals(ObjectClass.ACCOUNT)
+                ? "UserTest"
+                : oclass.equals(ObjectClass.GROUP)
+                ? "GroupTest"
+                : "AnyObjectTest";
         return new AbstractMap.SimpleEntry<>(prefix + suffix, "SAAN_" + prefix + suffix);
     }
 
