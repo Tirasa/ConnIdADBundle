@@ -39,6 +39,7 @@ import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
 import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import net.tirasa.connid.bundles.ldap.sync.LdapSyncStrategy;
 
@@ -178,8 +179,9 @@ public class ADSyncStrategy implements LdapSyncStrategy {
         final String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
                 DirSyncUtils.createDirSyncUFilter((ADConfiguration) conn.getConfiguration(), utils)
-                : // get group filter
-                DirSyncUtils.createDirSyncGFilter((ADConfiguration) conn.getConfiguration());
+                : oclass.is(ObjectClass.GROUP_NAME) // get group filter
+                ? DirSyncUtils.createDirSyncGFilter((ADConfiguration) conn.getConfiguration())
+                : DirSyncUtils.createDirSyncAOFilter((ADConfiguration) conn.getConfiguration());
 
         if (LOG.isOk()) {
             LOG.ok("Search filter: " + filter);
@@ -205,10 +207,19 @@ public class ADSyncStrategy implements LdapSyncStrategy {
                     LOG.error(e, "SyncDelta handling for {0} failed", sr.getName());
                 }
             }
-        } else {
+        } else if (oclass.is(ObjectClass.GROUP_NAME)) {
             for (SearchResult sr : changes) {
                 try {
                     handleSyncGDelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
+                    count--;
+                } catch (NamingException e) {
+                    LOG.error(e, "SyncDelta handling for {0} failed", sr.getName());
+                }
+            }
+        } else {
+            for (SearchResult sr : changes) {
+                try {
+                    handleSyncAODelta(ctx, sr, attrsToGet, count == 1 ? latestSyncToken : token, handler);
                     count--;
                 } catch (NamingException e) {
                     LOG.error(e, "SyncDelta handling for {0} failed", sr.getName());
@@ -525,6 +536,90 @@ public class ADSyncStrategy implements LdapSyncStrategy {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    protected void handleSyncAODelta(
+            final LdapContext ctx,
+            final SearchResult sr,
+            final Collection<String> attrsToGet,
+            final SyncToken token,
+            final SyncResultsHandler handler)
+            throws NamingException {
+
+        if (ctx == null || sr == null) {
+            throw new ConnectorException("Invalid context or search result.");
+        }
+
+        ctx.setRequestControls(new Control[] { new DeletedControl() });
+
+        // Just used to retrieve object classes and to pass to getSyncDelta
+        Attributes profile = sr.getAttributes();
+
+        if (LOG.isOk()) {
+            LOG.ok("Object profile: {0}", profile);
+        }
+
+        String guid = GUID.getGuidAsString((byte[]) profile.get(ADConnector.OBJECTGUID).get());
+
+        boolean isDeleted = false;
+
+        try {
+
+            javax.naming.directory.Attribute attributeIsDeleted = profile.get("isDeleted");
+
+            isDeleted = attributeIsDeleted != null
+                    && attributeIsDeleted.get() != null
+                    && Boolean.parseBoolean(
+                            attributeIsDeleted.get().toString());
+
+        } catch (NoSuchElementException e) {
+            if (LOG.isOk()) {
+                LOG.ok("Cannot find the isDeleted element for any-object.");
+            }
+        } catch (Throwable t) {
+            LOG.error(t, "Error retrieving isDeleted attribute");
+        }
+
+        // We need for this beacause DirSync can return an uncomplete profile.
+        profile = ctx.getAttributes("<GUID=" + guid + ">");
+
+        final ADConfiguration conf = (ADConfiguration) conn.getConfiguration();
+
+        if (LOG.isOk()) {
+            LOG.ok("Created/Updated/Deleted any-object {0}", sr.getNameInNamespace());
+        }
+
+        if (isDeleted) {
+
+            if (LOG.isOk()) {
+                LOG.ok("Deleted any-object {0}", sr.getNameInNamespace());
+            }
+
+            if (conf.isRetrieveDeletedAnyObject()) {
+                handler.handle(getSyncDelta(
+                        LdapSchema.ANY_OBJECT_CLASS,
+                        sr.getNameInNamespace(),
+                        SyncDeltaType.DELETE,
+                        token,
+                        profile,
+                        attrsToGet,
+                        true));
+            }
+
+        } else {
+            // user to be created/updated
+            if (LOG.isOk()) {
+                LOG.ok("Created/Updated any-object {0}", sr.getNameInNamespace());
+            }
+
+            String userDN = sr.getNameInNamespace();
+
+            handleEntry(
+                    ctx, LdapSchema.ANY_OBJECT_CLASS, userDN, conf.getAnyObjectSearchFilter(), handler, token, conf, attrsToGet);
+
+            ctx.setRequestControls(null);
+        }
+    }
+
     protected SyncDelta getSyncDelta(
             final ObjectClass oclass,
             final String entryDN,
@@ -633,7 +728,8 @@ public class ADSyncStrategy implements LdapSyncStrategy {
 
         if (deltaType != SyncDeltaType.DELETE
                 || (oclass.is(ObjectClass.GROUP_NAME) && conf.isRetrieveDeletedGroup())
-                || (oclass.is(ObjectClass.ACCOUNT_NAME) && conf.isRetrieveDeletedUser())) {
+                || (oclass.is(ObjectClass.ACCOUNT_NAME) && conf.isRetrieveDeletedUser())
+                || (oclass.is(LdapSchema.ANY_OBJECT_NAME) && conf.isRetrieveDeletedAnyObject())) {
 
             handler.handle(getSyncDelta(
                     oclass,
