@@ -94,7 +94,7 @@ public class DirSyncUtils {
         } else {
             filter.append("(&");
             filter.append(oclassFilter.toString());
-            filter.append("(!(isDeleted=TRUE))");
+            filter.append("(!(isDeleted=TRUE)))");
         }
 
         return filter.toString();
