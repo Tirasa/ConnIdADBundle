@@ -18,7 +18,7 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ 1_3_X ]
 
 jobs:
   build:
