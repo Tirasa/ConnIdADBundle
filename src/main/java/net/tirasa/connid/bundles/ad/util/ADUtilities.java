@@ -59,7 +59,7 @@ import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
 import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
-import net.tirasa.connid.bundles.ldap.schema.LdapSchemaMapping;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
@@ -176,7 +176,7 @@ public class ADUtilities {
         // AD-52 (paged membership retrieving: 1k a time)
         // -------------------------------------------------
         final String memberships
-                = ADConfiguration.class.cast(connection.getConfiguration()).getGroupMemberReferenceAttribute();
+                = ADConfiguration.class.cast(connection.getConfiguration()).getGroupMemberAttribute();
 
         if (oclass.is(ObjectClass.GROUP_NAME) && result.contains(memberships)) {
             // AD specific, for checking wether a user is enabled or not
@@ -207,13 +207,13 @@ public class ADUtilities {
 
     private void removeNonReadableAttributes(final Set<String> attributes, final ObjectClass oclass) {
         // Since the groups attributes are fake attributes, we don't want to
-        // send them to LdapSchemaMapping. This, for example, avoid an 
+        // send them to LdapSchema. This, for example, avoid an 
         // (unlikely) conflict with a custom attribute defined in the server
         // schema.
         boolean ldapGroups = attributes.remove(LdapConstants.LDAP_GROUPS_NAME);
         boolean posixGroups = attributes.remove(LdapConstants.POSIX_GROUPS_NAME);
 
-        connection.getSchemaMapping().removeNonReadableAttributes(oclass, attributes);
+        connection.getSchema().removeNonReadableAttributes(oclass, attributes);
 
         if (ldapGroups) {
             attributes.add(LdapConstants.LDAP_GROUPS_NAME);
@@ -225,13 +225,13 @@ public class ADUtilities {
     }
 
     public static Set<String> getAttributesReturnedByDefault(final LdapConnection conn, final ObjectClass oclass) {
-        if (oclass.equals(LdapSchemaMapping.ANY_OBJECT_CLASS)) {
+        if (oclass.equals(LdapSchema.ANY_OBJECT_CLASS)) {
             return newSet(Name.NAME);
         }
 
         final Set<String> result = newCaseInsensitiveSet();
 
-        final ObjectClassInfo oci = conn.getSchemaMapping().schema().findObjectClassInfo(oclass.getObjectClassValue());
+        final ObjectClassInfo oci = conn.getSchema().schema().findObjectClassInfo(oclass.getObjectClassValue());
 
         if (oci != null) {
             for (AttributeInfo info : oci.getAttributeInfo()) {
@@ -251,7 +251,7 @@ public class ADUtilities {
 
         boolean posixGroups = cleanAttrsToGet.remove(LdapConstants.POSIX_GROUPS_NAME);
 
-        final Set<String> result = connection.getSchemaMapping().getLdapAttributes(oclass, cleanAttrsToGet, true);
+        final Set<String> result = connection.getSchema().getLdapAttributes(oclass, cleanAttrsToGet, true);
 
         if (posixGroups) {
             result.add(GroupHelper.getPosixRefAttribute());
@@ -282,13 +282,13 @@ public class ADUtilities {
         final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
         builder.setObjectClass(oclass);
 
-        if (OBJECTGUID.equals(connection.getSchemaMapping().getLdapUidAttribute(oclass))) {
+        if (OBJECTGUID.equals(connection.getSchema().getLdapUidAttribute(oclass))) {
             builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
         } else {
-            builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
+            builder.setUid(connection.getSchema().createUid(oclass, entry));
         }
 
-        builder.setName(connection.getSchemaMapping().createName(oclass, entry));
+        builder.setName(connection.getSchema().createName(oclass, entry));
 
         String pgDN = null;
 
@@ -350,7 +350,7 @@ public class ADUtilities {
                                     ? AttributeBuilder.buildEnabled(true)
                                     : AttributeBuilder.buildEnabled(false));
 
-                    attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
+                    attribute = connection.getSchema().createAttribute(oclass, attributeName, entry, false);
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
@@ -371,16 +371,16 @@ public class ADUtilities {
                 attribute = AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, pgDN);
             } else if (oclass.is(ObjectClass.GROUP_NAME)
                     && String.format("%s;range=%d-%d", ADConfiguration.class.cast(connection.getConfiguration()).
-                            getGroupMemberReferenceAttribute(), 0, 999).equalsIgnoreCase(attributeName)) {
+                            getGroupMemberAttribute(), 0, 999).equalsIgnoreCase(attributeName)) {
                 // loop on membership ranges and populate member attribute
 
                 final String membAttrPrefix
                         = ADConfiguration.class.cast(connection.getConfiguration()).
-                                getGroupMemberReferenceAttribute();
+                                getGroupMemberAttribute();
 
                 // search for less than 1k memberships
                 String membAttrName = String.format("%s;range=0-*", membAttrPrefix);
-                attribute = connection.getSchemaMapping().createAttribute(oclass, membAttrName, entry, true);
+                attribute = connection.getSchema().createAttribute(oclass, membAttrName, entry, true);
 
                 final ArrayList<Object> values = new ArrayList<Object>(attribute.getValue());
 
@@ -389,7 +389,7 @@ public class ADUtilities {
                     int start = 0;
                     int end = 999;
                     membAttrName = String.format("%s;range=%d-%d", membAttrPrefix, start, end);
-                    attribute = connection.getSchemaMapping().createAttribute(oclass, membAttrName, entry, true);
+                    attribute = connection.getSchema().createAttribute(oclass, membAttrName, entry, true);
 
                     values.addAll(attribute.getValue());
 
@@ -418,7 +418,7 @@ public class ADUtilities {
 
                 attribute = AttributeBuilder.build(membAttrPrefix, values);
             } else if (profile.get(attributeName) != null) {
-                attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
+                attribute = connection.getSchema().createAttribute(oclass, attributeName, entry, false);
             }
 
             // Avoid attribute adding in case of attribute name not found
@@ -459,7 +459,11 @@ public class ADUtilities {
         return "cn=" + cn + ","
                 + (oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? ((ADConfiguration) (connection.getConfiguration())).getDefaultPeopleContainer()
-                : ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer());
+                : oclass.is(ObjectClass.GROUP_NAME)
+                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultGroupContainer()
+                : oclass.is(LdapSchema.ANY_OBJECT_NAME)
+                ? ((ADConfiguration) (connection.getConfiguration())).getDefaultAnyObjectContainer()
+                : connection.getConfiguration().getBaseContexts()[0]);
     }
 
     /**
@@ -516,7 +520,7 @@ public class ADUtilities {
     }
 
     public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
-        final String filter = connection.getSchemaMapping().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
+        final String filter = connection.getSchema().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
 
         final ConnectorObject obj = LdapSearches.findObject(
                 connection, oclass,
@@ -615,7 +619,7 @@ public class ADUtilities {
 
     public Set<String> getGroups(final String entryDN, final String... baseContexts) {
         final String member = ((ADConfiguration) connection.getConfiguration()).
-                getGroupMemberReferenceAttribute();
+                getGroupMemberAttribute();
 
         final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         for (SearchResult res : basicLdapSearch(filterInOr(member, entryDN), baseContexts)) {

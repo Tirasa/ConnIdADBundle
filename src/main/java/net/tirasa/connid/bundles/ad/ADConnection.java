@@ -15,28 +15,25 @@
  */
 package net.tirasa.connid.bundles.ad;
 
-import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.nullAsEmpty;
 import static org.identityconnectors.common.StringUtil.isNotBlank;
 
-import com.sun.jndi.ldap.ctl.PasswordExpiredResponseControl;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
-import javax.naming.AuthenticationException;
 import javax.naming.Context;
 import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
 import javax.naming.ldap.Control;
-import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 import net.tirasa.connid.bundles.ad.schema.ADSchema;
 import net.tirasa.connid.bundles.ad.util.TrustAllSocketFactory;
+import net.tirasa.connid.bundles.ldap.LdapConfiguration;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
+import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
+
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
-import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidCredentialException;
 
 public class ADConnection extends LdapConnection {
@@ -49,43 +46,11 @@ public class ADConnection extends LdapConnection {
 
     private static final String LDAP_BINARY_ATTRIBUTE = "java.naming.ldap.attributes.binary";
 
-    private LdapContext initCtx = null;
-
     private LdapContext syncCtx = null;
 
-    private final ADSchema schema;
-
-    private final ADConfiguration config;
-
-    public ADConnection(ADConfiguration config) {
+    public ADConnection(LdapConfiguration config) {
         super(config);
-        this.config = config;
         schema = new ADSchema(this);
-    }
-
-    @Override
-    public AuthenticationResult authenticate(final String entryDN, final GuardedString password) {
-        assert entryDN != null;
-
-        if (LOG.isOk()) {
-            LOG.ok("Attempting to authenticate {0}", entryDN);
-        }
-
-        final Pair<AuthenticationResult, LdapContext> pair = createContext(entryDN, password);
-
-        if (pair.second != null) {
-            quietClose(pair.second);
-        }
-
-        if (LOG.isOk()) {
-            LOG.ok("Authentication result: {0}", pair.first);
-        }
-
-        return pair.first;
-    }
-
-    public ADSchema getADSchema() {
-        return schema;
     }
 
     public LdapContext getSyncContext(final Control[] control) {
@@ -96,10 +61,8 @@ public class ADConnection extends LdapConnection {
     public void close() {
         try {
             super.close();
-            quietClose(initCtx);
             quietClose(syncCtx);
         } finally {
-            initCtx = null;
             syncCtx = null;
         }
     }
@@ -110,16 +73,6 @@ public class ADConnection extends LdapConnection {
         } catch (NamingException e) {
             LOG.error(e, "Context initialization failed");
             return null;
-        }
-    }
-
-    private static void quietClose(final LdapContext ctx) {
-        try {
-            if (ctx != null) {
-                ctx.close();
-            }
-        } catch (NamingException e) {
-            LOG.warn(e, "Failure closing context");
         }
     }
 
@@ -140,22 +93,8 @@ public class ADConnection extends LdapConnection {
         return initCtx;
     }
 
-    private LdapContext connect(String principal, GuardedString credentials) {
-        final Pair<AuthenticationResult, LdapContext> pair = createContext(principal, credentials);
-
-        if (LOG.isOk()) {
-            LOG.ok("Authentication result {0}", pair.first.getType());
-        }
-
-        if (pair.first.getType().equals(AuthenticationResultType.SUCCESS)) {
-            return pair.second;
-        }
-
-        pair.first.propagate();
-        throw new IllegalStateException("Should never get here");
-    }
-
-    private Pair<AuthenticationResult, LdapContext> createContext(
+    @Override
+    protected Pair<AuthenticationResult, LdapContext> createContext(
             final String principal, final GuardedString credentials) {
 
         final List<Pair<AuthenticationResult, LdapContext>> result = new ArrayList<>(1);
@@ -166,11 +105,13 @@ public class ADConnection extends LdapConnection {
         env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CTX_FACTORY);
         env.put(Context.PROVIDER_URL, getLdapUrls());
         env.put(Context.REFERRAL, "follow");
+        env.put(LdapConstants.CONNECT_TIMEOUT_ENV_PROP, Long.toString(config.getConnectTimeout()));
+        env.put(LdapConstants.READ_TIMEOUT_ENV_PROP, Long.toString(config.getReadTimeout()));
 
         if (config.isSsl()) {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
 
-            if (config.isTrustAllCerts()) {
+            if (((ADConfiguration) config).isTrustAllCerts()) {
                 env.put(LDAP_CTX_SOCKET_FACTORY, TrustAllSocketFactory.class.getName());
             }
         }
@@ -203,85 +144,5 @@ public class ADConnection extends LdapConnection {
         result.add(createContext(env));
 
         return result.get(0);
-    }
-
-    private Pair<AuthenticationResult, LdapContext> createContext(
-            @SuppressWarnings("UseOfObsoleteCollectionType")
-            final Hashtable<?, ?> env) {
-
-        AuthenticationResult authnResult = null;
-        InitialLdapContext context = null;
-
-        try {
-            context = new InitialLdapContext(env, null);
-
-            if (config.isRespectResourcePasswordPolicyChangeAfterReset()) {
-                if (hasPasswordExpiredControl(context.getResponseControls())) {
-                    authnResult = new AuthenticationResult(
-                            AuthenticationResultType.PASSWORD_EXPIRED);
-                }
-            }
-        } catch (AuthenticationException e) {
-            // TODO: check AD response
-            String message = e.getMessage().toLowerCase();
-            if (message.contains("password expired")) { // Sun DS.
-                authnResult = new AuthenticationResult(AuthenticationResultType.PASSWORD_EXPIRED, e);
-            } else if (message.contains("password has expired")) { // RACF.
-                authnResult = new AuthenticationResult(AuthenticationResultType.PASSWORD_EXPIRED, e);
-            } else {
-                authnResult = new AuthenticationResult(AuthenticationResultType.FAILED, e);
-            }
-
-        } catch (NamingException e) {
-            authnResult = new AuthenticationResult(AuthenticationResultType.FAILED, e);
-        }
-
-        if (authnResult == null) {
-            assert context != null;
-
-            authnResult = new AuthenticationResult(AuthenticationResultType.SUCCESS);
-        }
-
-        return new Pair<>(authnResult, context);
-    }
-
-    private static boolean hasPasswordExpiredControl(final Control[] controls) {
-        if (controls != null) {
-            for (Control control : controls) {
-                if (control instanceof PasswordExpiredResponseControl) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private String getLdapUrls() {
-        final StringBuilder builder = new StringBuilder();
-
-        builder.append("ldap://").
-                append(config.getHost()).append(':').append(config.getPort());
-
-        for (String failover : nullAsEmpty(config.getFailover())) {
-            builder.append(' ');
-            builder.append(failover);
-        }
-
-        return builder.toString();
-    }
-
-    @Override
-    public void test() {
-        checkAlive();
-    }
-
-    @Override
-    public void checkAlive() {
-        try {
-            final Attributes attrs = getInitialContext().getAttributes("", new String[] { "subschemaSubentry" });
-            attrs.get("subschemaSubentry");
-        } catch (NamingException e) {
-            throw new ConnectorException(e);
-        }
     }
 }

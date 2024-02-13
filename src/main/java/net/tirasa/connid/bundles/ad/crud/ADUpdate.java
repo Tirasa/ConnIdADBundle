@@ -18,14 +18,11 @@ package net.tirasa.connid.bundles.ad.crud;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
 import static net.tirasa.connid.bundles.ad.ADConnector.PRIMARYGROUPID;
-import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.checkedListByFilter;
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static net.tirasa.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
-import static org.identityconnectors.common.CollectionUtil.nullAsEmpty;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -48,13 +45,14 @@ import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
-import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper.GroupMembership;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper.Modification;
+import net.tirasa.connid.bundles.ldap.modify.LdapUpdate;
+import net.tirasa.connid.bundles.ldap.schema.GuardedPasswordAttribute;
+import net.tirasa.connid.bundles.ldap.schema.GuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.commons.LdapEntry;
-import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
 import org.identityconnectors.common.Pair;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -68,18 +66,11 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
 
-public class ADUpdate extends LdapModifyOperation {
+public class ADUpdate extends LdapUpdate {
 
     private static final Log LOG = Log.getLog(ADUpdate.class);
 
-    private final ObjectClass oclass;
-
-    private final Uid uid;
-
     private final ADUtilities utils;
-
-    @SuppressWarnings("FieldNameHidesFieldInSuperclass")
-    private final ADConnection conn;
 
     /**
      * Retrieve new name if specified.
@@ -103,12 +94,12 @@ public class ADUpdate extends LdapModifyOperation {
             attrs.remove(name);
 
             if (ADUtilities.isDN(name.getNameValue())) {
-                newName = new Name(conn.getSchemaMapping().getEntryDN(oclass, name));
+                newName = new Name(conn.getSchema().getEntryDN(oclass, name));
             }
         }
 
         if (newName == null
-                && !conn.getSchemaMapping().getLdapUidAttribute(oclass).equalsIgnoreCase(ADConfiguration.CN_NAME)
+                && !conn.getSchema().getLdapUidAttribute(oclass).equalsIgnoreCase(ADConfiguration.CN_NAME)
                 && cnAttr != null) {
             final String cnValue = cnAttr.getValue() == null
                     || cnAttr.getValue().isEmpty()
@@ -134,13 +125,11 @@ public class ADUpdate extends LdapModifyOperation {
     }
 
     public ADUpdate(final ADConnection conn, final ObjectClass oclass, final Uid uid) {
-        super(conn);
+        super(conn, oclass, uid);
         this.utils = new ADUtilities(conn);
-        this.oclass = oclass;
-        this.uid = uid;
-        this.conn = conn;
     }
 
+    @Override
     public Uid update(final Set<Attribute> attrs) {
         final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         String entryDN = obj.getName().getNameValue();
@@ -157,7 +146,7 @@ public class ADUpdate extends LdapModifyOperation {
                 LOG.error("Rename operation not permitted: '{0}' to '{1}'", entryDN, newName);
                 throw new ConnectorException("Rename operation not permitted");
             } else {
-                entryDN = conn.getSchemaMapping().rename(oclass, entryDN, newName);
+                entryDN = conn.getSchema().rename(oclass, entryDN, newName);
             }
         }
 
@@ -167,7 +156,7 @@ public class ADUpdate extends LdapModifyOperation {
             // ---------------------------------
             // Perform modify/rename
             // ---------------------------------
-            final Pair<Attributes, ADGuardedPasswordAttribute> attrToModify = getAttributesToModify(obj,
+            final Pair<Attributes, GuardedPasswordAttribute> attrToModify = getAttributesToModify(obj,
                     attrsToBeUpdated);
             // Update the attributes.
             modifyAttributes(entryDN, attrToModify, DirContext.REPLACE_ATTRIBUTE);
@@ -177,14 +166,15 @@ public class ADUpdate extends LdapModifyOperation {
         modifyMemberships(entryDN, attrsToBeUpdated);
         modifyPrimaryGroupID(entryDN, attrsToBeUpdated);
 
-        return conn.getSchemaMapping().createUid(oclass, entryDN);
+        return conn.getSchema().createUid(oclass, entryDN);
     }
 
+    @Override
     public Uid addAttributeValues(final Set<Attribute> attrs) {
         final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
-        final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
+        final Pair<Attributes, GuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
 
         modifyAttributes(entryDN, attrsToModify, DirContext.ADD_ATTRIBUTE);
         modifyMemberships(entryDN, attrs);
@@ -193,11 +183,12 @@ public class ADUpdate extends LdapModifyOperation {
         return uid;
     }
 
+    @Override
     public Uid removeAttributeValues(final Set<Attribute> attrs) {
         final ConnectorObject obj = utils.getEntryToBeUpdated(uid, oclass);
         final String entryDN = obj.getName().getNameValue();
 
-        final Pair<Attributes, ADGuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
+        final Pair<Attributes, GuardedPasswordAttribute> attrsToModify = getAttributesToModify(obj, attrs);
 
         modifyAttributes(entryDN, attrsToModify, DirContext.REMOVE_ATTRIBUTE);
 
@@ -209,7 +200,7 @@ public class ADUpdate extends LdapModifyOperation {
         return uid;
     }
 
-    private Pair<Attributes, ADGuardedPasswordAttribute> getAttributesToModify(
+    protected Pair<Attributes, GuardedPasswordAttribute> getAttributesToModify(
             final ConnectorObject obj, final Set<Attribute> attrs) {
 
         final BasicAttributes ldapAttrs = new BasicAttributes();
@@ -286,7 +277,7 @@ public class ADUpdate extends LdapModifyOperation {
             } else if (attr.is(OBJECTGUID)) {
                 // ignore info
             } else {
-                ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
+                ldapAttr = conn.getSchema().encodeAttribute(oclass, attr);
             }
 
             addAttribute(ldapAttr, ldapAttrs);
@@ -312,12 +303,12 @@ public class ADUpdate extends LdapModifyOperation {
             }
 
             if (newUACValue >= 0) {
-                addAttribute(conn.getSchemaMapping().encodeAttribute(
+                addAttribute(conn.getSchema().encodeAttribute(
                         oclass, AttributeBuilder.build(UACCONTROL_ATTR, Integer.toString(newUACValue))), ldapAttrs);
             }
         }
 
-        return new Pair<Attributes, ADGuardedPasswordAttribute>(ldapAttrs, pwdAttr);
+        return new Pair<Attributes, GuardedPasswordAttribute>(ldapAttrs, pwdAttr);
     }
 
     private void addAttribute(final javax.naming.directory.Attribute ldapAttr, final BasicAttributes ldapAttrs) {
@@ -339,10 +330,11 @@ public class ADUpdate extends LdapModifyOperation {
         }
     }
 
-    private void modifyAttributes(
+    @Override
+    protected void modifyAttributes(
             final String entryDN,
-            final Pair<Attributes, ADGuardedPasswordAttribute> attrs,
-            final int modifyOp) {
+            final Pair<Attributes, GuardedPasswordAttribute> attrs,
+            final int ldapModifyOp) {
 
         final List<ModificationItem> modItems = new ArrayList<ModificationItem>(attrs.first.size());
 
@@ -352,7 +344,7 @@ public class ADUpdate extends LdapModifyOperation {
             final javax.naming.directory.Attribute attr = attrEnum.nextElement();
             if (!attr.getID().equalsIgnoreCase(LdapConstants.LDAP_GROUPS_NAME)
                     && !attr.getID().equalsIgnoreCase(ADConfiguration.PRIMARY_GROUP_DN_NAME)) {
-                modItems.add(new ModificationItem(modifyOp, attr));
+                modItems.add(new ModificationItem(ldapModifyOp, attr));
             }
         }
 
@@ -360,10 +352,10 @@ public class ADUpdate extends LdapModifyOperation {
             attrs.second.access(new Accessor() {
 
                 @Override
-                public void access(BasicAttribute attr) {
+                public void access(javax.naming.directory.Attribute attr) {
                     try {
                         if (attr.get() != null) {
-                            modItems.add(new ModificationItem(modifyOp, attr));
+                            modItems.add(new ModificationItem(ldapModifyOp, attr));
                             modifyAttributes(entryDN, modItems);
                         }
                     } catch (NamingException e) {
@@ -376,22 +368,13 @@ public class ADUpdate extends LdapModifyOperation {
         modifyAttributes(entryDN, modItems);
     }
 
-    private void modifyAttributes(final String entryDN, final List<ModificationItem> modItems) {
+    @Override
+    protected void modifyAttributes(final String entryDN, final List<ModificationItem> modItems) {
         try {
             conn.getInitialContext().modifyAttributes(entryDN, modItems.toArray(new ModificationItem[modItems.size()]));
         } catch (NamingException e) {
             throw new ConnectorException(e);
         }
-    }
-
-    private List<String> getStringListValue(final Set<Attribute> attrs, final String attrName) {
-        final Attribute attr = AttributeUtil.find(attrName, attrs);
-
-        if (attr != null && attr.getValue() != null) {
-            return checkedListByFilter(nullAsEmpty(attr.getValue()), String.class);
-        }
-
-        return null;
     }
 
     /**
@@ -430,7 +413,7 @@ public class ADUpdate extends LdapModifyOperation {
         if (ldapGroups != null) {
             // All current roles ....
             final Set<String> currents = utils.getGroups(entryDN,
-                    ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                    ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
 
             // Current role into the managed group base contexts
             final Set<String> oldMemberships = utils.getGroups(entryDN);
@@ -451,7 +434,7 @@ public class ADUpdate extends LdapModifyOperation {
 
                     final Set<SearchResult> res = utils.basicLdapSearch(String.format(
                             "(&(objectclass=group)(%s=%s))", OBJECTSID, Hex.getEscaped(groupSID.toByteArray())),
-                            ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                            ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
 
                     if (res == null || res.isEmpty()) {
                         LOG.warn("Error retrieving primary group for {0}", entryDN);

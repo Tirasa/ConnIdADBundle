@@ -36,14 +36,14 @@ import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
-import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute.Accessor;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
-import net.tirasa.connid.bundles.ldap.commons.LdapModifyOperation;
+import net.tirasa.connid.bundles.ldap.modify.LdapCreate;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
+import net.tirasa.connid.bundles.ldap.schema.GuardedPasswordAttribute.Accessor;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
@@ -53,38 +53,20 @@ import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
 
-public class ADCreate extends LdapModifyOperation {
+public class ADCreate extends LdapCreate {
 
     private static final Log LOG = Log.getLog(ADConnection.class);
-
-    private final ObjectClass oclass;
-
-    private final Set<Attribute> attrs;
-
-    @SuppressWarnings("FieldNameHidesFieldInSuperclass")
-    private final ADConnection conn;
 
     public ADCreate(
             final ADConnection conn,
             final ObjectClass oclass,
             final Set<Attribute> attrs,
             final OperationOptions options) {
-        super(conn);
-
-        this.oclass = oclass;
-        this.attrs = attrs;
-        this.conn = conn;
+        super(conn, oclass, attrs, options);
     }
 
-    public Uid create() {
-        try {
-            return executeImpl();
-        } catch (NamingException e) {
-            throw new ConnectorException(e);
-        }
-    }
-
-    private Uid executeImpl() throws NamingException {
+    @Override
+    protected Uid executeImpl() throws NamingException {
 
         // -------------------------------------------------
         // Retrieve DN
@@ -100,7 +82,7 @@ public class ADCreate extends LdapModifyOperation {
             attrs.remove(cnAttr);
         }
 
-        final ADUtilities utils = new ADUtilities(conn);
+        final ADUtilities utils = new ADUtilities((ADConnection) conn);
 
         Name name;
         Uid uid = AttributeUtil.getUidAttribute(attrs);
@@ -125,6 +107,8 @@ public class ADCreate extends LdapModifyOperation {
             idAttrName = conn.getConfiguration().getUidAttribute();
         } else if (ObjectClass.GROUP.equals(oclass)) {
             idAttrName = conn.getConfiguration().getGidAttribute();
+        } else if (LdapSchema.ANY_OBJECT_CLASS.equals(oclass)) {
+            idAttrName = conn.getConfiguration().getAoidAttribute();
         } else {
             idAttrName = ADConfiguration.class.cast(conn.getConfiguration()).getDefaultIdAttribute();
         }
@@ -198,7 +182,7 @@ public class ADCreate extends LdapModifyOperation {
             } else if (attr.is(OBJECTGUID)) {
                 // ignore info
             } else {
-                javax.naming.directory.Attribute ldapAttr = conn.getSchemaMapping().encodeAttribute(oclass, attr);
+                javax.naming.directory.Attribute ldapAttr = conn.getSchema().encodeAttribute(oclass, attr);
 
                 // Do not send empty attributes. 
                 if (ldapAttr != null && ldapAttr.size() > 0) {
@@ -234,7 +218,7 @@ public class ADCreate extends LdapModifyOperation {
                 pwdAttr.access(new Accessor() {
 
                     @Override
-                    public void access(BasicAttribute attr) {
+                    public void access(javax.naming.directory.Attribute attr) {
                         try {
                             if (attr.get() != null && !attr.get().toString().isEmpty()) {
                                 adAttrs.put(attr);
@@ -255,7 +239,7 @@ public class ADCreate extends LdapModifyOperation {
             adAttrs.put(UACCONTROL_ATTR, Integer.toString(uacValue));
         }
 
-        final String entryDN = conn.getSchemaMapping().create(oclass, name, adAttrs);
+        final String entryDN = conn.getSchema().create(oclass, name, adAttrs);
 
         if (uccp != null) {
             // ---------------------------------
@@ -281,11 +265,11 @@ public class ADCreate extends LdapModifyOperation {
             // ---------------------------------
         }
 
-        if (OBJECTGUID.equals(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+        if (OBJECTGUID.equals(conn.getSchema().getLdapUidAttribute(oclass))) {
             final Attributes profile = conn.getInitialContext().getAttributes(entryDN, new String[] { OBJECTGUID });
             return new Uid(GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
         } else {
-            return conn.getSchemaMapping().createUid(oclass, entryDN);
+            return conn.getSchema().createUid(oclass, entryDN);
         }
     }
 }

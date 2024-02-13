@@ -25,12 +25,9 @@ import net.tirasa.connid.bundles.ad.crud.ADCreate;
 import net.tirasa.connid.bundles.ad.crud.ADDelete;
 import net.tirasa.connid.bundles.ad.crud.ADUpdate;
 import net.tirasa.connid.bundles.ad.search.ADSearch;
-import net.tirasa.connid.bundles.ad.sync.USNSyncStrategy;
-import net.tirasa.connid.bundles.ad.sync.ADSyncStrategy;
 import net.tirasa.connid.bundles.ldap.LdapConnector;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
-import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -39,11 +36,7 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
-import org.identityconnectors.framework.common.objects.Schema;
-import org.identityconnectors.framework.common.objects.SyncResultsHandler;
-import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
 
 /**
@@ -82,54 +75,6 @@ public class ADConnector extends LdapConnector {
 
     public static final int UF_PASSWORD_EXPIRED = 0x800000;
 
-    /**
-     * The configuration for this connector instance.
-     */
-    private transient ADConfiguration config;
-
-    /**
-     * The relative DirSyncSyncStrategy instance which sync-related operations are delegated to.
-     */
-    private transient ADSyncStrategy syncStrategy;
-
-    /**
-     * The connection to the AD server.
-     */
-    private transient ADConnection conn;
-
-    @Override
-    public Configuration getConfiguration() {
-        return config;
-    }
-
-    @Override
-    public void init(final Configuration cfg) {
-
-        config = (ADConfiguration) cfg;
-
-        // TODO: easier and more efficient if conn was protected in superclass
-        conn = new ADConnection(config);
-
-        String syncStrategyClassName = config.getSyncStrategy();
-        if (StringUtil.isNotEmpty(syncStrategyClassName)) {
-            try {
-                syncStrategy = (USNSyncStrategy) Class.forName(syncStrategyClassName).
-                        getConstructor(ADConnection.class).newInstance(conn);
-            } catch (Exception ex) {
-                syncStrategy = new ADSyncStrategy(conn);
-            }
-        } else {
-            syncStrategy = new ADSyncStrategy(conn);
-        }
-
-        super.init(cfg);
-    }
-
-    @Override
-    public void dispose() {
-        conn.close();
-        super.dispose();
-    }
 
     @Override
     public void executeQuery(
@@ -137,19 +82,7 @@ public class ADConnector extends LdapConnector {
             final LdapFilter query,
             final ResultsHandler handler,
             final OperationOptions options) {
-        new ADSearch(conn, oclass, query, handler, options).executeADQuery(handler);
-    }
-
-    @Override
-    public SyncToken getLatestSyncToken(final ObjectClass oclass) {
-        return syncStrategy.getLatestSyncToken();
-    }
-
-    @Override
-    public void sync(final ObjectClass oclass, final SyncToken token,
-            final SyncResultsHandler handler, final OperationOptions options) {
-
-        syncStrategy.sync(token, handler, options, oclass);
+        new ADSearch(conn, oclass, query, handler, options).execute();
     }
 
     @Override
@@ -176,14 +109,14 @@ public class ADConnector extends LdapConnector {
                         : Arrays.asList(ldapGroups.getValue().toArray(new String[ldapGroups.getValue().size()])));
             }
 
-            ldapGroupsToBeAdded.addAll(config.getMemberships() == null
-                    ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
+            ldapGroupsToBeAdded.addAll(((ADConfiguration) config).getMemberships() == null
+                    ? Collections.<String>emptyList() : Arrays.asList(((ADConfiguration) config).getMemberships()));
 
             // add groups
             attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
         }
 
-        return new ADCreate(conn, oclass, attributes, options).create();
+        return new ADCreate((ADConnection) conn, oclass, attributes, options).execute();
     }
 
     @Override
@@ -211,17 +144,18 @@ public class ADConnector extends LdapConnector {
                         ldapGroups.getValue() == null
                         ? Collections.<String>emptyList()
                         : Arrays.asList(ldapGroups.getValue().toArray(
-                                new String[ldapGroups.getValue().size()])));
+                        new String[ldapGroups.getValue().size()])));
 
-                ldapGroupsToBeAdded.addAll(config.getMemberships() == null
-                        ? Collections.<String>emptyList() : Arrays.asList(config.getMemberships()));
+                String[] memberships = ((ADConfiguration) config).getMemberships();
+                ldapGroupsToBeAdded.addAll(memberships == null
+                        ? Collections.<String>emptyList() : Arrays.asList(memberships));
 
                 // add groups
                 attributes.add(AttributeBuilder.build("ldapGroups", ldapGroupsToBeAdded));
             }
         }
 
-        return new ADUpdate(conn, oclass, uid).update(attributes);
+        return new ADUpdate((ADConnection) conn, oclass, uid).update(attributes);
     }
 
     @Override
@@ -234,12 +168,7 @@ public class ADConnector extends LdapConnector {
             throw new IllegalStateException("Delete operation not permitted");
         }
 
-        new ADDelete(conn, oclass, uid).delete();
-    }
-
-    @Override
-    public Schema schema() {
-        return conn.getADSchema().getSchema();
+        new ADDelete((ADConnection) conn, oclass, uid).execute();
     }
 
     @Override
@@ -249,7 +178,7 @@ public class ADConnector extends LdapConnector {
             final GuardedString password,
             final OperationOptions options) {
 
-        return new ADAuthenticate(conn, objectClass, username, options).authenticate(password);
+        return new ADAuthenticate((ADConnection) conn, objectClass, username, options).authenticate(password);
     }
 
     @Override
@@ -258,16 +187,6 @@ public class ADConnector extends LdapConnector {
             final String username,
             final OperationOptions options) {
 
-        return new ADAuthenticate(conn, objectClass, username, options).resolveUsername();
-    }
-
-    @Override
-    public void test() {
-        conn.test();
-    }
-
-    @Override
-    public void checkAlive() {
-        conn.checkAlive();
+        return new ADAuthenticate((ADConnection) conn, objectClass, username, options).resolveUsername();
     }
 }

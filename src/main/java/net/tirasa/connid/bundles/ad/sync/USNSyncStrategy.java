@@ -39,6 +39,8 @@ import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ad.util.DeletedControl;
+import net.tirasa.connid.bundles.ad.util.DirSyncUtils;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
 import org.identityconnectors.common.StringUtil;
 import org.identityconnectors.common.logging.Log;
@@ -130,10 +132,9 @@ public class USNSyncStrategy extends ADSyncStrategy {
         // get lastest sync token before start pulling objects
         latestSyncToken = token;
 
-        if ((oclass.is(ObjectClass.ACCOUNT_NAME)
-                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
-                || (oclass.is(ObjectClass.GROUP_NAME)
-                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())) {
+        if ((oclass.is(ObjectClass.ACCOUNT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
+                || (oclass.is(ObjectClass.GROUP_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())
+                || (oclass.is(LdapSchema.ANY_OBJECT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedAnyObject())) {
             syncDeletedObjects(token, handler, options, oclass);
         }
 
@@ -227,11 +228,26 @@ public class USNSyncStrategy extends ADSyncStrategy {
                         LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
                     }
                 }
-            } else {
+            } else if (oclass.is(ObjectClass.GROUP_NAME)) {
                 for (SearchResult sr : changes) {
                     LOG.ok("Remaining {0} groups to be processed", count);
                     try {
                         handleSyncGDelta(
+                                ctx,
+                                sr,
+                                attrsToGet,
+                                token,
+                                handler);
+                        count--;
+                    } catch (NamingException e) {
+                        LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                    }
+                }
+            } else {
+                for (SearchResult sr : changes) {
+                    LOG.ok("Remaining {0} any-objects to be processed", count);
+                    try {
+                        handleSyncAODelta(
                                 ctx,
                                 sr,
                                 attrsToGet,
@@ -265,8 +281,9 @@ public class USNSyncStrategy extends ADSyncStrategy {
         String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
                 "(&(objectClass=user)(isDeleted=TRUE))"
-                : // get group filter
-                "(&(objectClass=group)(isDeleted=TRUE))";
+                : oclass.is(ObjectClass.GROUP_NAME) // get group filter
+                ? "(&(objectClass=group)(isDeleted=TRUE))"
+                : DirSyncUtils.createDirSyncAOFilter((ADConfiguration) conn.getConfiguration(), true);
 
         sync(true, filter, token, handler, options, oclass);
     }
@@ -283,14 +300,15 @@ public class USNSyncStrategy extends ADSyncStrategy {
         String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
                 createDirSyncUFilter((ADConfiguration) conn.getConfiguration(), utils)
-                : // get group filter
-                createDirSyncGFilter();
+                : oclass.is(ObjectClass.GROUP_NAME) // get group filter
+                ? createDirSyncGFilter()
+                : DirSyncUtils.createDirSyncAOFilter((ADConfiguration) conn.getConfiguration(), false);
 
         sync(false, filter, token, handler, options, oclass);
     }
 
     @Override
-    public SyncToken getLatestSyncToken() {
+    public SyncToken getLatestSyncToken(ObjectClass oclass) {
         // -----------------------------------
         // Create basicLdapSearch control
         // -----------------------------------

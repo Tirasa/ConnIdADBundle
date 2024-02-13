@@ -15,11 +15,7 @@
  */
 package net.tirasa.connid.bundles.ad.search;
 
-import static java.util.Collections.singletonList;
-import static org.identityconnectors.common.StringUtil.isBlank;
-
 import com.sun.jndi.ldap.ctl.VirtualListViewControl;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -38,31 +34,19 @@ import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
+import net.tirasa.connid.bundles.ldap.search.LdapSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchStrategy;
-import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.QualifiedUid;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.spi.SearchResultsHandler;
 
-public class ADSearch {
-
-    private final LdapConnection conn;
-
-    private final ResultsHandler handler;
-
-    private final ObjectClass oclass;
-
-    private final LdapFilter filter;
-
-    private final OperationOptions options;
-
-    private final String[] baseDNs;
+public class ADSearch extends LdapSearch {
 
     private final ADUtilities utils;
 
@@ -75,13 +59,7 @@ public class ADSearch {
             final ResultsHandler handler,
             final OperationOptions options,
             final String[] baseDNs) {
-
-        this.conn = conn;
-        this.oclass = oclass;
-        this.filter = filter;
-        this.handler = handler;
-        this.options = options;
-        this.baseDNs = baseDNs;
+        super(conn, oclass, filter, handler, options, baseDNs);
 
         this.utils = new ADUtilities((ADConnection) this.conn);
     }
@@ -98,10 +76,13 @@ public class ADSearch {
                 ? ((ADConfiguration) conn.getConfiguration()).getUserBaseContexts()
                 : oclass.is(ObjectClass.GROUP_NAME)
                 ? ((ADConfiguration) conn.getConfiguration()).getGroupBaseContexts()
-                : ((ADConfiguration) conn.getConfiguration()).getBaseContextsToSynchronize());
+                : oclass.is(LdapSchema.ANY_OBJECT_NAME)
+                ? ((ADConfiguration) conn.getConfiguration()).getAnyObjectBaseContexts()
+                : ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
     }
 
-    public final void executeADQuery(final ResultsHandler handler) {
+    @Override
+    public final void execute() {
         final String[] attrsToGetOption = options.getAttributesToGet();
         final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
 
@@ -121,7 +102,8 @@ public class ADSearch {
         });
     }
 
-    private LdapInternalSearch getInternalSearch(final Set<String> attrsToGet) {
+    @Override
+    protected LdapInternalSearch getInternalSearch(final Set<String> attrsToGet) {
         // This is a bit tricky. If the LdapFilter has an entry DN,
         // we only need to look at that entry and check whether it matches
         // the native filter. Moreover, when looking at the entry DN
@@ -136,13 +118,17 @@ public class ADSearch {
         LdapSearchStrategy strategy;
         List<String> dns;
         int searchScope;
+        boolean ignoreUserAnyObjectConfig = false;
 
         final String filterEntryDN = filter == null ? null : filter.getEntryDN();
 
         if (filterEntryDN == null) {
             strategy = getSearchStrategy();
             dns = getBaseDNs();
-            searchScope = getLdapSearchScope();
+            if (options.getOptions().containsKey(OP_IGNORE_CUSTOM_ANY_OBJECT_CONFIG)) {
+                ignoreUserAnyObjectConfig = (boolean) options.getOptions().get(OP_IGNORE_CUSTOM_ANY_OBJECT_CONFIG);
+            }
+            searchScope = getLdapSearchScope(ignoreUserAnyObjectConfig);
         } else {
             // Would be good to check that filterEntryDN is under the configured 
             // base contexts. However, the adapter is likely to pass entries
@@ -174,7 +160,11 @@ public class ADSearch {
 
         final String searchFilter = oclass.equals(ObjectClass.ACCOUNT)
                 ? conn.getConfiguration().getAccountSearchFilter()
-                : ((ADConfiguration) conn.getConfiguration()).getGroupSearchFilter();
+                : oclass.equals(ObjectClass.GROUP)
+                ? conn.getConfiguration().getGroupSearchFilter()
+                : (!ignoreUserAnyObjectConfig)
+                ? conn.getConfiguration().getAnyObjectSearchFilter()
+                : null;
 
         if (LOG.isOk()) {
             LOG.ok("Search filter: {0} " + searchFilter);
@@ -221,37 +211,20 @@ public class ADSearch {
         } catch (InvalidNameException ine) {
             LOG.info(ine, "'{0}' is not am entry DN. Let's try derive it", filterEntryDN);
             final LdapName prefix = new LdapName(String.format("CN=%s", filterEntryDN));
-            return getBaseDNs().stream().
-                    map(bdn -> {
-                        try {
-                            return new LdapName(bdn).addAll(prefix).toString();
-                        } catch (InvalidNameException e) {
-                            return bdn;
-                        }
-                    }).collect(Collectors.toList());
+            return getBaseDNs().stream().map(bdn -> {
+                try {
+                    return new LdapName(bdn).addAll(prefix).toString();
+                } catch (InvalidNameException e) {
+                    return bdn;
+                }
+            }).collect(Collectors.toList());
         }
     }
 
-    private String getSearchFilter(final String... optionalFilters) {
-        final StringBuilder builder = new StringBuilder();
-        final String ocFilter = getObjectClassFilter();
-        int nonBlank = isBlank(ocFilter) ? 0 : 1;
-        for (String optionalFilter : optionalFilters) {
-            nonBlank += (isBlank(optionalFilter) ? 0 : 1);
-        }
-        if (nonBlank > 1) {
-            builder.append("(&");
-        }
-        appendFilter(ocFilter, builder);
-        for (String optionalFilter : optionalFilters) {
-            appendFilter(optionalFilter, builder);
-        }
-        if (nonBlank > 1) {
-            builder.append(')');
-        }
-
+    @Override
+    protected String getSearchFilter(final String... optionalFilters) {
         // replace any substring like as objectGUID=ba36c308-792a-45a9-b374-7f330e9742ab with the correct query
-        final String res = builder.toString();
+        final String res = super.getSearchFilter(optionalFilters);
 
         final String resToLowerCase = res.toLowerCase(); // required to be case-insensitive
         final String toBeFound = ADConnector.OBJECTGUID.toLowerCase();
@@ -276,7 +249,8 @@ public class ADSearch {
         return bld.toString();
     }
 
-    private LdapSearchStrategy getSearchStrategy() {
+    @Override
+    protected LdapSearchStrategy getSearchStrategy() {
         final LdapSearchStrategy result;
 
         if (options.getPageSize() != null) {
@@ -298,77 +272,5 @@ public class ADSearch {
             result = conn.getConfiguration().newDefaultSearchStrategy(true);
         }
         return result;
-    }
-
-    private static void appendFilter(String filter, StringBuilder toBuilder) {
-        if (!isBlank(filter)) {
-            final String trimmedUserFilter = filter.trim();
-            final boolean enclose = filter.charAt(0) != '(';
-            if (enclose) {
-                toBuilder.append('(');
-            }
-            toBuilder.append(trimmedUserFilter);
-            if (enclose) {
-                toBuilder.append(')');
-            }
-        }
-    }
-
-    private List<String> getBaseDNs() {
-        List<String> result;
-        QualifiedUid container = options.getContainer();
-        if (container != null) {
-            result = singletonList(LdapSearches.findEntryDN(
-                    conn, container.getObjectClass(), container.getUid()));
-        } else {
-            result = Arrays.asList(baseDNs);
-        }
-        assert result != null;
-        return result;
-    }
-
-    private String getObjectClassFilter() {
-        StringBuilder builder = new StringBuilder();
-        List<String> ldapClasses = conn.getSchemaMapping().getLdapClasses(oclass);
-        boolean and = ldapClasses.size() > 1;
-        if (and) {
-            builder.append("(&");
-        }
-        for (String ldapClass : ldapClasses) {
-            builder.append("(objectClass=");
-            builder.append(ldapClass);
-            builder.append(')');
-        }
-        if (and) {
-            builder.append(')');
-        }
-        return builder.toString();
-    }
-
-    private int getLdapSearchScope() {
-        String scope = options.getScope();
-
-        if (scope == null) {
-            if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                scope = ((ADConfiguration) conn.getConfiguration()).getUserSearchScope();
-            } else {
-                scope = ((ADConfiguration) conn.getConfiguration()).getGroupSearchScope();
-            }
-        }
-
-        if (null == scope) {
-            return SearchControls.SUBTREE_SCOPE;
-        } else {
-            switch (scope) {
-                case OperationOptions.SCOPE_OBJECT:
-                    return SearchControls.OBJECT_SCOPE;
-                case OperationOptions.SCOPE_ONE_LEVEL:
-                    return SearchControls.ONELEVEL_SCOPE;
-                case OperationOptions.SCOPE_SUBTREE:
-                    return SearchControls.SUBTREE_SCOPE;
-                default:
-                    throw new IllegalArgumentException("Invalid search scope " + scope);
-            }
-        }
     }
 }

@@ -32,8 +32,14 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
     public PropertyDescriptor[] getPropertyDescriptors() {
         final List<PropertyDescriptor> props = new ArrayList<>();
         try {
+            /*
+             * Connectivity
+             */
             // ssl
-            props.add(new PropertyDescriptor("ssl", ADConfiguration.class));
+            props.add(new PropertyDescriptor("ssl", LdapConfiguration.class));
+            
+            // trustAllCerts
+            props.add(new PropertyDescriptor("trustAllCerts", ADConfiguration.class));
 
             // host
             props.add(new PropertyDescriptor("host", LdapConfiguration.class));
@@ -41,100 +47,211 @@ public class ADConfigurationBeanInfo extends SimpleBeanInfo {
             // port
             props.add(new PropertyDescriptor("port", LdapConfiguration.class));
 
+            // failover
+            props.add(new PropertyDescriptor("failover", LdapConfiguration.class));
+            
             // principal
             props.add(new PropertyDescriptor("principal", LdapConfiguration.class));
-
-            // uidAttribute
-            props.add(new PropertyDescriptor("uidAttribute", LdapConfiguration.class));
-
-            // gidAttribute
-            props.add(new PropertyDescriptor("gidAttribute", LdapConfiguration.class));
-
-            // defaultIdAttribute
-            props.add(new PropertyDescriptor("defaultIdAttribute", ADConfiguration.class));
 
             // credentials
             props.add(new PropertyDescriptor("credentials", LdapConfiguration.class));
 
-            // trustAllCerts
-            props.add(new PropertyDescriptor("trustAllCerts", ADConfiguration.class));
+            // connectTimeout
+            props.add(new PropertyDescriptor("connectTimeout", LdapConfiguration.class));
 
-            // membershipsInOr
-            props.add(new PropertyDescriptor("membershipsInOr", ADConfiguration.class));
+            // readTimeout
+            props.add(new PropertyDescriptor("readTimeout", LdapConfiguration.class));
+
+            /*
+             * Identifying attributes
+             */
+            // uidAttribute
+            props.add(new PropertyDescriptor("uidAttribute", LdapConfiguration.class));
+            
+            // gidAttribute
+            props.add(new PropertyDescriptor("gidAttribute", LdapConfiguration.class));
+            
+            // aoidAttribute
+            props.add(new PropertyDescriptor("aoidAttribute", LdapConfiguration.class));
+
+            // defaultIdAttribute
+            props.add(new PropertyDescriptor("defaultIdAttribute", ADConfiguration.class));
+            
+            // dnAttribute
+            props.add(new PropertyDescriptor("dnAttribute", LdapConfiguration.class));
+
+            // userAuthenticationAttributes
+            props.add(new PropertyDescriptor("userAuthenticationAttributes", ADConfiguration.class));
+
+            /*
+             * Password attributes
+             */
+            // passwordAttribute
+            props.add(new PropertyDescriptor("passwordAttribute", LdapConfiguration.class));
+
+            // passwordAttributeToSynchronize
+            props.add(new PropertyDescriptor("passwordAttributeToSynchronize", LdapConfiguration.class));
+
+            // passwordDecryptionInitializationVector
+            props.add(new PropertyDescriptor("passwordDecryptionInitializationVector", LdapConfiguration.class));
+
+            // passwordDecryptionKey
+            props.add(new PropertyDescriptor("passwordDecryptionKey", LdapConfiguration.class));
+
+            // passwordHashAlgorithm
+            props.add(new PropertyDescriptor("passwordHashAlgorithm", LdapConfiguration.class));
+            
+            // synchronizePasswords
+            props.add(new PropertyDescriptor("synchronizePasswords", LdapConfiguration.class));
+
+            // retrievePasswordsWithSearch
+            props.add(new PropertyDescriptor("retrievePasswordsWithSearch", LdapConfiguration.class));
 
             // pwdUpdateOnly
             props.add(new PropertyDescriptor("pwdUpdateOnly", ADConfiguration.class));
 
-            // excludeAttributeChangesOnUpdate
-            props.add(new PropertyDescriptor("excludeAttributeChangesOnUpdate", ADConfiguration.class));
+            /*
+            * Object classes
+            */
+            // accountObjectClasses
+            props.add(new PropertyDescriptor("accountObjectClasses", LdapConfiguration.class));
+            
+            // groupObjectClasses
+            props.add(new PropertyDescriptor("groupObjectClasses", LdapConfiguration.class));
 
-            // failover
-            props.add(new PropertyDescriptor("failover", LdapConfiguration.class));
+            // anyObjectClasses
+            props.add(new PropertyDescriptor("anyObjectClasses", LdapConfiguration.class));
 
-            // baseContextsToSynchronize
-            props.add(new PropertyDescriptor("baseContextsToSynchronize", ADConfiguration.class));
+            /*
+            * Base contexts
+            */
+            // baseContexts
+            props.add(new PropertyDescriptor("baseContexts", LdapConfiguration.class));
 
             // userBaseContexts
             props.add(new PropertyDescriptor("userBaseContexts", ADConfiguration.class));
-
+            
             // groupBaseContexts
             props.add(new PropertyDescriptor("groupBaseContexts", ADConfiguration.class));
-
-            // baseContexts
+            
+            // anyObjectBaseContexts
+            props.add(new PropertyDescriptor("anyObjectBaseContexts", ADConfiguration.class));
+            
+            // defaultPeopleContainer
             props.add(new PropertyDescriptor("defaultPeopleContainer", ADConfiguration.class));
-
+           
             // defaultGroupContainer
             props.add(new PropertyDescriptor("defaultGroupContainer", ADConfiguration.class));
 
+            // defaultAnyObjectContainer
+            props.add(new PropertyDescriptor("defaultAnyObjectContainer", ADConfiguration.class));
+            
+            /*
+            * Group memberships & owners
+            */
             // memberships
             props.add(new PropertyDescriptor("memberships", ADConfiguration.class));
-
+            
             // membershipConservativePolicy
             props.add(new PropertyDescriptor("membershipConservativePolicy", ADConfiguration.class));
+            
+            // membershipsInOr
+            props.add(new PropertyDescriptor("membershipsInOr", ADConfiguration.class));
+            
+            // groupOwnerReferenceAttribute
+            props.add(new PropertyDescriptor("groupOwnerReferenceAttribute", ADConfiguration.class));
+            
+            // groupMemberAttribute
+            props.add(new PropertyDescriptor("groupMemberAttribute", LdapConfiguration.class));
+ 
+            // addPrincipalToNewGroups
+            props.add(new PropertyDescriptor("addPrincipalToNewGroups", LdapConfiguration.class));
 
+            /*
+            * Search scopes
+            */
+            // userSearchScope
+            props.add(new PropertyDescriptor("userSearchScope", LdapConfiguration.class));
+            
+            // groupSearchScope
+            props.add(new PropertyDescriptor("groupSearchScope", LdapConfiguration.class));
+
+            // anyObjectSearchScope
+            props.add(new PropertyDescriptor("anyObjectSearchScope", LdapConfiguration.class));
+
+            /*
+            * Search filters
+            */
             // accountSearchFilter
             props.add(new PropertyDescriptor("accountSearchFilter", LdapConfiguration.class));
-
+            
             // groupSearchFilter
-            props.add(new PropertyDescriptor("groupSearchFilter", ADConfiguration.class));
+            props.add(new PropertyDescriptor("groupSearchFilter", LdapConfiguration.class));
 
+            // anyObjectSearchFilter
+            props.add(new PropertyDescriptor("anyObjectSearchFilter", LdapConfiguration.class));
+
+            /*
+             * VLV attributes
+             */
+            // useVlvControls
+            props.add(new PropertyDescriptor("useVlvControls", LdapConfiguration.class));
+
+            // vlvSortAttribute
+            props.add(new PropertyDescriptor("vlvSortAttribute", LdapConfiguration.class));
+
+            /*
+            * Retrieve deleted
+            */
             // retrieveDeletedUser
             props.add(new PropertyDescriptor("retrieveDeletedUser", ADConfiguration.class));
-
+            
             // retrieveDeletedGroup
             props.add(new PropertyDescriptor("retrieveDeletedGroup", ADConfiguration.class));
 
-            // accountObjectClasses
-            props.add(new PropertyDescriptor("accountObjectClasses", LdapConfiguration.class));
+            // retrieveDeletedAnyObject
+            props.add(new PropertyDescriptor("retrieveDeletedAnyObject", ADConfiguration.class));
 
+            /*
+            * Syncs
+            */
+            // syncStrategy
+            props.add(new PropertyDescriptor("syncStrategy", LdapConfiguration.class));
+            
+            // baseContextsToSynchronize
+            props.add(new PropertyDescriptor("baseContextsToSynchronize", LdapConfiguration.class));
+   
             // objectClassesToSynchronize
             props.add(new PropertyDescriptor("objectClassesToSynchronize", LdapConfiguration.class));
+  
+            // attributesToSynchronize
+            props.add(new PropertyDescriptor("attributesToSynchronize", LdapConfiguration.class));
 
+            // changeLogBlockSize
+            props.add(new PropertyDescriptor("changeLogBlockSize", LdapConfiguration.class));
+
+            // changeNumberAttribute
+            props.add(new PropertyDescriptor("changeNumberAttribute", LdapConfiguration.class));
+
+            // accountSynchronizationFilter
+            props.add(new PropertyDescriptor("accountSynchronizationFilter", LdapConfiguration.class));
+
+            /*
+            * Misc
+            */
             // _connectorMessages
             props.add(new PropertyDescriptor("connectorMessages", AbstractConfiguration.class));
-
-            // userSearchScope
-            props.add(new PropertyDescriptor("userSearchScope", ADConfiguration.class));
-
-            // groupSearchScope
-            props.add(new PropertyDescriptor("groupSearchScope", ADConfiguration.class));
-
-            // groupOwnerReferenceAttribute
-            props.add(new PropertyDescriptor("groupOwnerReferenceAttribute", ADConfiguration.class));
-
-            // groupMemberReferenceAttribute
-            props.add(new PropertyDescriptor("groupMemberReferenceAttribute", ADConfiguration.class));
-
-            // syncStrategy
-            props.add(new PropertyDescriptor("syncStrategy", ADConfiguration.class));
             
-            // userAuthenticationAttributes
-            props.add(new PropertyDescriptor("userAuthenticationAttributes", ADConfiguration.class));
+            // excludeAttributeChangesOnUpdate
+            props.add(new PropertyDescriptor("excludeAttributeChangesOnUpdate", ADConfiguration.class));
+
+            // readSchema
+            props.add(new PropertyDescriptor("readSchema", LdapConfiguration.class));
         } catch (IntrospectionException e) {
             LOG.error(e, "Failure retrieving properties");
             props.clear();
         }
-
+        
         return props.toArray(new PropertyDescriptor[props.size()]);
     }
 }

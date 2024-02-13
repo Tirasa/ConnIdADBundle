@@ -16,7 +16,6 @@
 package net.tirasa.connid.bundles.ad.search;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import javax.naming.InvalidNameException;
@@ -38,32 +37,8 @@ public class ADDefaultSearchStrategy extends DefaultSearchStrategy {
 
     private static final Log LOG = Log.getLog(ADDefaultSearchStrategy.class);
 
-    private final boolean ignoreNonExistingBaseDNs;
-
-    static String searchControlsToString(SearchControls controls) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("SearchControls: {returningAttributes=");
-        String[] attrs = controls.getReturningAttributes();
-        builder.append(attrs != null ? Arrays.asList(attrs) : "null");
-        builder.append(", scope=");
-        switch (controls.getSearchScope()) {
-            case SearchControls.OBJECT_SCOPE:
-                builder.append("OBJECT");
-                break;
-            case SearchControls.ONELEVEL_SCOPE:
-                builder.append("ONELEVEL");
-                break;
-            case SearchControls.SUBTREE_SCOPE:
-                builder.append("SUBTREE");
-                break;
-        }
-        builder.append('}');
-        return builder.toString();
-    }
-
     public ADDefaultSearchStrategy(boolean ignoreNonExistingBaseDNs) {
         super(ignoreNonExistingBaseDNs);
-        this.ignoreNonExistingBaseDNs = ignoreNonExistingBaseDNs;
     }
 
     @Override

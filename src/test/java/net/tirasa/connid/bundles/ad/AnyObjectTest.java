@@ -13,16 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.tirasa.connid.bundles.ad.search;
+package net.tirasa.connid.bundles.ad;
 
-import net.tirasa.connid.bundles.ldap.search.VlvIndexSearchStrategy;
-import org.identityconnectors.common.logging.Log;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 
-public class ADVlvIndexSearchStrategy extends VlvIndexSearchStrategy {
+public class AnyObjectTest extends AbstractTest {
 
-    private static final Log LOG = Log.getLog(ADVlvIndexSearchStrategy.class);
+    protected static TestUtil util;
 
-    public ADVlvIndexSearchStrategy(String vlvSortAttr, int pageSize) {
-        super(vlvSortAttr, pageSize);
+    @BeforeAll
+    public static void init() {
+        AbstractTest.init();
+        util = new TestUtil(connector, conf, LdapSchema.ANY_OBJECT_CLASS);
+        AbstractTest.baseSetup(util);
+    }
+
+    @AfterAll
+    public static void cleanup() {
+        AbstractTest.cleanup(util);
     }
 }

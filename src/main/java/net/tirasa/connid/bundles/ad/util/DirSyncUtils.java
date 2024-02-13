@@ -64,6 +64,42 @@ public class DirSyncUtils {
         return filter.toString();
     }
 
+    public static String createDirSyncAOFilter(final ADConfiguration conf) {
+        return createDirSyncAOFilter(conf, conf.isRetrieveDeletedAnyObject());
+    }
+
+    public static String createDirSyncAOFilter(final ADConfiguration conf, boolean isDeleted) {
+        final StringBuilder filter = new StringBuilder();
+        final StringBuilder oclassFilter = new StringBuilder();
+        String[] anyObjectClasses = conf.getAnyObjectClasses();
+        if (anyObjectClasses.length > 1) {
+            if (conf.isFilterWithOrInsteadOfAnd()){
+                oclassFilter.append("(|");
+            }
+            else {
+                oclassFilter.append("(&");
+            }
+        }
+        for (String oclass : anyObjectClasses) {
+            oclassFilter.append("(objectClass=");
+            oclassFilter.append(oclass);
+            oclassFilter.append(")");
+        }
+        if (anyObjectClasses.length > 1) {
+            oclassFilter.append(")");
+        }
+
+        if (isDeleted) {
+            filter.append(oclassFilter.toString());
+        } else {
+            filter.append("(&");
+            filter.append(oclassFilter.toString());
+            filter.append("(!(isDeleted=TRUE)))");
+        }
+
+        return filter.toString();
+    }
+
     public static String createLdapUFilter(final ADConfiguration conf) {
 
         final String[] memberships = conf.getMemberships();
