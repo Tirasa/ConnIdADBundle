@@ -155,7 +155,7 @@ public class ADSearch extends LdapSearch {
         final String optionsFilter = LdapConstants.getSearchFilter(options);
 
         if (LOG.isOk()) {
-            LOG.ok("Options filter: {0} " + optionsFilter);
+            LOG.ok("Options filter: '{0}'", optionsFilter);
         }
 
         final String searchFilter = oclass.equals(ObjectClass.ACCOUNT)
@@ -167,13 +167,13 @@ public class ADSearch extends LdapSearch {
                 : null;
 
         if (LOG.isOk()) {
-            LOG.ok("Search filter: {0} " + searchFilter);
+            LOG.ok("Search filter: '{0}'", searchFilter);
         }
 
         final String nativeFilter = filter != null ? filter.getNativeFilter() : null;
 
         if (LOG.isOk()) {
-            LOG.ok("Native filter: {0} " + nativeFilter);
+            LOG.ok("Native filter: '{0}'", nativeFilter);
         }
 
         final String membershipSearchFilter = oclass.equals(ObjectClass.ACCOUNT)
@@ -181,7 +181,7 @@ public class ADSearch extends LdapSearch {
                 : null;
 
         if (LOG.isOk()) {
-            LOG.ok("Membership filter: {0} " + membershipSearchFilter);
+            LOG.ok("Membership filter: '{0}'", membershipSearchFilter);
         }
 
         return new LdapInternalSearch(
