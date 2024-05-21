@@ -16,11 +16,12 @@
 
 FROM ubuntu:22.04
  
+RUN apt-get update && apt-get install -y software-properties-common && rm -rf /var/lib/apt/lists/*
+RUN add-apt-repository ppa:linux-schools/samba-latest
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install samba krb5-config winbind smbclient 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install iproute2
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install openssl
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install vim
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install ldb-tools
  
 RUN rm /etc/krb5.conf
 RUN mkdir -p /opt/ad-scripts

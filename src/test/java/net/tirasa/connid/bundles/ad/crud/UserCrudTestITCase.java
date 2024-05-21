@@ -16,6 +16,7 @@
 package net.tirasa.connid.bundles.ad.crud;
 
 import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -45,6 +46,7 @@ import net.tirasa.connid.bundles.ad.ADConnector;
 import net.tirasa.connid.bundles.ad.TestUtil;
 import net.tirasa.connid.bundles.ad.UserTest;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
+import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.api.APIConfiguration;
 import org.identityconnectors.framework.api.ConnectorFacade;
@@ -52,6 +54,8 @@ import org.identityconnectors.framework.api.ConnectorFacadeFactory;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.AttributeDelta;
+import org.identityconnectors.framework.common.objects.AttributeDeltaBuilder;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.Name;
@@ -68,9 +72,16 @@ import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.framework.impl.api.APIConfigurationImpl;
 import org.identityconnectors.framework.impl.api.local.JavaClassProperties;
 import org.identityconnectors.test.common.TestHelpers;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class UserCrudTestITCase extends UserTest {
+
+    private static final String NUMBER1 = "+1 800 123 4567";
+
+    private static final String NUMBER2 = "+1 800 765 4321";
+
+    private static final String NUMBER3 = "+1 800 765 9876";
 
     @Test
     public void pagedSearch() {
@@ -446,6 +457,108 @@ public class UserCrudTestITCase extends UserTest {
             // ignore
         }
         // --------------------------
+    }
+
+    @Test
+    public void updateDeltaNoValuePresent() {
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("3");
+
+        Uid authUid = connector.authenticate(
+                ObjectClass.ACCOUNT, // object class
+                ids.getValue(), // uid
+                new GuardedString("Password123".toCharArray()), // password
+                null);
+
+        assertNotNull(authUid);
+
+        try {
+            connector.authenticate(
+                    ObjectClass.ACCOUNT, // object class
+                    ids.getValue(), // uid
+                    new GuardedString("Password321".toCharArray()), // password
+                    null);
+            fail();
+        } catch (ConnectorException ignore) {
+            // ignore
+        }
+        
+        // updateDelta with values to add and to remove
+        AttributeDelta delta = AttributeDeltaBuilder.build(
+                "givenName", "gnupdate");
+        connector.updateDelta(ObjectClass.ACCOUNT, new Uid(ids.getValue()), Collections.singleton(delta), null);
+
+        OperationOptions options = new OperationOptionsBuilder().setAttributesToGet("givenName").build();
+
+        ConnectorObject obj = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), options);
+        Attribute givenName = obj.getAttributeByName("givenName");
+        assertNotNull(obj);
+        assertEquals(ids.getValue(), obj.getUid().getUidValue());
+        assertEquals("gnupdate", givenName.getValue().get(0));
+
+    }
+
+    @Test
+    @Disabled("Update Delta with value already present not possible with Samba")
+    public void updateDelta() {
+        // 1. take user and set attribute
+        final Map.Entry<String, String> ids = util.getEntryIDs("3");
+        connector.update(
+                ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()),
+                Collections.singleton(AttributeBuilder.build("telephoneNumber", NUMBER1)),
+                null);
+
+        OperationOptions options = new OperationOptionsBuilder().setAttributesToGet("telephoneNumber").build();
+        ConnectorObject bugs = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), options);
+        Attribute telephoneAttr = bugs.getAttributeByName("telephoneNumber");
+        List<Object> numberAttr = telephoneAttr.getValue();
+        assertEquals(1, numberAttr.size());
+        assertEquals(NUMBER1, numberAttr.get(0));
+
+        // 2. updateDelta with values to add and to remove
+        AttributeDelta delta = AttributeDeltaBuilder.build(
+                "telephoneNumber", Collections.singletonList(NUMBER2), Collections.singletonList(NUMBER1));
+        connector.updateDelta(ObjectClass.ACCOUNT, new Uid(ids.getValue()), Collections.singleton(delta), null);
+
+        bugs = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), options);
+        numberAttr = bugs.getAttributeByName("telephoneNumber").getValue();
+        assertEquals(1, numberAttr.size());
+        assertEquals(NUMBER2, numberAttr.get(0));
+
+        // 3. updateDelta with values to add
+        delta = AttributeDeltaBuilder.build(
+                "telephoneNumber", Collections.singletonList(NUMBER1), Collections.emptyList());
+        connector.updateDelta(ObjectClass.ACCOUNT, new Uid(ids.getValue()), Collections.singleton(delta), null);
+
+        bugs = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), options);
+        numberAttr = bugs.getAttributeByName("telephoneNumber").getValue();
+        assertEquals(2, numberAttr.size());
+        assertTrue(numberAttr.contains(NUMBER1));
+        assertTrue(numberAttr.contains(NUMBER2));
+
+        // 4. updateDelta with values to replace
+        assertDoesNotThrow(() -> connector.authenticate(
+                ObjectClass.ACCOUNT, ids.getValue(), new GuardedString("carrot".toCharArray()), null));
+
+        delta = AttributeDeltaBuilder.build("telephoneNumber", CollectionUtil.newList(NUMBER1, NUMBER3));
+        GuardedString newPwd = new GuardedString("newPwd".toCharArray());
+        connector.updateDelta(
+                ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()),
+                CollectionUtil.newSet(delta, AttributeDeltaBuilder.buildPassword(newPwd)),
+                null);
+
+        bugs = connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), options);
+        numberAttr = bugs.getAttributeByName("telephoneNumber").getValue();
+        assertEquals(2, numberAttr.size());
+        assertTrue(numberAttr.contains(NUMBER1));
+        assertTrue(numberAttr.contains(NUMBER3));
+
+        assertDoesNotThrow(() -> connector.authenticate(ObjectClass.ACCOUNT, ids.getValue(), newPwd, null));
+        connector.removeAttributeValues(ObjectClass.ACCOUNT, new Uid(ids.getValue()), Collections.singleton(telephoneAttr), null);
     }
 
     @Test
