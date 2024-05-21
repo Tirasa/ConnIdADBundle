@@ -83,6 +83,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
     <exec.skip>false</exec.skip>
+    <skipTests>false</skipTests>
   </properties>
 
   <dependencies>
@@ -297,7 +298,7 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>3.2.5</version>
         <configuration>
-          <skipTests>${exec.skip}</skipTests>
+          <skipTests>${skipTests}</skipTests>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <runOrder>alphabetical</runOrder>
         </configuration>
@@ -317,7 +318,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <inherited>true</inherited>
         <configuration>
-          <skipTests>${exec.skip}</skipTests>
+          <skipTests>${skipTests}</skipTests>
         </configuration>
         <executions>
           <execution>
@@ -327,7 +328,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <skip>${exec.skip}</skip>
+              <skip>${skipTests}</skip>
               <includes>
                 <include>**/*Test.java</include>
               </includes>
@@ -341,7 +342,6 @@
         <artifactId>docker-maven-plugin</artifactId>
         <version>0.44.0</version>
         <configuration>
-          <skip>${exec.skip}</skip>
           <images>
             <image>
               <alias>tirasaad</alias>
@@ -369,7 +369,7 @@
                   </bind>
                 </volumes>
                 <wait>
-                  <log>samba version 4.15.13-Ubuntu started</log>
+                  <log>samba version 4.19.5 started</log>
                   <time>60000</time>
                 </wait>
               </run>
@@ -384,6 +384,9 @@
               <goal>stop</goal>
               <goal>remove</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
           <execution>
             <id>start-docker</id>
@@ -392,6 +395,9 @@
               <goal>build</goal>
               <goal>start</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
           <execution>
             <id>remove-containers-post-test</id>
@@ -400,6 +406,9 @@
               <goal>stop</goal>
               <goal>remove</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -425,11 +434,35 @@
       <id>skipTests</id>
       
       <properties>
+        <skipTests>true</skipTests>
         <exec.skip>true</exec.skip>
       </properties>
       
       <build>
         <defaultGoal>clean install</defaultGoal>
+      </build>
+    </profile>
+    <profile>
+      <id>debug</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <exec.skip>true</exec.skip>
+      </properties>
+      <build>
+        <defaultGoal>clean package io.fabric8:docker-maven-plugin:build io.fabric8:docker-maven-plugin:start
+        </defaultGoal>
+      </build>
+    </profile>
+    <profile>
+      <id>tests</id>
+
+      <properties>
+        <skipTests>false</skipTests>
+        <exec.skip>true</exec.skip>
+      </properties>
+
+      <build>
+        <defaultGoal>test</defaultGoal>
       </build>
     </profile>
   </profiles>

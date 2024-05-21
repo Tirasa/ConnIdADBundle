@@ -31,8 +31,6 @@ info "Provisioning domain controller..."
  
 info "Given admin password: ${SMB_ADMIN_PASSWORD}"
  
-rm /etc/samba/smb.conf
- 
 samba-tool domain provision\
  --server-role=dc\
  --use-rfc2307\
