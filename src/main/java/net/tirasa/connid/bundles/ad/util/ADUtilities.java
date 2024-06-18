@@ -16,6 +16,7 @@
 package net.tirasa.connid.bundles.ad.util;
 
 import static net.tirasa.connid.bundles.ad.ADConfiguration.PNE_FLAG;
+import static net.tirasa.connid.bundles.ad.ADConfiguration.PRIMARY_GROUP_DN_NAME;
 import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTSID;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.naming.InvalidNameException;
@@ -62,6 +64,7 @@ import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
+import net.tirasa.connid.bundles.ldap.search.LdapSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
@@ -76,6 +79,7 @@ import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
+import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
 import org.identityconnectors.framework.common.objects.Uid;
 
@@ -123,7 +127,6 @@ public class ADUtilities {
     }
 
     public String getPrimaryGroupDN(final LdapEntry entry, final Attributes profile) throws NamingException {
-
         final javax.naming.directory.Attribute primaryGroupID = profile.get(PRIMARYGROUPID);
         final javax.naming.directory.Attribute objectSID = profile.get(OBJECTSID);
 
@@ -175,8 +178,7 @@ public class ADUtilities {
         // -------------------------------------------------
         // AD-52 (paged membership retrieving: 1k a time)
         // -------------------------------------------------
-        final String memberships
-                = ADConfiguration.class.cast(connection.getConfiguration()).getGroupMemberAttribute();
+        final String memberships = connection.getConfiguration().getGroupMemberAttribute();
 
         if (oclass.is(ObjectClass.GROUP_NAME) && result.contains(memberships)) {
             // AD specific, for checking wether a user is enabled or not
@@ -270,6 +272,22 @@ public class ADUtilities {
         return createConnectorObject(baseDN, result.getAttributes(), attrsToGet, oclass);
     }
 
+    private void initConnectorObjectBuilder(
+            final LdapEntry entry,
+            final ObjectClass oclass,
+            final ConnectorObjectBuilder builder) throws NamingException {
+
+        builder.setObjectClass(oclass);
+
+        if (OBJECTGUID.equals(connection.getSchema().getLdapUidAttribute(oclass))) {
+            builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
+        } else {
+            builder.setUid(connection.getSchema().createUid(oclass, entry));
+        }
+
+        builder.setName(connection.getSchema().createName(oclass, entry));
+    }
+
     public ConnectorObject createConnectorObject(
             final String baseDN,
             final Attributes profile,
@@ -280,20 +298,12 @@ public class ADUtilities {
         final LdapEntry entry = LdapEntry.create(baseDN, profile);
 
         final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        builder.setObjectClass(oclass);
 
-        if (OBJECTGUID.equals(connection.getSchema().getLdapUidAttribute(oclass))) {
-            builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
-        } else {
-            builder.setUid(connection.getSchema().createUid(oclass, entry));
-        }
-
-        builder.setName(connection.getSchema().createName(oclass, entry));
+        initConnectorObjectBuilder(entry, oclass, builder);
 
         String pgDN = null;
 
         for (String attributeName : attrsToGet) {
-
             Attribute attribute = null;
 
             if (LdapConstants.isLdapGroups(attributeName) || attributeName.equals(ADConnector.MEMBEROF)) {
@@ -306,8 +316,8 @@ public class ADUtilities {
                 }
                 attribute = AttributeBuilder.build(attributeName, ldapGroups);
             } else if (LdapConstants.isPosixGroups(attributeName)) {
-                final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(entry.getAttributes(), GroupHelper.
-                        getPosixRefAttribute());
+                final Set<String> posixRefAttrs = LdapUtil.getStringAttrValues(
+                        entry.getAttributes(), GroupHelper.getPosixRefAttribute());
                 final List<String> posixGroups = groupHelper.getPosixGroups(posixRefAttrs);
                 attribute = AttributeBuilder.build(LdapConstants.POSIX_GROUPS_NAME, posixGroups);
             } else if (LdapConstants.PASSWORD.is(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
@@ -332,28 +342,7 @@ public class ADUtilities {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
             } else if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                try {
-
-                    final String status = profile.get(UACCONTROL_ATTR) == null
-                            || profile.get(UACCONTROL_ATTR).get() == null
-                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
-
-                    if (LOG.isOk()) {
-                        LOG.ok("User Account Control: {0}", status);
-                    }
-
-                    // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
-                    builder.addAttribute(
-                            status == null || Integer.parseInt(
-                                    profile.get(UACCONTROL_ATTR).get().toString())
-                            % 16 != UF_ACCOUNTDISABLE
-                                    ? AttributeBuilder.buildEnabled(true)
-                                    : AttributeBuilder.buildEnabled(false));
-
-                    attribute = connection.getSchema().createAttribute(oclass, attributeName, entry, false);
-                } catch (NamingException e) {
-                    LOG.error(e, "While fetching " + UACCONTROL_ATTR);
-                }
+                attribute = manageUACAttribute(profile, oclass, entry, builder, attributeName);
             } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
                 attribute = AttributeBuilder.build(
                         attributeName, GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
@@ -364,25 +353,23 @@ public class ADUtilities {
                             UCCP_FLAG,
                             SDDLHelper.isUserCannotChangePassword(new SDDL(((byte[]) sddl.get()))));
                 }
-            } else if (ADConfiguration.PRIMARY_GROUP_DN_NAME.equalsIgnoreCase(attributeName)) {
+            } else if (PRIMARY_GROUP_DN_NAME.equalsIgnoreCase(attributeName)) {
                 if (StringUtil.isBlank(pgDN)) {
                     pgDN = getPrimaryGroupDN(entry, profile);
                 }
-                attribute = AttributeBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, pgDN);
+                attribute = AttributeBuilder.build(PRIMARY_GROUP_DN_NAME, pgDN);
             } else if (oclass.is(ObjectClass.GROUP_NAME)
-                    && String.format("%s;range=%d-%d", ADConfiguration.class.cast(connection.getConfiguration()).
+                    && String.format("%s;range=%d-%d", connection.getConfiguration().
                             getGroupMemberAttribute(), 0, 999).equalsIgnoreCase(attributeName)) {
-                // loop on membership ranges and populate member attribute
 
-                final String membAttrPrefix
-                        = ADConfiguration.class.cast(connection.getConfiguration()).
-                                getGroupMemberAttribute();
+                // loop on membership ranges and populate member attribute
+                final String membAttrPrefix = connection.getConfiguration().getGroupMemberAttribute();
 
                 // search for less than 1k memberships
                 String membAttrName = String.format("%s;range=0-*", membAttrPrefix);
                 attribute = connection.getSchema().createAttribute(oclass, membAttrName, entry, true);
 
-                final ArrayList<Object> values = new ArrayList<Object>(attribute.getValue());
+                final ArrayList<Object> values = new ArrayList<>(attribute.getValue());
 
                 if (values.isEmpty()) {
                     // loop among ranges
@@ -431,6 +418,44 @@ public class ADUtilities {
     }
 
     /**
+     * This utility method is meant to build a minimal connector object without any other parsed attribute but
+     * userPrincipalName and objectGUID.
+     * This implementation is useful when searching for entries to be updated in getEntryToBeUpdated that require
+     * original values in the {@link org.identityconnectors.framework.common.objects.ConnectorObject}
+     */
+    private ConnectorObject createMinimalConnectorObject(
+            final String baseDN,
+            final Attributes profile,
+            final Collection<String> attrsToGet,
+            final ObjectClass oclass)
+            throws NamingException {
+
+        final LdapEntry entry = LdapEntry.create(baseDN, profile);
+
+        final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
+
+        initConnectorObjectBuilder(entry, oclass, builder);
+
+        for (String attributeName : attrsToGet) {
+            Attribute attribute = null;
+
+            if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                attribute = manageUACAttribute(profile, oclass, entry, builder, attributeName);
+            } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
+                attribute = AttributeBuilder.build(
+                        attributeName, GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } else if (profile.get(attributeName) != null) {
+                attribute = connection.getSchema().createAttribute(oclass, attributeName, entry, false);
+            }
+
+            // Avoid attribute adding in case of attribute name not found
+            Optional.ofNullable(attribute).ifPresent(builder::addAttribute);
+        }
+
+        return builder.build();
+    }
+
+    /**
      * Create a DN string starting from a set attributes and a default people container. This method has to be used
      * if
      * __NAME__ attribute is not provided or it it is not a DN.
@@ -441,7 +466,6 @@ public class ADUtilities {
      * @return distinguished name string.
      */
     public final String getDN(final ObjectClass oclass, final Name nameAttr, final Attribute cnAttr) {
-
         String cn;
 
         if (cnAttr == null || cnAttr.getValue() == null
@@ -483,21 +507,6 @@ public class ADUtilities {
         }
     }
 
-    public String getMembershipSearchFilter(final ADConfiguration conf) {
-        final StringBuilder ufilter = new StringBuilder();
-        final String[] memberships = conf.getMemberships();
-        if (memberships != null && memberships.length > 0) {
-            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
-
-            for (String group : memberships) {
-                ufilter.append("(").append(ADConnector.MEMBEROF).append("=").append(group).append(")");
-            }
-
-            ufilter.append(")");
-        }
-        return ufilter.toString();
-    }
-
     public LdapEntry getEntryToBeUpdated(final String entryDN) {
         LdapEntry obj = null;
         try {
@@ -519,16 +528,41 @@ public class ADUtilities {
         return obj;
     }
 
-    public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
-        final String filter = connection.getSchema().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
+    private String getEntryToBeUpdatedQuery(final Uid uid, final ObjectClass oclass) {
+        return connection.getSchema().getLdapUidAttribute(oclass) + "="
+                + (OBJECTGUID.equals(connection.getSchema().getLdapUidAttribute(oclass))
+                ? getEscapedGUID(uid.getUidValue())
+                : uid.getUidValue());
+    }
 
-        final ConnectorObject obj = LdapSearches.findObject(
-                connection, oclass,
-                LdapFilter.forNativeFilter(filter),
-                UACCONTROL_ATTR,
-                SDDL_ATTR,
-                OBJECTSID,
-                PRIMARYGROUPID);
+    public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
+        OperationOptionsBuilder builder = new OperationOptionsBuilder();
+        builder.setAttributesToGet(Arrays.asList(UACCONTROL_ATTR, SDDL_ATTR, OBJECTSID, PRIMARYGROUPID));
+
+        LdapFilter filter = LdapFilter.forNativeFilter(getEntryToBeUpdatedQuery(uid, oclass));
+
+        LOG.ok("Searching for object of class {0} with filter {1}", oclass.getObjectClassValue(), filter);
+
+        final ConnectorObject obj = new LdapSearch(connection, oclass, filter, null, builder.build()) {
+
+            @Override
+            protected ConnectorObject createConnectorObject(final String baseDN,
+                    final SearchResult result,
+                    final Set<String> attrsToGet,
+                    final boolean emptyAttrWhenNotFound) {
+
+                try {
+                    // cannot use default createConnectorObject, since payload may contain Active Directory binary 
+                    // and/or special attributes
+                    return createMinimalConnectorObject(result.getNameInNamespace(),
+                            result.getAttributes(),
+                            attrsToGet,
+                            oclass);
+                } catch (NamingException e) {
+                    throw new ConnectorException("Error while creating connector object", e);
+                }
+            }
+        }.getSingleResult();
 
         if (obj == null) {
             throw new ConnectorException("Entry not found");
@@ -537,7 +571,7 @@ public class ADUtilities {
         return obj;
     }
 
-    public Attributes getAttributes(final String entryDN, final String... attributes) {
+    private Attributes getAttributes(final String entryDN, final String... attributes) {
         try {
             return connection.getInitialContext().getAttributes(entryDN, attributes);
         } catch (NamingException e) {
@@ -569,8 +603,7 @@ public class ADUtilities {
         return userCannotChangePassword((byte[]) ntSecurityDescriptor.getValue().get(0), cannot);
     }
 
-    public javax.naming.directory.Attribute userCannotChangePassword(final byte[] obj, final Boolean cannot) {
-
+    private static javax.naming.directory.Attribute userCannotChangePassword(final byte[] obj, final Boolean cannot) {
         if (obj == null) {
             return null;
         }
@@ -579,7 +612,6 @@ public class ADUtilities {
     }
 
     public Set<SearchResult> basicLdapSearch(final String filter, final String... baseContextDNs) {
-
         final LdapContext ctx = connection.getInitialContext();
 
         // -----------------------------------
@@ -590,10 +622,9 @@ public class ADUtilities {
         searchCtls.setReturningAttributes(new String[0]);
         // -----------------------------------
 
-        final Set<SearchResult> result = new HashSet<SearchResult>();
+        final Set<SearchResult> result = new HashSet<>();
 
         for (String baseContextDn : baseContextDNs) {
-
             if (LOG.isOk()) {
                 LOG.ok("Searching from " + baseContextDn);
             }
@@ -618,10 +649,9 @@ public class ADUtilities {
     }
 
     public Set<String> getGroups(final String entryDN, final String... baseContexts) {
-        final String member = ((ADConfiguration) connection.getConfiguration()).
-                getGroupMemberAttribute();
+        final String member = connection.getConfiguration().getGroupMemberAttribute();
 
-        final Set<String> ldapGroups = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> ldapGroups = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (SearchResult res : basicLdapSearch(filterInOr(member, entryDN), baseContexts)) {
             ldapGroups.add(res.getNameInNamespace());
         }
@@ -629,22 +659,77 @@ public class ADUtilities {
         return ldapGroups;
     }
 
-    private String filterInOr(final String attr, final String... values) {
+    private static String getEscapedGUID(final String unescapedGUID) {
+        return Hex.getEscaped(GUID.getGuidAsByteArray(unescapedGUID));
+    }
+
+    private Attribute manageUACAttribute(final Attributes profile,
+            final ObjectClass oclass,
+            final LdapEntry entry,
+            final ConnectorObjectBuilder builder,
+            final String attributeName) {
+
+        Attribute attribute = null;
+        try {
+            final String status = profile.get(UACCONTROL_ATTR) == null
+                    || profile.get(UACCONTROL_ATTR).get() == null
+                    ? null : profile.get(UACCONTROL_ATTR).get().toString();
+
+            if (LOG.isOk()) {
+                LOG.ok("User Account Control: {0}", status);
+            }
+
+            // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
+            builder.addAttribute(
+                    status == null || Integer.parseInt(
+                            profile.get(UACCONTROL_ATTR).get().toString())
+                    % 16 != UF_ACCOUNTDISABLE
+                            ? AttributeBuilder.buildEnabled(true)
+                            : AttributeBuilder.buildEnabled(false));
+
+            attribute = connection.getSchema().createAttribute(oclass, attributeName, entry, false);
+        } catch (NamingException e) {
+            LOG.error(e, "While fetching " + UACCONTROL_ATTR);
+        }
+        return attribute;
+    }
+
+    private static String filterInOr(final String attr, final String... values) {
         final StringBuilder builder = new StringBuilder();
         boolean multi = values != null && values.length > 1;
         if (multi) {
             builder.append("(|");
         }
-        for (String memberValue : values) {
-            builder.append('(');
-            builder.append(attr);
-            builder.append('=');
-            escapeAttrValue(memberValue, builder);
-            builder.append(')');
+
+        if (values != null) {
+            for (String memberValue : values) {
+                builder.append('(');
+                builder.append(attr);
+                builder.append('=');
+                escapeAttrValue(memberValue, builder);
+                builder.append(')');
+            }
         }
+
         if (multi) {
             builder.append(")");
         }
+
         return builder.toString();
+    }
+
+    public static String getMembershipSearchFilter(final ADConfiguration conf) {
+        final StringBuilder ufilter = new StringBuilder();
+        final String[] memberships = conf.getMemberships();
+        if (memberships != null && memberships.length > 0) {
+            ufilter.append(conf.isMembershipsInOr() ? "(|" : "(&");
+
+            for (String group : memberships) {
+                ufilter.append("(").append(ADConnector.MEMBEROF).append("=").append(group).append(")");
+            }
+
+            ufilter.append(")");
+        }
+        return ufilter.toString();
     }
 }

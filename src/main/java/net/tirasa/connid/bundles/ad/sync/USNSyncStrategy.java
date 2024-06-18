@@ -60,7 +60,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
 
     private static final Log LOG = Log.getLog(USNSyncStrategy.class);
 
-    private static String USN = "uSNChanged";
+    private static final String USN = "uSNChanged";
 
     private String deleteTokenValue;
 
@@ -132,9 +132,13 @@ public class USNSyncStrategy extends ADSyncStrategy {
         // get lastest sync token before start pulling objects
         latestSyncToken = token;
 
-        if ((oclass.is(ObjectClass.ACCOUNT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
-                || (oclass.is(ObjectClass.GROUP_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())
-                || (oclass.is(LdapSchema.ANY_OBJECT_NAME) && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedAnyObject())) {
+        if ((oclass.is(ObjectClass.ACCOUNT_NAME)
+                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedUser())
+                || (oclass.is(ObjectClass.GROUP_NAME)
+                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedGroup())
+                || (oclass.is(LdapSchema.ANY_OBJECT_NAME)
+                && ((ADConfiguration) conn.getConfiguration()).isRetrieveDeletedAnyObject())) {
+
             syncDeletedObjects(token, handler, options, oclass);
         }
 
@@ -299,7 +303,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
         // -----------------------------------
         String filter = oclass.is(ObjectClass.ACCOUNT_NAME)
                 ? // get user filter
-                createDirSyncUFilter((ADConfiguration) conn.getConfiguration(), utils)
+                createDirSyncUFilter((ADConfiguration) conn.getConfiguration())
                 : oclass.is(ObjectClass.GROUP_NAME) // get group filter
                 ? createDirSyncGFilter()
                 : DirSyncUtils.createDirSyncAOFilter((ADConfiguration) conn.getConfiguration(), false);
@@ -502,10 +506,10 @@ public class USNSyncStrategy extends ADSyncStrategy {
         }
     }
 
-    private static String createDirSyncUFilter(final ADConfiguration conf, final ADUtilities utils) {
+    private static String createDirSyncUFilter(final ADConfiguration conf) {
         StringBuilder filter = new StringBuilder();
 
-        filter.append("(&(objectClass=user)").append(utils.getMembershipSearchFilter(conf)).
+        filter.append("(&(objectClass=user)").append(ADUtilities.getMembershipSearchFilter(conf)).
                 append("(! (isDeleted=TRUE))").append(")");
 
         return filter.toString();

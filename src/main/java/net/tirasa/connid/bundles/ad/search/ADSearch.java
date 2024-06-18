@@ -149,7 +149,7 @@ public class ADSearch extends LdapSearch {
         final SearchControls controls = LdapInternalSearch.createDefaultSearchControls();
         final Set<String> ldapAttrsToGet = utils.getLdapAttributesToGet(attrsToGet, oclass);
 
-        controls.setReturningAttributes(ldapAttrsToGet.toArray(new String[ldapAttrsToGet.size()]));
+        controls.setReturningAttributes(ldapAttrsToGet.toArray(new String[0]));
         controls.setSearchScope(searchScope);
 
         final String optionsFilter = LdapConstants.getSearchFilter(options);
@@ -177,7 +177,7 @@ public class ADSearch extends LdapSearch {
         }
 
         final String membershipSearchFilter = oclass.equals(ObjectClass.ACCOUNT)
-                ? utils.getMembershipSearchFilter(((ADConfiguration) conn.getConfiguration()))
+                ? ADUtilities.getMembershipSearchFilter(((ADConfiguration) conn.getConfiguration()))
                 : null;
 
         if (LOG.isOk()) {

@@ -484,7 +484,7 @@ public class UserCrudTestITCase extends UserTest {
         } catch (ConnectorException ignore) {
             // ignore
         }
-        
+
         // updateDelta with values to add and to remove
         AttributeDelta delta = AttributeDeltaBuilder.build(
                 "givenName", "gnupdate");
@@ -558,7 +558,8 @@ public class UserCrudTestITCase extends UserTest {
         assertTrue(numberAttr.contains(NUMBER3));
 
         assertDoesNotThrow(() -> connector.authenticate(ObjectClass.ACCOUNT, ids.getValue(), newPwd, null));
-        connector.removeAttributeValues(ObjectClass.ACCOUNT, new Uid(ids.getValue()), Collections.singleton(telephoneAttr), null);
+        connector.removeAttributeValues(ObjectClass.ACCOUNT,
+                new Uid(ids.getValue()), Collections.singleton(telephoneAttr), null);
     }
 
     @Test
@@ -1216,7 +1217,7 @@ public class UserCrudTestITCase extends UserTest {
 
         // create options for returning attributes
         OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet("sAMAccountName", ADConnector.OBJECTGUID);
+        oob.setAttributesToGet("sAMAccountName", ADConnector.OBJECTGUID, "givenName", "sn");
 
         // -----------------------------------------------------
         // Create new user
@@ -1240,7 +1241,7 @@ public class UserCrudTestITCase extends UserTest {
         attributes.add(AttributeBuilder.build("givenName", Collections.singletonList("gntest")));
         attributes.add(AttributeBuilder.build("displayName", Collections.singletonList("dntest")));
 
-        final Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, null);
+        Uid uid = newConnector.create(ObjectClass.ACCOUNT, attributes, null);
         assertNotNull(uid);
         // -----------------------------------------------------
 
@@ -1268,6 +1269,31 @@ public class UserCrudTestITCase extends UserTest {
             assertEquals(objectguid.getValue(), results.get(0).getUid().getValue());
 
             // -----------------------------------------------------
+            // -----------------------------------------------------
+            // Update user
+            // -----------------------------------------------------
+            List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
+                AttributeBuilder.build("givenName", "gnupdate"),
+                AttributeBuilder.build("sn", "snupdate"),
+                AttributeBuilder.buildPassword(
+                new GuardedString("Password321".toCharArray())) });
+
+            uid = newConnector.update(
+                    ObjectClass.ACCOUNT,
+                    uid,
+                    new HashSet<>(attrToReplace),
+                    null);
+
+            assertNotNull(uid);
+
+            final ConnectorObject object = newConnector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+
+            assertNotNull(object);
+            assertNotNull(object.getAttributes());
+            assertNotNull(object.getAttributeByName("givenName"));
+            assertEquals(Collections.singletonList("gnupdate"), object.getAttributeByName("givenName").getValue());
+            assertNotNull(object.getAttributeByName("sn"));
+            assertEquals(Collections.singletonList("snupdate"), object.getAttributeByName("sn").getValue());
         } finally {
             newConnector.delete(ObjectClass.ACCOUNT, uid, null);
         }

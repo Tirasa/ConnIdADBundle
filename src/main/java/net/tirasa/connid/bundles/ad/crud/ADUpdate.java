@@ -23,6 +23,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static net.tirasa.connid.bundles.ad.util.ADUtilities.getPrimaryGroupSID;
 import static org.identityconnectors.common.CollectionUtil.isEmpty;
 import static org.identityconnectors.common.CollectionUtil.newSet;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
@@ -166,7 +168,18 @@ public class ADUpdate extends LdapUpdate {
         modifyMemberships(entryDN, attrsToBeUpdated);
         modifyPrimaryGroupID(entryDN, attrsToBeUpdated);
 
-        return conn.getSchema().createUid(oclass, entryDN);
+        if (OBJECTGUID.equals(conn.getSchema().getLdapUidAttribute(oclass))) {
+            final Attributes profile;
+            try {
+                profile = conn.getInitialContext().getAttributes(entryDN, new String[] { OBJECTGUID });
+                return new Uid(GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } catch (NamingException e) {
+                LOG.error("Error managing objectGUID after update", e);
+                throw new ConnectorException("Error managing objectGUID after update", e);
+            }
+        } else {
+            return conn.getSchema().createUid(oclass, entryDN);
+        }
     }
 
     @Override
@@ -231,8 +244,8 @@ public class ADUpdate extends LdapUpdate {
             } else if (attr.is(ADConfiguration.UCCP_FLAG)) {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty()) {
-                    javax.naming.directory.Attribute ntSecurityDescriptor
-                            = utils.userCannotChangePassword(obj, (Boolean) value.get(0));
+                    javax.naming.directory.Attribute ntSecurityDescriptor =
+                            utils.userCannotChangePassword(obj, (Boolean) value.get(0));
                     if (ntSecurityDescriptor != null) {
                         ldapAttrs.put(ntSecurityDescriptor);
                     }

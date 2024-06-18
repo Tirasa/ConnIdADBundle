@@ -41,7 +41,7 @@ public class DirSyncUtils {
 
         mfilter.append("(objectClass=group)");
 
-        ufilter.append(utils.getMembershipSearchFilter(conf));
+        ufilter.append(ADUtilities.getMembershipSearchFilter(conf));
 
         ufilter.insert(0, "(&(objectClass=user)").append(")");
 
@@ -52,7 +52,6 @@ public class DirSyncUtils {
     }
 
     public static String createDirSyncGFilter(final ADConfiguration conf) {
-
         final StringBuilder filter = new StringBuilder();
 
         if (conf.isRetrieveDeletedGroup()) {
@@ -73,10 +72,9 @@ public class DirSyncUtils {
         final StringBuilder oclassFilter = new StringBuilder();
         String[] anyObjectClasses = conf.getAnyObjectClasses();
         if (anyObjectClasses.length > 1) {
-            if (conf.isFilterWithOrInsteadOfAnd()){
+            if (conf.isFilterWithOrInsteadOfAnd()) {
                 oclassFilter.append("(|");
-            }
-            else {
+            } else {
                 oclassFilter.append("(&");
             }
         }
