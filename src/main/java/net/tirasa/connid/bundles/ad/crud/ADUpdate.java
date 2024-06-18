@@ -39,11 +39,13 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
+import net.tirasa.connid.bundles.ad.search.ADSearch;
 import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import net.tirasa.connid.bundles.ad.util.ADUtilities;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper.GroupMembership;
@@ -166,7 +168,18 @@ public class ADUpdate extends LdapUpdate {
         modifyMemberships(entryDN, attrsToBeUpdated);
         modifyPrimaryGroupID(entryDN, attrsToBeUpdated);
 
-        return conn.getSchema().createUid(oclass, entryDN);
+        if (OBJECTGUID.equals(conn.getSchema().getLdapUidAttribute(oclass))) {
+            final Attributes profile;
+            try {
+                profile = conn.getInitialContext().getAttributes(entryDN, new String[] { OBJECTGUID });
+                return new Uid(GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } catch (NamingException e) {
+                LOG.error("Error managing objectGUID after update", e);
+                throw new ConnectorException("Error managing objectGUID after update", e);
+            }
+        } else {
+            return conn.getSchema().createUid(oclass, entryDN);
+        }
     }
 
     @Override
