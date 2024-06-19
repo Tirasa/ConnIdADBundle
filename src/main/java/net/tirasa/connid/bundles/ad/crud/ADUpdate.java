@@ -42,6 +42,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.utils.GUID;
 import net.tirasa.adsddl.ntsd.utils.Hex;
 import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
@@ -177,7 +178,18 @@ public class ADUpdate extends LdapModifyOperation {
         modifyMemberships(entryDN, attrsToBeUpdated);
         modifyPrimaryGroupID(entryDN, attrsToBeUpdated);
 
-        return conn.getSchemaMapping().createUid(oclass, entryDN);
+        if (OBJECTGUID.equals(conn.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            final Attributes profile;
+            try {
+                profile = conn.getInitialContext().getAttributes(entryDN, new String[] { OBJECTGUID });
+                return new Uid(GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } catch (NamingException e) {
+                LOG.error("Error managing objectGUID after update", e);
+                throw new ConnectorException("Error managing objectGUID after update", e);
+            }
+        } else {
+            return conn.getSchemaMapping().createUid(oclass, entryDN);
+        }
     }
 
     public Uid addAttributeValues(final Set<Attribute> attrs) {
