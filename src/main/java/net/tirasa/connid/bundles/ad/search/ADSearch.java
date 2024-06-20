@@ -19,6 +19,7 @@ import com.sun.jndi.ldap.ctl.VirtualListViewControl;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
@@ -41,6 +42,7 @@ import net.tirasa.connid.bundles.ldap.search.LdapSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchStrategy;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
@@ -81,6 +83,19 @@ public class ADSearch extends LdapSearch {
                 : ((ADConfiguration) conn.getConfiguration()).getBaseContexts());
     }
 
+    public final void execute(final BiFunction<SearchResult, Set<String>, ConnectorObject> connObjSupplier) {
+        final String[] attrsToGetOption = options.getAttributesToGet();
+        final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
+
+        getInternalSearch(attrsToGet).execute(new LdapSearchResultsHandler() {
+
+            @Override
+            public boolean handle(final String baseDN, final SearchResult result) {
+                return handler.handle(connObjSupplier.apply(result, attrsToGet));
+            }
+        });
+    }
+    
     @Override
     public final void execute() {
         final String[] attrsToGetOption = options.getAttributesToGet();

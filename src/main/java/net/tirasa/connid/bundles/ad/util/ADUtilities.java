@@ -56,6 +56,7 @@ import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
+import net.tirasa.connid.bundles.ad.search.ADSearch;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
@@ -64,7 +65,6 @@ import net.tirasa.connid.bundles.ldap.commons.LdapUtil;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
 import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import net.tirasa.connid.bundles.ldap.search.LdapInternalSearch;
-import net.tirasa.connid.bundles.ldap.search.LdapSearch;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.StringUtil;
@@ -528,41 +528,30 @@ public class ADUtilities {
         return obj;
     }
 
-    private String getEntryToBeUpdatedQuery(final Uid uid, final ObjectClass oclass) {
-        return connection.getSchema().getLdapUidAttribute(oclass) + "="
-                + (OBJECTGUID.equals(connection.getSchema().getLdapUidAttribute(oclass))
-                ? getEscapedGUID(uid.getUidValue())
-                : uid.getUidValue());
-    }
-
     public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
         OperationOptionsBuilder builder = new OperationOptionsBuilder();
         builder.setAttributesToGet(Arrays.asList(UACCONTROL_ATTR, SDDL_ATTR, OBJECTSID, PRIMARYGROUPID));
 
-        LdapFilter filter = LdapFilter.forNativeFilter(getEntryToBeUpdatedQuery(uid, oclass));
+        final String filter = connection.getSchema().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
 
         LOG.ok("Searching for object of class {0} with filter {1}", oclass.getObjectClassValue(), filter);
 
-        final ConnectorObject obj = new LdapSearch(connection, oclass, filter, null, builder.build()) {
-
-            @Override
-            protected ConnectorObject createConnectorObject(final String baseDN,
-                    final SearchResult result,
-                    final Set<String> attrsToGet,
-                    final boolean emptyAttrWhenNotFound) {
-
-                try {
-                    // cannot use default createConnectorObject, since payload may contain Active Directory binary 
-                    // and/or special attributes
-                    return createMinimalConnectorObject(result.getNameInNamespace(),
-                            result.getAttributes(),
-                            attrsToGet,
-                            oclass);
-                } catch (NamingException e) {
-                    throw new ConnectorException("Error while creating connector object", e);
-                }
+        final ConnectorObject[] results = new ConnectorObject[] { null };
+        new ADSearch(connection, oclass, LdapFilter.forNativeFilter(filter), connectorObject -> {
+            results[0] = connectorObject;
+            return false;
+        }, builder.build()).execute((result, attrsToGet) -> {
+            try {
+                return createMinimalConnectorObject(result.getNameInNamespace(),
+                        result.getAttributes(),
+                        attrsToGet,
+                        oclass);
+            } catch (NamingException e) {
+                throw new ConnectorException("Error while creating connector object", e);
             }
-        }.getSingleResult();
+        });
+
+        ConnectorObject obj = results[0];
 
         if (obj == null) {
             throw new ConnectorException("Entry not found");
@@ -657,10 +646,6 @@ public class ADUtilities {
         }
 
         return ldapGroups;
-    }
-
-    private static String getEscapedGUID(final String unescapedGUID) {
-        return Hex.getEscaped(GUID.getGuidAsByteArray(unescapedGUID));
     }
 
     private Attribute manageUACAttribute(final Attributes profile,
