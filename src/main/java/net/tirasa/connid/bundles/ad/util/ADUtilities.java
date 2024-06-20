@@ -547,7 +547,7 @@ public class ADUtilities {
                         attrsToGet,
                         oclass);
             } catch (NamingException e) {
-                throw new ConnectorException(e);
+                throw new ConnectorException("Error while creating connector object", e);
             }
         });
 
