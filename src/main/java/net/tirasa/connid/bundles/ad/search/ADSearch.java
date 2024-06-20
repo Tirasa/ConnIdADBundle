@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
@@ -44,6 +45,8 @@ import net.tirasa.connid.bundles.ldap.search.LdapSearchResultsHandler;
 import net.tirasa.connid.bundles.ldap.search.LdapSearchStrategy;
 import net.tirasa.connid.bundles.ldap.search.LdapSearches;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.QualifiedUid;
@@ -102,21 +105,28 @@ public class ADSearch {
     }
 
     public final void executeADQuery(final ResultsHandler handler) {
+        executeADQuery(handler, (result, attrsToGet) -> {
+            try {
+                return utils.createConnectorObject(result.getNameInNamespace(),
+                        result,
+                        attrsToGet,
+                        oclass);
+            } catch (NamingException e) {
+                throw new ConnectorException(e);
+            }
+        });
+    }
+
+    public final void executeADQuery(final ResultsHandler handler,
+            final BiFunction<SearchResult, Set<String>, ConnectorObject> connObjSupplier) {
         final String[] attrsToGetOption = options.getAttributesToGet();
         final Set<String> attrsToGet = utils.getAttributesToGet(attrsToGetOption, oclass);
 
-        final LdapInternalSearch search = getInternalSearch(attrsToGet);
-
-        search.execute(new LdapSearchResultsHandler() {
+        getInternalSearch(attrsToGet).execute(new LdapSearchResultsHandler() {
 
             @Override
-            public boolean handle(final String baseDN, final SearchResult result)
-                    throws NamingException {
-                return handler.handle(utils.createConnectorObject(
-                        result.getNameInNamespace(),
-                        result,
-                        attrsToGet,
-                        oclass));
+            public boolean handle(final String baseDN, final SearchResult result) {
+                return handler.handle(connObjSupplier.apply(result, attrsToGet));
             }
         });
     }

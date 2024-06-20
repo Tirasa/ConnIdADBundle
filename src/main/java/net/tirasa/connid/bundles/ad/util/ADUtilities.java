@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.naming.InvalidNameException;
@@ -54,6 +55,7 @@ import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 import net.tirasa.connid.bundles.ad.ADConfiguration;
 import net.tirasa.connid.bundles.ad.ADConnection;
 import net.tirasa.connid.bundles.ad.ADConnector;
+import net.tirasa.connid.bundles.ad.search.ADSearch;
 import net.tirasa.connid.bundles.ldap.LdapConnection;
 import net.tirasa.connid.bundles.ldap.commons.GroupHelper;
 import net.tirasa.connid.bundles.ldap.commons.LdapConstants;
@@ -76,7 +78,9 @@ import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.ObjectClassInfo;
+import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.OperationalAttributes;
+import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Uid;
 
 public class ADUtilities {
@@ -270,6 +274,44 @@ public class ADUtilities {
         return createConnectorObject(baseDN, result.getAttributes(), attrsToGet, oclass);
     }
 
+    /**
+     * This utility method is meant to build a minimal connector object without any other parsed attribute but
+     * userPrincipalName and objectGUID.
+     * This implementation is useful when searching for entries to be updated in getEntryToBeUpdated that require
+     * original values in the {@link org.identityconnectors.framework.common.objects.ConnectorObject}
+     */
+    private ConnectorObject createMinimalConnectorObject(
+            final String baseDN,
+            final Attributes profile,
+            final Collection<String> attrsToGet,
+            final ObjectClass oclass)
+            throws NamingException {
+
+        final LdapEntry entry = LdapEntry.create(baseDN, profile);
+
+        final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
+
+        initConnectorObjectBuilder(entry, oclass, builder);
+
+        for (String attributeName : attrsToGet) {
+            Attribute attribute = null;
+
+            if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                attribute = manageUACAttribute(profile, oclass, entry, builder, attributeName);
+            } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
+                attribute = AttributeBuilder.build(
+                        attributeName, GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
+            } else if (profile.get(attributeName) != null) {
+                attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
+            }
+
+            // Avoid attribute adding in case of attribute name not found
+            Optional.ofNullable(attribute).ifPresent(builder::addAttribute);
+        }
+
+        return builder.build();
+    }
+    
     public ConnectorObject createConnectorObject(
             final String baseDN,
             final Attributes profile,
@@ -280,15 +322,8 @@ public class ADUtilities {
         final LdapEntry entry = LdapEntry.create(baseDN, profile);
 
         final ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        builder.setObjectClass(oclass);
-
-        if (OBJECTGUID.equals(connection.getSchemaMapping().getLdapUidAttribute(oclass))) {
-            builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
-        } else {
-            builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
-        }
-
-        builder.setName(connection.getSchemaMapping().createName(oclass, entry));
+        
+        initConnectorObjectBuilder(entry, oclass, builder);
 
         String pgDN = null;
 
@@ -332,28 +367,7 @@ public class ADUtilities {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }
             } else if (UACCONTROL_ATTR.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                try {
-
-                    final String status = profile.get(UACCONTROL_ATTR) == null
-                            || profile.get(UACCONTROL_ATTR).get() == null
-                            ? null : profile.get(UACCONTROL_ATTR).get().toString();
-
-                    if (LOG.isOk()) {
-                        LOG.ok("User Account Control: {0}", status);
-                    }
-
-                    // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
-                    builder.addAttribute(
-                            status == null || Integer.parseInt(
-                                    profile.get(UACCONTROL_ATTR).get().toString())
-                            % 16 != UF_ACCOUNTDISABLE
-                                    ? AttributeBuilder.buildEnabled(true)
-                                    : AttributeBuilder.buildEnabled(false));
-
-                    attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
-                } catch (NamingException e) {
-                    LOG.error(e, "While fetching " + UACCONTROL_ATTR);
-                }
+                attribute = manageUACAttribute(profile, oclass, entry, builder, attributeName);
             } else if (OBJECTGUID.equalsIgnoreCase(attributeName)) {
                 attribute = AttributeBuilder.build(
                         attributeName, GUID.getGuidAsString((byte[]) profile.get(OBJECTGUID).get()));
@@ -516,15 +530,40 @@ public class ADUtilities {
     }
 
     public ConnectorObject getEntryToBeUpdated(final Uid uid, final ObjectClass oclass) {
+        OperationOptionsBuilder builder = new OperationOptionsBuilder();
+        builder.setAttributesToGet(Arrays.asList(UACCONTROL_ATTR, SDDL_ATTR, OBJECTSID, PRIMARYGROUPID));
+
         final String filter = connection.getSchemaMapping().getLdapUidAttribute(oclass) + "=" + uid.getUidValue();
 
-        final ConnectorObject obj = LdapSearches.findObject(
-                connection, oclass,
+        LOG.ok("Searching for object of class {0} with filter {1}", oclass.getObjectClassValue(), filter);
+
+        final ConnectorObject[] results = new ConnectorObject[] { null };
+        ResultsHandler handler = new ResultsHandler() {
+
+            @Override
+            public boolean handle(final ConnectorObject connectorObject) {
+                results[0] = connectorObject;
+                return false;
+            }
+        };
+        new ADSearch(connection,
+                oclass,
                 LdapFilter.forNativeFilter(filter),
-                UACCONTROL_ATTR,
-                SDDL_ATTR,
-                OBJECTSID,
-                PRIMARYGROUPID);
+                handler,
+                builder.build()).executeADQuery(
+                handler,
+                (result, attrsToGet) -> {
+                    try {
+                        return createMinimalConnectorObject(result.getNameInNamespace(),
+                                result.getAttributes(),
+                                attrsToGet,
+                                oclass);
+                    } catch (NamingException e) {
+                        throw new ConnectorException(e);
+                    }
+                });
+
+        ConnectorObject obj = results[0];
 
         if (obj == null) {
             throw new ConnectorException("Entry not found");
@@ -642,5 +681,52 @@ public class ADUtilities {
             builder.append(")");
         }
         return builder.toString();
+    }
+
+    private void initConnectorObjectBuilder(
+            final LdapEntry entry,
+            final ObjectClass oclass,
+            final ConnectorObjectBuilder builder) throws NamingException {
+
+        builder.setObjectClass(oclass);
+
+        if (OBJECTGUID.equals(connection.getSchemaMapping().getLdapUidAttribute(oclass))) {
+            builder.setUid(GUID.getGuidAsString((byte[]) entry.getAttributes().get(OBJECTGUID).get()));
+        } else {
+            builder.setUid(connection.getSchemaMapping().createUid(oclass, entry));
+        }
+
+        builder.setName(connection.getSchemaMapping().createName(oclass, entry));
+    }
+
+    private Attribute manageUACAttribute(final Attributes profile,
+            final ObjectClass oclass,
+            final LdapEntry entry,
+            final ConnectorObjectBuilder builder,
+            final String attributeName) {
+
+        Attribute attribute = null;
+        try {
+            final String status = profile.get(UACCONTROL_ATTR) == null
+                                          || profile.get(UACCONTROL_ATTR).get() == null
+                                  ? null : profile.get(UACCONTROL_ATTR).get().toString();
+
+            if (LOG.isOk()) {
+                LOG.ok("User Account Control: {0}", status);
+            }
+
+            // enabled if UF_ACCOUNTDISABLE is not included (0x00002)
+            builder.addAttribute(
+                    status == null || Integer.parseInt(
+                            profile.get(UACCONTROL_ATTR).get().toString())
+                            % 16 != UF_ACCOUNTDISABLE
+                    ? AttributeBuilder.buildEnabled(true)
+                    : AttributeBuilder.buildEnabled(false));
+
+            attribute = connection.getSchemaMapping().createAttribute(oclass, attributeName, entry, false);
+        } catch (NamingException e) {
+            LOG.error(e, "While fetching " + UACCONTROL_ATTR);
+        }
+        return attribute;
     }
 }
