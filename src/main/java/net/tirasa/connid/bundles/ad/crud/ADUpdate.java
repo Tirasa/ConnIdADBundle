@@ -236,6 +236,7 @@ public class ADUpdate extends LdapModifyOperation {
         int newUACValue = -1;
 
         Boolean pne = null;
+        Boolean pnr = null;
         Boolean status = null;
 
         for (Attribute attr : attrs) {
@@ -262,6 +263,11 @@ public class ADUpdate extends LdapModifyOperation {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty()) {
                     pne = (Boolean) value.get(0);
+                }
+            } else if (attr.is(ADConfiguration.PNR_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    pnr = (Boolean) value.get(0);
                 }
             } else if (attr.is(ADConfiguration.PROMPT_USER_FLAG)) {
                 final List<Object> value = attr.getValue();
@@ -315,6 +321,16 @@ public class ADUpdate extends LdapModifyOperation {
                 }
             }
 
+            if (pnr != null) {
+                if ((currentUACValue & ADConnector.UF_PASSWD_NOTREQD)
+                        == ADConnector.UF_PASSWD_NOTREQD && !pnr) {
+                    newUACValue = (newUACValue == -1 ? currentUACValue : newUACValue) - ADConnector.UF_PASSWD_NOTREQD;
+                } else if ((currentUACValue & ADConnector.UF_PASSWD_NOTREQD)
+                        != ADConnector.UF_PASSWD_NOTREQD && pnr) {
+                    newUACValue = (newUACValue == -1 ? currentUACValue : newUACValue) + ADConnector.UF_PASSWD_NOTREQD;
+                }
+            }
+            
             if (status != null) {
                 if ((currentUACValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
                     newUACValue = currentUACValue - UF_ACCOUNTDISABLE;

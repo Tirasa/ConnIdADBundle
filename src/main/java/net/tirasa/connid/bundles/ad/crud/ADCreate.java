@@ -148,6 +148,7 @@ public class ADCreate extends LdapModifyOperation {
 
         Boolean uccp = null;
         Boolean pne = null;
+        Boolean pnr = null;
         Boolean status = null;
 
         for (Attribute attr : attrs) {
@@ -163,6 +164,11 @@ public class ADCreate extends LdapModifyOperation {
                 final List<Object> value = attr.getValue();
                 if (value != null && !value.isEmpty()) {
                     pne = (Boolean) value.get(0);
+                }
+            } else if (attr.is(ADConfiguration.PNR_FLAG)) {
+                final List<Object> value = attr.getValue();
+                if (value != null && !value.isEmpty()) {
+                    pnr = (Boolean) value.get(0);
                 }
             } else if (attr.is(ADConfiguration.PRIMARY_GROUP_DN_NAME)) {
                 final List<Object> value = attr.getValue();
@@ -217,6 +223,16 @@ public class ADCreate extends LdapModifyOperation {
                     uacValue = uacValue == -1
                             ? ADConnector.UF_DONT_EXPIRE_PASSWD
                             : uacValue + ADConnector.UF_DONT_EXPIRE_PASSWD;
+                }
+            }
+
+            if (pnr != null) {
+                if ((uacValue & ADConnector.UF_PASSWD_NOTREQD) == ADConnector.UF_PASSWD_NOTREQD && !pnr) {
+                    uacValue -= ADConnector.UF_PASSWD_NOTREQD;
+                } else if ((uacValue & ADConnector.UF_PASSWD_NOTREQD) != ADConnector.UF_PASSWD_NOTREQD && pnr) {
+                    uacValue = uacValue == -1
+                            ? ADConnector.UF_PASSWD_NOTREQD
+                            : uacValue + ADConnector.UF_PASSWD_NOTREQD;
                 }
             }
 

@@ -153,6 +153,8 @@ public class UserCrudTestITCase extends UserTest {
         assertNull(connector.getObject(ObjectClass.ACCOUNT, new Uid(ids.getValue()), null));
 
         final Set<Attribute> attributes = util.getSimpleProfile(ids);
+        attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
+        attributes.add(AttributeBuilder.build(ADConfiguration.PNR_FLAG, true));
 
         final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
         assertNotNull(uid);
@@ -1656,40 +1658,155 @@ public class UserCrudTestITCase extends UserTest {
         assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
     }
 
+    @Test
     public void issueAD61() {
         assertNotNull(connector);
         assertNotNull(conf);
 
-        final Map.Entry<String, String> ids = util.getEntryIDs("pne");
-        final Set<Attribute> attributes = util.getSimpleProfile(ids, false);
-        attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD61NN");
+        Uid uid = new Uid(ids.getValue());
+        try {
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
 
-        final Uid uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+            final Set<Attribute> attributes = util.getSimpleProfile(ids);
+            attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
 
-        // Ask just for memberOf
-        final OperationOptionsBuilder oob = new OperationOptionsBuilder();
-        oob.setAttributesToGet(UACCONTROL_ATTR, ADConfiguration.PNE_FLAG);
+            uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
 
-        // retrieve created object
-        ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-        assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
-        int uac_before = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+            // Ask just for memberOf
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet(UACCONTROL_ATTR, ADConfiguration.PNE_FLAG);
 
-        // remove password never expire flag
-        List<Attribute> attrToReplace = Arrays.asList(new Attribute[] {
-            AttributeBuilder.build(ADConfiguration.PNE_FLAG, false) });
+            // retrieve created object
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            int uac_before = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
 
-        connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
+            // remove password never expire flag and add password not required one
+            List<Attribute> attrToReplace = Arrays.asList(
+                    new Attribute[] { AttributeBuilder.build(ADConfiguration.PNE_FLAG, false) });
 
-        object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
-        assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
-        int uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+            connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
 
-        assertNotEquals(uac_before, uac_after);
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            int uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
 
-        // remove user
-        connector.delete(ObjectClass.ACCOUNT, uid, null);
-        assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+            assertNotEquals(uac_before, uac_after);
+        } finally {
+            // remove user
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+        }
+    }
+
+    @Test
+    public void issueAD78() {
+        // test update of both PNR and PNE 
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD78UPD");
+        Uid uid = new Uid(ids.getValue());
+        try {
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+            final Set<Attribute> attributes = util.getSimpleProfile(ids);
+            attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
+            attributes.add(AttributeBuilder.build(ADConfiguration.PNR_FLAG, false));
+
+            uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+
+            // Ask just for uac, pne and pnr
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet(UACCONTROL_ATTR, ADConfiguration.PNE_FLAG, ADConfiguration.PNR_FLAG);
+
+            // retrieve created object
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNR_FLAG).getValue().get(0)));
+            int uac_before = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+            // remove password never expire flag and add password not required one
+            List<Attribute> attrToReplace = Arrays.asList(
+                    new Attribute[] { AttributeBuilder.build(ADConfiguration.PNE_FLAG, false),
+                            AttributeBuilder.build(ADConfiguration.PNR_FLAG, true) });
+
+            connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNR_FLAG).getValue().get(0)));
+            int uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+            assertNotEquals(uac_before, uac_after);
+
+            uac_before = uac_after;
+
+            // remove password not required
+            attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(ADConfiguration.PNR_FLAG, false) });
+
+            connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNR_FLAG).getValue().get(0)));
+            uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+            assertNotEquals(uac_before, uac_after);
+
+            uac_before = uac_after;
+
+            // add password never expires
+            attrToReplace = Arrays.asList(new Attribute[] { AttributeBuilder.build(ADConfiguration.PNE_FLAG, true) });
+
+            connector.update(ObjectClass.ACCOUNT, uid, new HashSet<>(attrToReplace), null);
+
+            object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            assertFalse(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNR_FLAG).getValue().get(0)));
+            uac_after = Integer.parseInt(object.getAttributeByName(UACCONTROL_ATTR).getValue().get(0).toString());
+
+            assertNotEquals(uac_before, uac_after);
+        } finally {
+            // remove user
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+        }
+    }
+
+    @Test
+    public void issueAD78_pne_pnr() {
+        // check whether both pne and pnr to true are supported
+        assertNotNull(connector);
+        assertNotNull(conf);
+
+        final Map.Entry<String, String> ids = util.getEntryIDs("AD78CR");
+        Uid uid = new Uid(ids.getValue());
+        try {
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+
+            final Set<Attribute> attributes = util.getSimpleProfile(ids);
+            attributes.add(AttributeBuilder.build(ADConfiguration.PNE_FLAG, true));
+            attributes.add(AttributeBuilder.build(ADConfiguration.PNR_FLAG, true));
+
+            uid = connector.create(ObjectClass.ACCOUNT, attributes, null);
+            assertNotNull(uid);
+            assertEquals(ids.getValue(), uid.getUidValue());
+
+            // Ask just for uac, pne and pnr
+            final OperationOptionsBuilder oob = new OperationOptionsBuilder();
+            oob.setAttributesToGet(UACCONTROL_ATTR, ADConfiguration.PNE_FLAG, ADConfiguration.PNR_FLAG);
+
+            // retrieve created object
+            ConnectorObject object = connector.getObject(ObjectClass.ACCOUNT, uid, oob.build());
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNE_FLAG).getValue().get(0)));
+            assertTrue(Boolean.class.cast(object.getAttributeByName(ADConfiguration.PNR_FLAG).getValue().get(0)));
+        } finally {
+            // remove user
+            connector.delete(ObjectClass.ACCOUNT, uid, null);
+            assertNull(connector.getObject(ObjectClass.ACCOUNT, uid, null));
+        }
     }
 
     @Test
