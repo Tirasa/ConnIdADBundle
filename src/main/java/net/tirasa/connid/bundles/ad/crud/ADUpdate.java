@@ -333,9 +333,9 @@ public class ADUpdate extends LdapModifyOperation {
             
             if (status != null) {
                 if ((currentUACValue & UF_ACCOUNTDISABLE) == UF_ACCOUNTDISABLE && status) {
-                    newUACValue = currentUACValue - UF_ACCOUNTDISABLE;
+                    newUACValue = (newUACValue == -1 ? currentUACValue : newUACValue) - UF_ACCOUNTDISABLE;
                 } else if ((currentUACValue & UF_ACCOUNTDISABLE) != UF_ACCOUNTDISABLE && !status) {
-                    newUACValue = currentUACValue + UF_ACCOUNTDISABLE;
+                    newUACValue = (newUACValue == -1 ? currentUACValue : newUACValue) + UF_ACCOUNTDISABLE;
                 }
             }
 
