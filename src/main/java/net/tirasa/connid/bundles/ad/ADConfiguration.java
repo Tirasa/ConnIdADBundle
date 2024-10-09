@@ -49,6 +49,8 @@ public final class ADConfiguration extends LdapConfiguration {
     public static final String UCCP_FLAG = "userCannotChangePassword";
 
     public static final String PNE_FLAG = "passwordNeverExpires";
+    
+    public static final String PNR_FLAG = "passwordNotRequired";
 
     public static final String CN_NAME = "CN";
 

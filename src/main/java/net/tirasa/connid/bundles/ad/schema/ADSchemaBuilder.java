@@ -149,6 +149,7 @@ class ADSchemaBuilder extends LdapSchemaBuilder {
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.LOCK_OUT_FLAG, Boolean.class));
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PROMPT_USER_FLAG, Boolean.class));
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PNE_FLAG, Boolean.class));
+        objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PNR_FLAG, Boolean.class));
         objClassBld.addAttributeInfo(AttributeInfoBuilder.build(ADConfiguration.PRIMARY_GROUP_DN_NAME, String.class));
 
         final ObjectClassInfo oci = objClassBld.build();
