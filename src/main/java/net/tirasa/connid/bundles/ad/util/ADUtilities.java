@@ -16,6 +16,7 @@
 package net.tirasa.connid.bundles.ad.util;
 
 import static net.tirasa.connid.bundles.ad.ADConfiguration.PNE_FLAG;
+import static net.tirasa.connid.bundles.ad.ADConfiguration.PNR_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConfiguration.PRIMARY_GROUP_DN_NAME;
 import static net.tirasa.connid.bundles.ad.ADConfiguration.UCCP_FLAG;
 import static net.tirasa.connid.bundles.ad.ADConnector.OBJECTGUID;
@@ -26,6 +27,7 @@ import static net.tirasa.connid.bundles.ad.ADConnector.UACCONTROL_ATTR;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_ACCOUNTDISABLE;
 import static net.tirasa.connid.bundles.ad.ADConnector.ADDS2012_ATTRIBUTES_TO_BE_REMOVED;
 import static net.tirasa.connid.bundles.ad.ADConnector.UF_DONT_EXPIRE_PASSWD;
+import static net.tirasa.connid.bundles.ad.ADConnector.UF_PASSWD_NOTREQD;
 import static net.tirasa.connid.bundles.ldap.commons.LdapUtil.escapeAttrValue;
 import static org.identityconnectors.common.CollectionUtil.newCaseInsensitiveSet;
 import static org.identityconnectors.common.CollectionUtil.newSet;
@@ -338,6 +340,23 @@ public class ADUtilities {
                     attribute = uac == null || (Integer.parseInt(uac) & UF_DONT_EXPIRE_PASSWD) != UF_DONT_EXPIRE_PASSWD
                             ? AttributeBuilder.build(PNE_FLAG, false)
                             : AttributeBuilder.build(PNE_FLAG, true);
+                } catch (NamingException e) {
+                    LOG.error(e, "While fetching " + UACCONTROL_ATTR);
+                }
+            } else if (PNR_FLAG.equalsIgnoreCase(attributeName) && oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                try {
+
+                    final String uac =
+                            profile.get(UACCONTROL_ATTR) == null || profile.get(UACCONTROL_ATTR).get() == null ? null
+                                    : profile.get(UACCONTROL_ATTR).get().toString();
+
+                    if (LOG.isOk()) {
+                        LOG.ok("User Account Control: {0}", uac);
+                    }
+
+                    // disabled if PNR_FLAG is not included (0x0020)
+                    attribute = uac == null || (Integer.parseInt(uac) & UF_PASSWD_NOTREQD) != UF_PASSWD_NOTREQD
+                            ? AttributeBuilder.build(PNR_FLAG, false) : AttributeBuilder.build(PNR_FLAG, true);
                 } catch (NamingException e) {
                     LOG.error(e, "While fetching " + UACCONTROL_ATTR);
                 }

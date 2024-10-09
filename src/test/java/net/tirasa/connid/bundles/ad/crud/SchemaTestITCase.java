@@ -47,6 +47,7 @@ public class SchemaTestITCase extends AbstractTest {
 
         boolean sddl = false;
         boolean pne = false;
+        boolean pnr = false;
         boolean givenname = false;
 
         for (AttributeInfo attrInfo : info.getAttributeInfo()) {
@@ -59,6 +60,11 @@ public class SchemaTestITCase extends AbstractTest {
                 pne = true;
                 assertEquals(Boolean.class, attrInfo.getType());
             }
+            
+            if (ADConfiguration.PNR_FLAG.equals(attrInfo.getName())) {
+                pnr = true;
+                assertEquals(Boolean.class, attrInfo.getType());
+            }
 
             if ("givenName".equalsIgnoreCase(attrInfo.getName())) {
                 givenname = true;
@@ -66,6 +72,6 @@ public class SchemaTestITCase extends AbstractTest {
             }
         }
 
-        assertTrue(sddl && givenname && pne);
+        assertTrue(sddl && givenname && pne && pnr);
     }
 }

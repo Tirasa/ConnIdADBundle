@@ -369,7 +369,7 @@
                   </bind>
                 </volumes>
                 <wait>
-                  <log>samba version 4.19.5 started</log>
+                  <log>samba version ((\d)+.(\d)+.(\d)+) started</log>
                   <time>60000</time>
                 </wait>
               </run>
