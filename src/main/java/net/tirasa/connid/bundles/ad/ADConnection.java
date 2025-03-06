@@ -24,6 +24,7 @@ import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.StartTlsResponse;
 import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 import net.tirasa.connid.bundles.ad.schema.ADSchema;
 import net.tirasa.connid.bundles.ad.util.TrustAllSocketFactory;
@@ -61,7 +62,7 @@ public class ADConnection extends LdapConnection {
     public void close() {
         try {
             super.close();
-            quietClose(syncCtx);
+            quietClose(new Pair<>(syncCtx, tlsCtx));
         } finally {
             syncCtx = null;
         }
@@ -82,7 +83,9 @@ public class ADConnection extends LdapConnection {
             return this.initCtx;
         }
 
-        this.initCtx = connect(config.getPrincipal(), config.getCredentials());
+        Pair<LdapContext, StartTlsResponse> connectPair = connect(config.getPrincipal(), config.getCredentials());
+        initCtx = connectPair.first;
+        tlsCtx = connectPair.second;
 
         try {
             initCtx.setRequestControls(new Control[] { new SDFlagsControl(0x00000004) });
@@ -94,10 +97,11 @@ public class ADConnection extends LdapConnection {
     }
 
     @Override
-    protected Pair<AuthenticationResult, LdapContext> createContext(
+    protected Pair<AuthenticationResult, Pair<LdapContext, StartTlsResponse>> createContext(
             final String principal, final GuardedString credentials) {
 
-        final List<Pair<AuthenticationResult, LdapContext>> result = new ArrayList<>(1);
+        final List<Pair<AuthenticationResult, Pair<LdapContext, StartTlsResponse>>> result =
+                new ArrayList<Pair<AuthenticationResult, Pair<LdapContext, StartTlsResponse>>>(1);
 
         @SuppressWarnings("UseOfObsoleteCollectionType")
         final Hashtable<Object, Object> env = new Hashtable<>();
