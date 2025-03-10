@@ -76,7 +76,7 @@
   </mailingLists>
 
   <properties>
-    <connid.version>1.5.2.0</connid.version>
+    <connid.version>1.6.0.0</connid.version>
     <connid.ldap.version>1.5.10</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
