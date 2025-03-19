@@ -81,11 +81,10 @@ public class USNSyncStrategy extends ADSyncStrategy {
                 new SortControl(USN, Control.CRITICAL),
                 new PagedResultsControl(1000, cookie, Control.CRITICAL) });
 
-        final List<SearchResult> result = new ArrayList<>();
-
         if (LOG.isOk()) {
             LOG.ok("Searching from " + baseContextDn);
         }
+        final List<SearchResult> result = new ArrayList<>();
         try {
             final NamingEnumeration<SearchResult> answer = ctx.search(baseContextDn, filter, searchCtls);
 
@@ -502,7 +501,7 @@ public class USNSyncStrategy extends ADSyncStrategy {
         }
     }
 
-    private byte[] getResponseCookie(final Control[] controls) {
+    private static byte[] getResponseCookie(final Control[] controls) {
         if (controls != null) {
             for (Control control : controls) {
                 if (control instanceof PagedResultsResponseControl) {
