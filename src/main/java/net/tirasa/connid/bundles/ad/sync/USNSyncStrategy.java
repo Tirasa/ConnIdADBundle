@@ -31,6 +31,8 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.PagedResultsControl;
+import javax.naming.ldap.PagedResultsResponseControl;
 import javax.naming.ldap.SortControl;
 import net.tirasa.adsddl.ntsd.controls.ShowDeletedControl;
 import net.tirasa.adsddl.ntsd.utils.GUID;
@@ -71,13 +73,31 @@ public class USNSyncStrategy extends ADSyncStrategy {
     protected List<SearchResult> search(
             final LdapContext ctx,
             final String filter,
-            final SearchControls searchCtls) throws Exception {
+            final SearchControls searchCtls,
+            final byte[] cookie,
+            final String baseContextDn) throws Exception {
 
         ctx.setRequestControls(new Control[] {
-            new SortControl(USN, Control.CRITICAL)
-        });
+                new SortControl(USN, Control.CRITICAL),
+                new PagedResultsControl(1000, cookie, Control.CRITICAL) });
 
-        return super.search(ctx, filter, searchCtls, false);
+        final List<SearchResult> result = new ArrayList<>();
+
+        if (LOG.isOk()) {
+            LOG.ok("Searching from " + baseContextDn);
+        }
+        try {
+            final NamingEnumeration<SearchResult> answer = ctx.search(baseContextDn, filter, searchCtls);
+
+            while (answer.hasMoreElements()) {
+                result.add(answer.nextElement());
+            }
+        } catch (NamingException e) {
+            LOG.error(e, "While searching base context {0} with filter {1} and search controls {2}",
+                    baseContextDn, filter, searchCtls);
+        }
+
+        return result;
     }
 
     protected List<SearchResult> searchForDeletedObjects(
@@ -205,43 +225,41 @@ public class USNSyncStrategy extends ADSyncStrategy {
         try {
             LdapContext ctx = conn.getInitialContext().newInstance(new Control[] {});
 
-            final List<SearchResult> changes = deleted
-                    ? searchForDeletedObjects(ctx, filter, searchCtls)
-                    : search(ctx, filter, searchCtls);
+            byte[] cookie = null;
+            for (String baseContextDn : conn.getConfiguration().getBaseContextsToSynchronize()) {
+                do {
+                    final List<SearchResult> changes = deleted ?
+                            searchForDeletedObjects(ctx, filter, searchCtls) :
+                            search(ctx, filter, searchCtls, cookie, baseContextDn);
 
-            int count = changes.size();
-            LOG.ok("Found {0} changes", count);
+                    if (!deleted) {
+                        cookie = getResponseCookie(ctx.getResponseControls());
+                    }
+                    int count = changes.size();
+                    LOG.ok("Found {0} changes", count);
 
-            if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
-                for (SearchResult sr : changes) {
-                    LOG.ok("Remaining {0} users to be processed", count);
-                    try {
-                        handleSyncUDelta(
-                                ctx,
-                                sr,
-                                attrsToGet,
-                                token,
-                                handler);
-                        count--;
-                    } catch (NamingException e) {
-                        LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                    if (oclass.is(ObjectClass.ACCOUNT_NAME)) {
+                        for (SearchResult sr : changes) {
+                            LOG.ok("Remaining {0} users to be processed", count);
+                            try {
+                                handleSyncUDelta(ctx, sr, attrsToGet, token, handler);
+                                count--;
+                            } catch (NamingException e) {
+                                LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                            }
+                        }
+                    } else {
+                        for (SearchResult sr : changes) {
+                            LOG.ok("Remaining {0} groups to be processed", count);
+                            try {
+                                handleSyncGDelta(ctx, sr, attrsToGet, token, handler);
+                                count--;
+                            } catch (NamingException e) {
+                                LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
+                            }
+                        }
                     }
-                }
-            } else {
-                for (SearchResult sr : changes) {
-                    LOG.ok("Remaining {0} groups to be processed", count);
-                    try {
-                        handleSyncGDelta(
-                                ctx,
-                                sr,
-                                attrsToGet,
-                                token,
-                                handler);
-                        count--;
-                    } catch (NamingException e) {
-                        LOG.error(e, "SyncDelta handling for '{0}' failed", sr.getName());
-                    }
-                }
+                } while (cookie != null);
             }
         } catch (Exception e) {
             throw new ConnectorException("While looking for changes", e);
@@ -482,6 +500,18 @@ public class USNSyncStrategy extends ADSyncStrategy {
         } else {
             LOG.warn("Invalid object type {0}", objectClasses);
         }
+    }
+
+    private byte[] getResponseCookie(final Control[] controls) {
+        if (controls != null) {
+            for (Control control : controls) {
+                if (control instanceof PagedResultsResponseControl) {
+                    PagedResultsResponseControl pagedControl = (PagedResultsResponseControl) control;
+                    return pagedControl.getCookie();
+                }
+            }
+        }
+        return null;
     }
 
     private static String createDirSyncUFilter(final ADConfiguration conf, final ADUtilities utils) {
