@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.5.2.0</version>
+    <version>1.5.2.1</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
@@ -62,26 +62,13 @@
     <url>https://github.com/Tirasa/ConnIdADBundle/actions</url>
   </ciManagement>
 
-  <mailingLists>
-    <mailingList>
-      <name>connid-dev</name>
-      <post>connid-dev@googlegroups.com</post>
-      <archive>http://groups.google.com/group/connid-dev</archive>
-    </mailingList>
-    <mailingList>
-      <name>connid-users</name>
-      <post>connid-users@googlegroups.com</post>
-      <archive>http://groups.google.com/group/connid-users</archive>
-    </mailingList>
-  </mailingLists>
-
   <properties>
-    <connid.version>1.5.2.0</connid.version>
+    <connid.version>1.5.2.1</connid.version>
     <connid.ldap.version>1.5.10</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    
+
     <exec.skip>false</exec.skip>
     <skipTests>false</skipTests>
   </properties>
@@ -296,7 +283,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.5.2</version>
+        <version>3.5.3</version>
         <configuration>
           <skipTests>${skipTests}</skipTests>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -340,7 +327,7 @@
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
-        <version>0.45.1</version>
+        <version>0.46.0</version>
         <configuration>
           <images>
             <image>
@@ -468,16 +455,6 @@
   </profiles>
   
   <repositories>
-    <repository>
-      <id>sonatype</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
     <repository>
       <id>atalassian</id>
       <url>https://maven.atlassian.com/3rdparty/</url>

@@ -45,11 +45,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       
-      - name: Build
-        run: mvn clean install
-
-      - name: Deploy
+      - name: Build and deploy
         env:
           SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-        run: mvn deploy -s settings.xml
+        run: mvn clean deploy -s settings.xml
