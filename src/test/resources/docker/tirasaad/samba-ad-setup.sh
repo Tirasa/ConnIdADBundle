@@ -39,6 +39,9 @@ samba-tool domain provision\
  --domain=IAM\
  --adminpass=${SMB_ADMIN_PASSWORD}
 
+#Modifica schema per cambio attributo single-value
+ldbmodify -H /var/lib/samba/private/sam.ldb.d/CN=SCHEMA,CN=CONFIGURATION,DC=LOCALHOST.ldb single-value.ldif
+
 samba-tool ou create "OU=ARTE,DC=localhost"
 samba-tool ou create "OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=localhost"
 samba-tool ou create "OU=Utenti,OU=1-DGDSIS-Digitalizzazione Sistemi Informativi Statistici,OU=ARTE,DC=localhost"

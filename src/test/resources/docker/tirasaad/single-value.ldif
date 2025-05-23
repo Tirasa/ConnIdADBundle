@@ -1,0 +1,4 @@
+dn: CN=Telephone-Number,CN=Schema,CN=Configuration,DC=localhost
+changetype: modify
+replace: isSingleValued
+isSingleValued: FALSE

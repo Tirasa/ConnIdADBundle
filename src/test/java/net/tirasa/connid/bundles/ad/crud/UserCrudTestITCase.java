@@ -503,7 +503,6 @@ public class UserCrudTestITCase extends UserTest {
     }
 
     @Test
-    @Disabled("Update Delta with value already present not possible with Samba")
     public void updateDelta() {
         // 1. take user and set attribute
         final Map.Entry<String, String> ids = util.getEntryIDs("3");
@@ -542,11 +541,8 @@ public class UserCrudTestITCase extends UserTest {
         assertTrue(numberAttr.contains(NUMBER2));
 
         // 4. updateDelta with values to replace
-        assertDoesNotThrow(() -> connector.authenticate(
-                ObjectClass.ACCOUNT, ids.getValue(), new GuardedString("carrot".toCharArray()), null));
-
         delta = AttributeDeltaBuilder.build("telephoneNumber", CollectionUtil.newList(NUMBER1, NUMBER3));
-        GuardedString newPwd = new GuardedString("newPwd".toCharArray());
+        GuardedString newPwd = new GuardedString("NuovaPassword123!".toCharArray());
         connector.updateDelta(
                 ObjectClass.ACCOUNT,
                 new Uid(ids.getValue()),

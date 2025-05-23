@@ -31,6 +31,7 @@ import net.tirasa.connid.bundles.ldap.search.LdapFilter;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.AttributeDelta;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
@@ -156,6 +157,14 @@ public class ADConnector extends LdapConnector {
         }
 
         return new ADUpdate((ADConnection) conn, oclass, uid).update(attributes);
+    }
+
+    @Override
+    public Set<AttributeDelta> updateDelta(final ObjectClass oclass,
+            final Uid uid,
+            final Set<AttributeDelta> modifications,
+            final OperationOptions options) {
+        return new ADUpdate((ADConnection) conn, oclass, uid).updateDelta(modifications);
     }
 
     @Override
