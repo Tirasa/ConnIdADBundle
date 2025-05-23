@@ -361,4 +361,9 @@ public final class ADConfiguration extends LdapConfiguration {
             this.userAuthenticationAttributes = userAuthenticationAttributes.clone();
         }
     }
+
+    @Override
+    public String getPasswordHashAlgorithm() {
+        return "NONE";
+    }
 }

@@ -16,8 +16,12 @@
 package net.tirasa.connid.bundles.ad.schema;
 
 import net.tirasa.connid.bundles.ad.ADConnection;
+import net.tirasa.connid.bundles.ad.util.ADGuardedPasswordAttribute;
 import net.tirasa.connid.bundles.ldap.schema.LdapSchema;
+import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.common.security.GuardedString;
+import org.identityconnectors.framework.common.objects.AttributeDelta;
 import org.identityconnectors.framework.common.objects.AttributeUtil;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -61,5 +65,15 @@ public class ADSchema extends LdapSchema {
                     attrName, oclass.getObjectClassValue());
         }
         return result;
+    }
+
+    @Override
+    public ADGuardedPasswordAttribute encodePassword(AttributeDelta attr) {
+        assert attr.is(OperationalAttributes.PASSWORD_NAME);
+
+        String pwdAttrName = this.conn.getConfiguration().getPasswordAttribute();
+        return CollectionUtil.isEmpty(attr.getValuesToReplace())
+                ? null
+                : ADGuardedPasswordAttribute.create(pwdAttrName, (GuardedString) attr.getValuesToReplace().get(0));
     }
 }
