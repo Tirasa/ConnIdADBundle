@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.5.2.0</version>
+    <version>1.5.2.1</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
@@ -62,27 +62,15 @@
     <url>https://github.com/Tirasa/ConnIdADBundle/actions</url>
   </ciManagement>
 
-  <mailingLists>
-    <mailingList>
-      <name>connid-dev</name>
-      <post>connid-dev@googlegroups.com</post>
-      <archive>http://groups.google.com/group/connid-dev</archive>
-    </mailingList>
-    <mailingList>
-      <name>connid-users</name>
-      <post>connid-users@googlegroups.com</post>
-      <archive>http://groups.google.com/group/connid-users</archive>
-    </mailingList>
-  </mailingLists>
-
   <properties>
-    <connid.version>1.5.2.0</connid.version>
+    <connid.version>1.5.2.1</connid.version>
     <connid.ldap.version>1.5.8</connid.ldap.version>
     <adsddl.verson>1.9</adsddl.verson>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    
+
     <exec.skip>false</exec.skip>
+    <skipTests>false</skipTests>
   </properties>
 
   <dependencies>
@@ -177,9 +165,33 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>default-cli</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>${targetJdk}</version>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>3.9.5</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.gaul</groupId>
         <artifactId>modernizer-maven-plugin</artifactId>
-        <version>2.7.0</version>
+        <version>3.1.0</version>
         <configuration>
           <javaVersion>${targetJdk}</javaVersion>
         </configuration>
@@ -271,9 +283,9 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.2.1</version>
+        <version>3.5.3</version>
         <configuration>
-          <skipTests>${exec.skip}</skipTests>
+          <skipTests>${skipTests}</skipTests>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <runOrder>alphabetical</runOrder>
         </configuration>
@@ -293,7 +305,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <inherited>true</inherited>
         <configuration>
-          <skipTests>${exec.skip}</skipTests>
+          <skipTests>${skipTests}</skipTests>
         </configuration>
         <executions>
           <execution>
@@ -303,7 +315,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <skip>${exec.skip}</skip>
+              <skip>${skipTests}</skip>
               <includes>
                 <include>**/*Test.java</include>
               </includes>
@@ -315,9 +327,8 @@
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
-        <version>0.43.4</version>
+        <version>0.46.0</version>
         <configuration>
-          <skip>${exec.skip}</skip>
           <images>
             <image>
               <alias>tirasaad</alias>
@@ -345,7 +356,7 @@
                   </bind>
                 </volumes>
                 <wait>
-                  <log>samba version 4.15.13-Ubuntu started</log>
+                  <log>samba version ((\d)+.(\d)+.(\d)+) started</log>
                   <time>60000</time>
                 </wait>
               </run>
@@ -360,6 +371,9 @@
               <goal>stop</goal>
               <goal>remove</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
           <execution>
             <id>start-docker</id>
@@ -368,6 +382,9 @@
               <goal>build</goal>
               <goal>start</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
           <execution>
             <id>remove-containers-post-test</id>
@@ -376,6 +393,9 @@
               <goal>stop</goal>
               <goal>remove</goal>
             </goals>
+            <configuration>
+              <skip>${exec.skip}</skip>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -401,6 +421,7 @@
       <id>skipTests</id>
       
       <properties>
+        <skipTests>true</skipTests>
         <exec.skip>true</exec.skip>
       </properties>
       
@@ -408,19 +429,32 @@
         <defaultGoal>clean install</defaultGoal>
       </build>
     </profile>
+    <profile>
+      <id>debug</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <exec.skip>true</exec.skip>
+      </properties>
+      <build>
+        <defaultGoal>clean package io.fabric8:docker-maven-plugin:build io.fabric8:docker-maven-plugin:start
+        </defaultGoal>
+      </build>
+    </profile>
+    <profile>
+      <id>tests</id>
+
+      <properties>
+        <skipTests>false</skipTests>
+        <exec.skip>true</exec.skip>
+      </properties>
+
+      <build>
+        <defaultGoal>test</defaultGoal>
+      </build>
+    </profile>
   </profiles>
   
   <repositories>
-    <repository>
-      <id>sonatype</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
     <repository>
       <id>atalassian</id>
       <url>https://maven.atlassian.com/3rdparty/</url>
