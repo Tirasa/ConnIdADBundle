@@ -140,10 +140,10 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
+              <outputDirectory>${project.build.directory}/reports/apidocs/META-INF</outputDirectory>
               <resources>
                 <resource>
-                  <directory>.</directory>
+                  <directory>${basedir}</directory>
                   <includes>
                     <include>LICENSE</include>
                     <include>NOTICE</include>
