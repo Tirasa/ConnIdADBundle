@@ -356,7 +356,7 @@
                   </bind>
                 </volumes>
                 <wait>
-                  <log>samba version ((\d)+.(\d)+.(\d)+) started</log>
+                  <log>samba version 4.15.13-Ubuntu started</log>
                   <time>60000</time>
                 </wait>
               </run>
