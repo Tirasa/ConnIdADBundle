@@ -23,7 +23,7 @@
   <parent>
     <groupId>net.tirasa.connid</groupId>
     <artifactId>connid</artifactId>
-    <version>1.5.2.1</version>
+    <version>1.6.1.0</version>
   </parent>
 
   <groupId>net.tirasa.connid.bundles</groupId>
